@@ -313,6 +313,7 @@ function handleDelegatedClick(e) {
     case 'rebuild-vless':        rebuildVless(); break;
     case 'save-vless-xhttp':     saveVlessXhttp(); break;
     case 'openflux-install':     installOpenFlux(); break;
+    case 'openflux-uninstall':   uninstallOpenFlux(); break;
     case 'openflux-create':      createOpenFluxProfile(); break;
     case 'openflux-refresh':     loadOpenFlux(); break;
     case 'openflux-action':      openFluxProfileAction(btn.dataset.id, btn.dataset.profileAction); break;
@@ -2067,6 +2068,24 @@ async function installOpenFlux() {
     await api('POST', '/api/openflux/install', {});
     showMsg('openflux-msg', 'OpenFlux установлен, но не активирован.', true);
     toast('OpenFlux установлен без запуска служб', 'success');
+    await loadOpenFlux();
+  } catch (error) { showMsg('openflux-msg', error.message, false); }
+  finally { setBtnBusy(btn, false); }
+}
+
+async function uninstallOpenFlux() {
+  const confirmPhrase = prompt('Операция остановит и удалит все OpenFlux-профили. Введите: UNINSTALL OPENFLUX');
+  if (confirmPhrase !== 'UNINSTALL OPENFLUX') return;
+  const password = prompt('Повторно введите пароль администратора:');
+  if (!password) return;
+  const btn = el('btn-openflux-uninstall');
+  setBtnBusy(btn, true);
+  showMsg('openflux-msg', 'Создание резервной копии и удаление OpenFlux…', true);
+  try {
+    const result = await api('POST', '/api/openflux/uninstall', { confirm: confirmPhrase, password });
+    const backup = result.backup ? ` Резервная копия: ${result.backup}` : '';
+    showMsg('openflux-msg', `OpenFlux удалён.${backup}`, true);
+    toast('OpenFlux удалён; основной proxy stack не изменялся', 'success');
     await loadOpenFlux();
   } catch (error) { showMsg('openflux-msg', error.message, false); }
   finally { setBtnBusy(btn, false); }

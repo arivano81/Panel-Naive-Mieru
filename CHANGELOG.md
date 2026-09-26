@@ -59,6 +59,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added an idempotent OpenFlux profile Repair/reset action. Start, restart and
   reset now wait for the assigned listener; an active unit without a socket is
   disabled and its scoped firewall rule is removed instead of reporting success.
+- Added a password-reconfirmed OpenFlux purge/uninstall workflow. It creates a
+  mode-600 recovery archive before stopping instance units, removing only
+  profile-tagged firewall rules, bundles, configs, unit and binary. Repeating
+  uninstall is a successful no-op and unrelated component-registry entries stay intact.
 - Documented the OpenFlux share-link compatibility gate: pinned release `0.0.5`
   has no `--share` or `openflux://` implementation, so the panel deliberately
   keeps the verified client bundle instead of inventing an incompatible QR URI.

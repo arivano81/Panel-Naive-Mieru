@@ -338,7 +338,8 @@ instance-unit, числом строк и фильтром потенциаль�
 
 - полный существующий набор тестов проходит до и после добавления модуля;
 - golden-тест подтверждает неизменность Caddyfile, Mieru, Hy2, Xray и подписок при выключенном модуле;
-- install, update, start, stop, reset и uninstall OpenFlux идемпотентны;
+- install, update, start, stop, reset и uninstall OpenFlux идемпотентны
+  (reset и архивируемый uninstall покрыты Linux fixture; install/update ещё требуют отдельного gate);
 - fault-тесты покрывают оборванную загрузку, неправильный SHA-256, занятый порт, повреждённый
   config, неудачный старт systemd, зависший процесс и пропавшую сеть;
 - каждый сбой оставляет основные службы активными и исходные firewall-правила неизменными;

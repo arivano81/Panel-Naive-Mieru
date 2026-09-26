@@ -17,9 +17,10 @@ function ok(value, message) {
 
 console.log('OpenFlux isolated API regression test');
 const calls = [];
-const exists = new Set(['/bin/openflux', '/scripts/profile.sh', '/scripts/install.sh']);
+const exists = new Set(['/bin/openflux', '/scripts/profile.sh', '/scripts/install.sh', '/scripts/uninstall.sh']);
 const service = createOpenFluxService({
-  paths: { binary: '/bin/openflux', lifecycleScript: '/scripts/profile.sh', installScript: '/scripts/install.sh' },
+  paths: { binary: '/bin/openflux', lifecycleScript: '/scripts/profile.sh', installScript: '/scripts/install.sh',
+    uninstallScript: '/scripts/uninstall.sh' },
   existsSync: file => exists.has(file),
   lstatSync: () => ({ isFile: () => true, isSymbolicLink: () => false }),
   execFileSync: (file, args) => {
@@ -42,6 +43,9 @@ ok(calls.some(call => call.join('|') === 'bash|/scripts/profile.sh|start|alpha')
 service.rotate('alpha');
 ok(calls.some(call => call.join('|') === 'bash|/scripts/profile.sh|rotate|alpha'),
   'key rotation delegates only to the transactional lifecycle CLI');
+service.uninstall();
+ok(calls.some(call => call.join('|') === 'bash|/scripts/uninstall.sh|--purge'),
+  'uninstall delegates to the isolated explicit-purge script without a shell');
 const logs = service.logs('alpha', 9999);
 ok(logs.includes('normal line') && !logs.includes('forbidden') &&
   logs.match(/\[redacted sensitive line\]/g)?.length === 2, 'journal output is filtered before leaving the service');
@@ -54,6 +58,7 @@ ok(!routes.includes('execSync') && !routes.includes('child_process'), 'HTTP rout
 for (const route of [
   "app.get('/api/openflux', requireAuth",
   "app.post('/api/openflux/install', requireAuth",
+  "app.post('/api/openflux/uninstall', requireAuth",
   "app.post('/api/openflux/profiles', requireAuth",
   "app.post('/api/openflux/profiles/:id/bundle', requireAuth",
   "app.post('/api/openflux/profiles/:id/rotate', requireAuth",
@@ -80,11 +85,16 @@ ok(ui.includes("case 'openflux-bundle'") && ui.includes("prompt('Повторн�
   'UI requires an explicit warning and administrator password before bundle export');
 ok(routes.includes('service.rotate(req.params.id)') && ui.includes("case 'openflux-rotate'"),
   'key rotation is exposed only through its confirmed experimental control');
+ok(routes.includes("req.body.confirm !== 'UNINSTALL OPENFLUX'") &&
+   routes.includes('service.uninstall()') && html.includes('id="btn-openflux-uninstall"') &&
+   ui.includes("case 'openflux-uninstall'"),
+  'destructive uninstall requires password re-authentication and an exact phrase');
 ok(!/protocols[^\n]*openflux/i.test(ui), 'UI never adds OpenFlux to shared user protocols');
 ok(!safeFailure({ stderr: 'one\ntwo\nthree\nfour' }).includes('one'), 'external failure output is length-bounded to its tail');
 
 const absent = createOpenFluxService({
-  paths: { binary: '/missing', lifecycleScript: '/scripts/profile.sh', installScript: '/scripts/install.sh' },
+  paths: { binary: '/missing', lifecycleScript: '/scripts/profile.sh', installScript: '/scripts/install.sh',
+    uninstallScript: '/scripts/uninstall.sh' },
   existsSync: file => file !== '/missing',
   execFileSync: () => { throw new Error('must not run'); },
 });

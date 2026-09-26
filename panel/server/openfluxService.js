@@ -9,6 +9,7 @@ const DEFAULTS = Object.freeze({
   binary: '/usr/local/bin/openflux',
   lifecycleScript: path.join(__dirname, '../scripts/openflux_profile.sh'),
   installScript: path.join(__dirname, '../scripts/install_openflux.sh'),
+  uninstallScript: path.join(__dirname, '../scripts/uninstall_openflux.sh'),
 });
 const PROFILE_ID_RE = /^[a-z][a-z0-9-]{0,31}$/;
 
@@ -91,6 +92,16 @@ function createOpenFluxService(options = {}) {
         });
         if (!installed()) throw new Error('installer completed without an OpenFlux binary');
         return { ok: true, installed: true, activated: false };
+      } catch (error) {
+        throw Object.assign(new Error(safeFailure(error)), { status: 500 });
+      }
+    },
+    uninstall: () => {
+      try {
+        const output = runFile('bash', [paths.uninstallScript, '--purge'], {
+          timeout: 120000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+        });
+        return JSON.parse(String(output));
       } catch (error) {
         throw Object.assign(new Error(safeFailure(error)), { status: 500 });
       }

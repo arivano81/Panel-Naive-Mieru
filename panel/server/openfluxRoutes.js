@@ -15,6 +15,12 @@ function registerOpenFluxRoutes(app, requireAuth, service, verifyAdminPassword, 
   app.post('/api/openflux/install', requireAuth, (_req, res) => {
     try { res.json(service.install()); } catch (error) { replyError(res, error); }
   });
+  app.post('/api/openflux/uninstall', requireAuth, secretExportLimiter, (req, res) => {
+    if (!req.body || req.body.confirm !== 'UNINSTALL OPENFLUX' ||
+        typeof req.body.password !== 'string' || !verifyAdminPassword(req.body.password))
+      return res.status(403).json({ error: 'Password and exact confirmation phrase are required' });
+    try { res.json(service.uninstall()); } catch (error) { replyError(res, error); }
+  });
   app.post('/api/openflux/profiles', requireAuth, (req, res) => {
     const input = req.body || {};
     try { res.status(201).json(service.create({ id: input.id, port: input.port, host: input.host })); }

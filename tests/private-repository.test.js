@@ -53,6 +53,9 @@ ok(configMigrations.status === 0, 'explicit config migration regression suite pa
 const backupRestore = spawnSync(process.execPath, [path.join(__dirname, 'backup-restore.test.js')],
   { stdio: 'inherit' });
 ok(backupRestore.status === 0, 'clean-install backup restore regression suite passes');
+const vlessAdapter = spawnSync(process.execPath, [path.join(__dirname, 'vless-reality-adapter.test.js')],
+  { stdio: 'inherit' });
+ok(vlessAdapter.status === 0, 'VLESS REALITY adapter regression suite passes');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

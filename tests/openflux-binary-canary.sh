@@ -59,7 +59,6 @@ NODE
 PIDS+=("$!")
 "$WORK/openflux" --config="$WORK/exit.conf" > "$WORK/exit.log" 2>&1 & PIDS+=("$!")
 "$WORK/openflux" --config="$WORK/client.conf" > "$WORK/client.log" 2>&1 & PIDS+=("$!")
-"$WORK/openflux" --config="$WORK/wrong.conf" > "$WORK/wrong.log" 2>&1 & PIDS+=("$!")
 
 wait_for_port() {
   local port=$1
@@ -80,6 +79,8 @@ for _ in $(seq 1 80); do
 done
 [[ "$RESULT" == "openflux-canary-ok" ]] || { echo "encrypted Direct tunnel failed" >&2; exit 1; }
 
+"$WORK/openflux" --config="$WORK/wrong.conf" > "$WORK/wrong.log" 2>&1 & PIDS+=("$!")
+sleep 1
 if curl -fsS --max-time 3 --socks5-hostname 127.0.0.1:11081 \
   http://127.0.0.1:19090 >/dev/null 2>&1; then
   echo "wrong encryption key unexpectedly reached the target" >&2

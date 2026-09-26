@@ -20,6 +20,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added a disposable Debian 13 OpenFlux binary canary that sends an HTTP request
   through a real encrypted L4/Direct-to-SOCKS5 tunnel and verifies that a client
   with the wrong key cannot fall back to plaintext.
+
 - Began VLESS stage B with an isolated REALITY/Vision config adapter and a
   pinned Xray-core `v26.3.27` installer. The installer verifies the official
   amd64 SHA-256, validates config before activation, uses a hardened dedicated
@@ -53,6 +54,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Serialized the positive and wrong-key OpenFlux canary clients because one
+  negotiated exit intentionally accepts only one active client session.
 - Updated REALITY key parsing for the current Xray `PrivateKey` and
   `Password (PublicKey)` output while retaining compatibility with legacy
   `Private key` and `Public key` labels.

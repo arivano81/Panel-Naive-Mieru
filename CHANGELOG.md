@@ -63,6 +63,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   mode-600 recovery archive before stopping instance units, removing only
   profile-tagged firewall rules, bundles, configs, unit and binary. Repeating
   uninstall is a successful no-op and unrelated component-registry entries stay intact.
+- OpenFlux install/update is now explicitly idempotent. An exact pinned binary,
+  canonical unit and registry state return `changed:false` before any network
+  request. Drifted installations reuse the transactional installer and refuse
+  replacement while any OpenFlux profile is active.
 - Documented the OpenFlux share-link compatibility gate: pinned release `0.0.5`
   has no `--share` or `openflux://` implementation, so the panel deliberately
   keeps the verified client bundle instead of inventing an incompatible QR URI.

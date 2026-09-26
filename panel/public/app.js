@@ -313,6 +313,7 @@ function handleDelegatedClick(e) {
     case 'rebuild-vless':        rebuildVless(); break;
     case 'save-vless-xhttp':     saveVlessXhttp(); break;
     case 'openflux-install':     installOpenFlux(); break;
+    case 'openflux-update':      updateOpenFlux(); break;
     case 'openflux-uninstall':   uninstallOpenFlux(); break;
     case 'openflux-create':      createOpenFluxProfile(); break;
     case 'openflux-refresh':     loadOpenFlux(); break;
@@ -2086,6 +2087,22 @@ async function uninstallOpenFlux() {
     const backup = result.backup ? ` Резервная копия: ${result.backup}` : '';
     showMsg('openflux-msg', `OpenFlux удалён.${backup}`, true);
     toast('OpenFlux удалён; основной proxy stack не изменялся', 'success');
+    await loadOpenFlux();
+  } catch (error) { showMsg('openflux-msg', error.message, false); }
+  finally { setBtnBusy(btn, false); }
+}
+
+async function updateOpenFlux() {
+  const password = prompt('Проверить закреплённую версию и при необходимости обновить. Введите пароль администратора:');
+  if (!password) return;
+  const btn = el('btn-openflux-update');
+  setBtnBusy(btn, true);
+  showMsg('openflux-msg', 'Проверка checksum, unit и версии OpenFlux…', true);
+  try {
+    const result = await api('POST', '/api/openflux/update', { password });
+    showMsg('openflux-msg', result.changed
+      ? 'OpenFlux обновлён; профили не запускались и firewall не менялся.'
+      : 'Установленная версия уже полностью совпадает; изменений нет.', true);
     await loadOpenFlux();
   } catch (error) { showMsg('openflux-msg', error.message, false); }
   finally { setBtnBusy(btn, false); }

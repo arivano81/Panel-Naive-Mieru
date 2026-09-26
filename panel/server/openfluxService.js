@@ -41,6 +41,21 @@ function createOpenFluxService(options = {}) {
     }
   }
 
+  function runInstaller() {
+    try {
+      const output = String(runFile('bash', [paths.installScript], {
+        timeout: 180000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+      }));
+      const marker = output.match(/OPENFLUX_RESULT_JSON=(\{[^\r\n]+\})/);
+      if (!marker) throw new Error('installer completed without a result marker');
+      const result = JSON.parse(marker[1]);
+      if (!installed()) throw new Error('installer completed without an OpenFlux binary');
+      return result;
+    } catch (error) {
+      throw Object.assign(new Error(safeFailure(error)), { status: 500 });
+    }
+  }
+
   return Object.freeze({
     release: OPENFLUX_RELEASE,
     installed,
@@ -84,18 +99,8 @@ function createOpenFluxService(options = {}) {
         throw Object.assign(new Error('OpenFlux client bundle is unavailable'), { status: 404 });
       }
     },
-    install: () => {
-      if (installed()) throw Object.assign(new Error('OpenFlux is already installed'), { status: 409 });
-      try {
-        runFile('bash', [paths.installScript], {
-          timeout: 180000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
-        });
-        if (!installed()) throw new Error('installer completed without an OpenFlux binary');
-        return { ok: true, installed: true, activated: false };
-      } catch (error) {
-        throw Object.assign(new Error(safeFailure(error)), { status: 500 });
-      }
-    },
+    install: runInstaller,
+    update: runInstaller,
     uninstall: () => {
       try {
         const output = runFile('bash', [paths.uninstallScript, '--purge'], {

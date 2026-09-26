@@ -16,7 +16,7 @@ die() { printf '[OPENFLUX] ERROR: %s\n' "$*" >&2; exit 1; }
 
 [[ $EUID -eq 0 ]] || die "run as root"
 [[ "$(uname -m)" == "x86_64" || "$(uname -m)" == "amd64" ]] || die "only amd64 is supported"
-for command in curl sha256sum node systemctl jq; do
+for command in curl sha256sum node systemctl jq cmp; do
   command -v "$command" >/dev/null 2>&1 || die "missing dependency: $command"
 done
 [[ ! -f "$COMPONENT_REGISTRY" ]] || jq empty "$COMPONENT_REGISTRY" >/dev/null 2>&1 \
@@ -27,6 +27,43 @@ ADAPTER="$SCRIPT_DIR/../server/openfluxAdapter.js"
 [[ -f "$ADAPTER" ]] || die "missing OpenFlux adapter: $ADAPTER"
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
+OPENFLUX_ADAPTER="$ADAPTER" node <<'NODE' > "$WORK/openflux-exit@.service"
+const { buildOpenFluxUnit } = require(process.env.OPENFLUX_ADAPTER);
+process.stdout.write(buildOpenFluxUnit());
+NODE
+grep -F 'ExecStart=/usr/local/bin/openflux --config=/etc/openflux/profiles/%i.conf --negotiate' \
+  "$WORK/openflux-exit@.service" >/dev/null || die "generated unit failed validation"
+
+# Idempotent fast path: an exact pinned binary + canonical unit + service user
+# needs no download, backup, rewrite, daemon reload, profile restart or firewall change.
+registry_ok=true
+if [[ -f "$COMPONENT_REGISTRY" ]]; then
+  jq -e --arg version "$OPENFLUX_VERSION" \
+    '.components.openflux.installed == true and .components.openflux.version == $version and .components.openflux.enabled == false' \
+    "$COMPONENT_REGISTRY" >/dev/null 2>&1 || registry_ok=false
+fi
+if [[ -x "$OPENFLUX_BIN" && -f "$OPENFLUX_UNIT" && -d "$OPENFLUX_DIR/profiles" &&
+      -d "$OPENFLUX_DIR/secrets" && "$registry_ok" == true ]] &&
+   printf '%s  %s\n' "$OPENFLUX_SHA256" "$OPENFLUX_BIN" | sha256sum -c - >/dev/null 2>&1 &&
+   cmp -s "$WORK/openflux-exit@.service" "$OPENFLUX_UNIT" && id openflux >/dev/null 2>&1; then
+  log "pinned OpenFlux ${OPENFLUX_VERSION} is already installed exactly; no changes"
+  printf 'OPENFLUX_RESULT_JSON={"ok":true,"installed":true,"activated":false,"changed":false,"version":"%s"}\n' "$OPENFLUX_VERSION"
+  exit 0
+fi
+
+# Never replace the binary underneath a running negotiated session. Operators
+# stop profiles explicitly, then update, then start them after distributing any
+# newly required client artifact. Exact no-op installs above remain harmless.
+shopt -s nullglob
+for meta in "$OPENFLUX_DIR/profiles"/*.json; do
+  profile_id=$(jq -er '.id' "$meta") || die "invalid profile metadata: $meta"
+  [[ "$profile_id" =~ ^[a-z][a-z0-9-]{0,31}$ ]] || die "invalid profile id in metadata: $meta"
+  if systemctl is-active --quiet "openflux-exit@${profile_id}.service"; then
+    die "stop all OpenFlux profiles before update (active: $profile_id)"
+  fi
+done
+shopt -u nullglob
+
 COMMITTED=0
 HAD_BIN=0; HAD_UNIT=0; HAD_REGISTRY=0
 [[ ! -e "$OPENFLUX_BIN" ]] || HAD_BIN=1
@@ -40,13 +77,6 @@ printf '%s  %s\n' "$OPENFLUX_SHA256" "$WORK/$OPENFLUX_ASSET" | sha256sum -c - >/
 chmod 0755 "$WORK/$OPENFLUX_ASSET"
 "$WORK/$OPENFLUX_ASSET" --help 2>&1 | grep -F 'OpenFlux' >/dev/null \
   || die "downloaded binary failed the identity smoke test"
-
-OPENFLUX_ADAPTER="$ADAPTER" node <<'NODE' > "$WORK/openflux-exit@.service"
-const { buildOpenFluxUnit } = require(process.env.OPENFLUX_ADAPTER);
-process.stdout.write(buildOpenFluxUnit());
-NODE
-grep -F 'ExecStart=/usr/local/bin/openflux --config=/etc/openflux/profiles/%i.conf --negotiate' \
-  "$WORK/openflux-exit@.service" >/dev/null || die "generated unit failed validation"
 
 BACKUP=""
 if [[ -e "$OPENFLUX_BIN" || -e "$OPENFLUX_UNIT" || -e "$COMPONENT_REGISTRY" ]]; then
@@ -118,3 +148,4 @@ chmod 0600 "$REPORT"
 COMMITTED=1
 log "installed but not enabled; no service was started and no port was opened"
 log "report: $REPORT"
+printf 'OPENFLUX_RESULT_JSON={"ok":true,"installed":true,"activated":false,"changed":true,"version":"%s"}\n' "$OPENFLUX_VERSION"

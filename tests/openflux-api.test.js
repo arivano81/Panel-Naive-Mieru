@@ -27,6 +27,8 @@ const service = createOpenFluxService({
     calls.push([file, ...args]);
     if (file === 'journalctl') return 'normal line\nEncryptionKey = forbidden\npassword=forbidden\n';
     if (file === 'tar') return Buffer.from('archive');
+    if (file === 'bash' && args[0] === '/scripts/install.sh')
+      return 'OPENFLUX_RESULT_JSON={"ok":true,"installed":true,"activated":false,"changed":false,"version":"0.0.5"}\n';
     if (args[1] === 'list') return '[{"id":"alpha","active":false}]';
     return '{"ok":true}';
   },
@@ -46,6 +48,9 @@ ok(calls.some(call => call.join('|') === 'bash|/scripts/profile.sh|rotate|alpha'
 service.uninstall();
 ok(calls.some(call => call.join('|') === 'bash|/scripts/uninstall.sh|--purge'),
   'uninstall delegates to the isolated explicit-purge script without a shell');
+const updateResult = service.update();
+ok(updateResult.changed === false && calls.some(call => call.join('|') === 'bash|/scripts/install.sh'),
+  'idempotent update reuses the pinned transactional installer result');
 const logs = service.logs('alpha', 9999);
 ok(logs.includes('normal line') && !logs.includes('forbidden') &&
   logs.match(/\[redacted sensitive line\]/g)?.length === 2, 'journal output is filtered before leaving the service');
@@ -58,6 +63,7 @@ ok(!routes.includes('execSync') && !routes.includes('child_process'), 'HTTP rout
 for (const route of [
   "app.get('/api/openflux', requireAuth",
   "app.post('/api/openflux/install', requireAuth",
+  "app.post('/api/openflux/update', requireAuth",
   "app.post('/api/openflux/uninstall', requireAuth",
   "app.post('/api/openflux/profiles', requireAuth",
   "app.post('/api/openflux/profiles/:id/bundle', requireAuth",
@@ -89,6 +95,9 @@ ok(routes.includes("req.body.confirm !== 'UNINSTALL OPENFLUX'") &&
    routes.includes('service.uninstall()') && html.includes('id="btn-openflux-uninstall"') &&
    ui.includes("case 'openflux-uninstall'"),
   'destructive uninstall requires password re-authentication and an exact phrase');
+ok(routes.includes('service.update()') && routes.includes('verifyAdminPassword(req.body.password)') &&
+   html.includes('id="btn-openflux-update"') && ui.includes("case 'openflux-update'"),
+  'component update requires password confirmation and exposes idempotent UI feedback');
 ok(!/protocols[^\n]*openflux/i.test(ui), 'UI never adds OpenFlux to shared user protocols');
 ok(!safeFailure({ stderr: 'one\ntwo\nthree\nfour' }).includes('one'), 'external failure output is length-bounded to its tail');
 

@@ -45,7 +45,7 @@ OPENFLUX_ADAPTER="$ADAPTER" node <<'NODE' > "$WORK/openflux-exit@.service"
 const { buildOpenFluxUnit } = require(process.env.OPENFLUX_ADAPTER);
 process.stdout.write(buildOpenFluxUnit());
 NODE
-grep -F 'ExecStart=/usr/local/bin/openflux --config=/etc/openflux/profiles/%i.conf' \
+grep -F 'ExecStart=/usr/local/bin/openflux --config=/etc/openflux/profiles/%i.conf --negotiate' \
   "$WORK/openflux-exit@.service" >/dev/null || die "generated unit failed validation"
 
 BACKUP=""

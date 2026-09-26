@@ -56,6 +56,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Serialized the positive and wrong-key OpenFlux canary clients because one
   negotiated exit intentionally accepts only one active client session.
+- Made Direct transport and authenticated negotiation explicit in generated
+  OpenFlux configs, units, and the canary; the HTTP probe now disables
+  environment `NO_PROXY` bypass.
 - Updated REALITY key parsing for the current Xray `PrivateKey` and
   `Password (PublicKey)` output while retaining compatibility with legacy
   `Private key` and `Public key` labels.

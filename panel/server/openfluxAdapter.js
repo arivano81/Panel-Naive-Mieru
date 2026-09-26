@@ -44,6 +44,7 @@ function buildOpenFluxExitConfig(input) {
   return [
     '[Interface]',
     'Role = exit',
+    'Transport = direct',
     'Mode = l4',
     'Codec = batched',
     `EncryptionKeyFile = ${paths.secret}`,
@@ -67,6 +68,7 @@ function buildOpenFluxClientConfig(input) {
   return [
     '[Interface]',
     'Role = client',
+    'Transport = direct',
     'Inbound = socks5',
     `Socks5 = 127.0.0.1:${socksPort}`,
     'Codec = batched',
@@ -92,7 +94,7 @@ Wants=network-online.target
 Type=simple
 User=openflux
 Group=openflux
-ExecStart=/usr/local/bin/openflux --config=/etc/openflux/profiles/%i.conf
+ExecStart=/usr/local/bin/openflux --config=/etc/openflux/profiles/%i.conf --negotiate
 Restart=on-failure
 RestartSec=5s
 NoNewPrivileges=true

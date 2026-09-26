@@ -36,12 +36,13 @@ const client = buildOpenFluxClientConfig(profile);
 const unit = buildOpenFluxUnit();
 ok(paths.secret === '/etc/openflux/secrets/direct-one.key' &&
    paths.service === 'openflux-exit@direct-one.service', 'profile paths remain namespaced');
-ok(exit.includes('Role = exit') && exit.includes('Mode = l4') &&
+ok(exit.includes('Role = exit') && exit.includes('Transport = direct') && exit.includes('Mode = l4') &&
    exit.includes('[Transport "direct"]') && exit.includes('Listen = 0.0.0.0:18445'),
   'exit is restricted to L4 and Direct');
 ok(exit.includes('EncryptionKeyFile = /etc/openflux/secrets/direct-one.key') &&
    exit.includes('URL = openflux-direct://direct-one'), 'exit requires a profile-specific encryption context');
-ok(client.includes('Role = client') && client.includes('Dial = vpn.example.com:18445') &&
+ok(client.includes('Role = client') && client.includes('Transport = direct') &&
+   client.includes('Dial = vpn.example.com:18445') &&
    client.includes('EncryptionKeyFile = ./openflux.key'), 'matching SOCKS5 client config is generated');
 ok(buildOpenFluxClientConfig({ ...profile, host: '2001:db8::1' }).includes('Dial = [2001:db8::1]:18445'),
   'IPv6 client endpoint is bracketed');
@@ -51,7 +52,7 @@ rejects(() => buildOpenFluxClientConfig({ ...profile, socksPort: 80 }), /SOCKS5/
 ok(unit.includes('User=openflux') && unit.includes('ProtectSystem=strict') &&
    unit.includes('CapabilityBoundingSet=') && !unit.includes('ExecStartPre=/bin/sh'),
   'unit is unprivileged, hardened and contains no shell hook');
-ok(unit.includes('/etc/openflux/profiles/%i.conf') && !unit.includes('caddy') &&
+ok(unit.includes('/etc/openflux/profiles/%i.conf --negotiate') && !unit.includes('caddy') &&
    !unit.includes('mieru') && !unit.includes('xray'), 'unit can only start its own profile');
 
 for (const id of ['../escape', 'UPPER', '1starts-number', 'has space', 'a'.repeat(33)]) {

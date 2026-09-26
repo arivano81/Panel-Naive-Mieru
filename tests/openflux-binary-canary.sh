@@ -44,9 +44,10 @@ OPENFLUX_ADAPTER="$ADAPTER" OPENFLUX_WORK="$WORK" node <<'NODE'
 const fs = require('fs');
 const { buildOpenFluxExitConfig, buildOpenFluxClientConfig } = require(process.env.OPENFLUX_ADAPTER);
 const profile = { id: 'ci-canary', port: 18445, host: '127.0.0.1', socksPort: 11080 };
-const exit = buildOpenFluxExitConfig(profile).replace('/etc/openflux/secrets/ci-canary.key', `${process.env.OPENFLUX_WORK}/server.key`);
-const client = buildOpenFluxClientConfig(profile).replace('./openflux.key', `${process.env.OPENFLUX_WORK}/client.key`);
-const wrong = buildOpenFluxClientConfig({ ...profile, socksPort: 11081 }).replace('./openflux.key', `${process.env.OPENFLUX_WORK}/wrong.key`);
+const debug = text => text.replace('Debug = false', 'Debug = true');
+const exit = debug(buildOpenFluxExitConfig(profile)).replace('/etc/openflux/secrets/ci-canary.key', `${process.env.OPENFLUX_WORK}/server.key`);
+const client = debug(buildOpenFluxClientConfig(profile)).replace('./openflux.key', `${process.env.OPENFLUX_WORK}/client.key`);
+const wrong = debug(buildOpenFluxClientConfig({ ...profile, socksPort: 11081 })).replace('./openflux.key', `${process.env.OPENFLUX_WORK}/wrong.key`);
 fs.writeFileSync(`${process.env.OPENFLUX_WORK}/exit.conf`, exit);
 fs.writeFileSync(`${process.env.OPENFLUX_WORK}/client.conf`, client);
 fs.writeFileSync(`${process.env.OPENFLUX_WORK}/wrong.conf`, wrong);
@@ -57,8 +58,8 @@ const http = require('http');
 http.createServer((_req, res) => res.end('openflux-canary-ok')).listen(19090, '127.0.0.1');
 NODE
 PIDS+=("$!")
-"$WORK/openflux" --config="$WORK/exit.conf" > "$WORK/exit.log" 2>&1 & PIDS+=("$!")
-"$WORK/openflux" --config="$WORK/client.conf" > "$WORK/client.log" 2>&1 & PIDS+=("$!")
+"$WORK/openflux" --config="$WORK/exit.conf" --negotiate > "$WORK/exit.log" 2>&1 & PIDS+=("$!")
+"$WORK/openflux" --config="$WORK/client.conf" --negotiate > "$WORK/client.log" 2>&1 & PIDS+=("$!")
 
 wait_for_port() {
   local port=$1
@@ -71,17 +72,17 @@ wait_for_port() {
 wait_for_port 19090
 
 RESULT=""
-for _ in $(seq 1 80); do
-  RESULT=$(curl -fsS --max-time 2 --socks5-hostname 127.0.0.1:11080 \
+for _ in $(seq 1 40); do
+  RESULT=$(curl -fsS --max-time 1 --noproxy "" --socks5-hostname 127.0.0.1:11080 \
     http://127.0.0.1:19090 2>/dev/null || true)
   [[ "$RESULT" != "openflux-canary-ok" ]] || break
   sleep 0.25
 done
 [[ "$RESULT" == "openflux-canary-ok" ]] || { echo "encrypted Direct tunnel failed" >&2; exit 1; }
 
-"$WORK/openflux" --config="$WORK/wrong.conf" > "$WORK/wrong.log" 2>&1 & PIDS+=("$!")
+"$WORK/openflux" --config="$WORK/wrong.conf" --negotiate > "$WORK/wrong.log" 2>&1 & PIDS+=("$!")
 sleep 1
-if curl -fsS --max-time 3 --socks5-hostname 127.0.0.1:11081 \
+if curl -fsS --max-time 3 --noproxy "" --socks5-hostname 127.0.0.1:11081 \
   http://127.0.0.1:19090 >/dev/null 2>&1; then
   echo "wrong encryption key unexpectedly reached the target" >&2
   exit 1

@@ -58,8 +58,8 @@ if (process.platform !== 'win32') {
 set -eu
 cmd=$1; shift
 case "$cmd" in
-  is-active) [ -f "$OPENFLUX_TEST_STATE/$1.active" ] ;;
-  is-enabled) [ -f "$OPENFLUX_TEST_STATE/$1.enabled" ] ;;
+  is-active) [ "\${1:-}" != --quiet ] || shift; [ -f "$OPENFLUX_TEST_STATE/$1.active" ] ;;
+  is-enabled) [ "\${1:-}" != --quiet ] || shift; [ -f "$OPENFLUX_TEST_STATE/$1.enabled" ] ;;
   enable) shift; svc=$1; [ "\${OPENFLUX_TEST_FAIL_START:-0}" != 1 ] || exit 1; touch "$OPENFLUX_TEST_STATE/$svc.active" "$OPENFLUX_TEST_STATE/$svc.enabled" ;;
   disable) shift; svc=$1; rm -f "$OPENFLUX_TEST_STATE/$svc.active" "$OPENFLUX_TEST_STATE/$svc.enabled" ;;
   restart) svc=$1; [ -f "$OPENFLUX_TEST_STATE/$svc.active" ] ;;
@@ -93,7 +93,10 @@ esac
     firewallAfterFailure.includes('delete allow 18445/tcp comment RIXXX OpenFlux alpha'),
   'failed start removes the same scoped firewall rule');
   const started = run(['start', 'alpha']);
-  ok(started.status === 0 && JSON.parse(started.stdout).active === true, 'fixture starts and enables the instance');
+  let startedJson = null;
+  try { startedJson = JSON.parse(started.stdout); } catch {}
+  ok(started.status === 0 && startedJson?.active === true,
+    `fixture starts and enables the instance${started.stderr ? `: ${started.stderr.trim()}` : ''}`);
   const stopped = run(['stop', 'alpha']);
   ok(stopped.status === 0 && JSON.parse(stopped.stdout).active === false, 'fixture stops the instance idempotently');
   const removed = run(['remove', 'alpha']);

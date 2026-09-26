@@ -268,12 +268,12 @@ install_deps() {
   apt-get update -qq
   # Bug 1: certbot removed — Caddy uses TLS-ALPN-01 (no standalone HTTP-01 needed)
   apt-get install -y -qq \
-    curl wget git ufw unzip tar xz-utils jq \
+    curl wget git ufw unzip tar xz-utils jq sqlite3 \
     ca-certificates gnupg lsb-release \
     systemd cron net-tools iproute2 \
     coreutils acl logrotate 2>/dev/null || \
   apt-get install -y \
-    curl wget git ufw unzip tar xz-utils jq \
+    curl wget git ufw unzip tar xz-utils jq sqlite3 \
     ca-certificates gnupg lsb-release \
     systemd cron net-tools iproute2 \
     coreutils acl logrotate

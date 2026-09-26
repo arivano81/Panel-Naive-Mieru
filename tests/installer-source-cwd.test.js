@@ -28,6 +28,8 @@ ok(panel.includes('script_dir/panel') && panel.includes('PWD/panel'),
 ok(caddyStart < panelStart, 'regression covers the production install order');
 ok(!/\(\(\s*[A-Za-z_][A-Za-z0-9_]*\+\+\s*\)\)/.test(install + update),
   'set -e production scripts contain no zero-valued postfix increments');
+ok(/curl wget git ufw unzip tar xz-utils jq sqlite3/.test(install),
+  'clean install provides the SQLite CLI required by doctor diagnostics');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

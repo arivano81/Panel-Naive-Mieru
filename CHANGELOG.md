@@ -132,6 +132,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Fixed `set -e` aborting installer and updater health reports on the first
   successful counter increment. Smoke tests now collect every result and reach
   the final root-only administrator report.
+- Clean installations now include the `sqlite3` CLI used by read-only doctor
+  diagnostics, so database integrity is checked instead of silently skipped.
 - Documented private vulnerability reporting, administrator containment and a
   non-silent release revocation procedure in `SECURITY.md`.
 - Added centralized runtime and HTTP access-log redaction for passwords, UUIDs,

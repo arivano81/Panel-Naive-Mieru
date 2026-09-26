@@ -92,6 +92,11 @@ ok(openfluxUninstall.status === 0, 'isolated OpenFlux uninstall regression suite
 const openfluxApi = spawnSync(process.execPath, [path.join(__dirname, 'openflux-api.test.js')],
   { stdio: 'inherit' });
 ok(openfluxApi.status === 0, 'isolated OpenFlux API regression suite passes');
+const openfluxGolden = spawnSync(process.execPath, [path.join(__dirname, 'openflux-disabled-golden.test.js')],
+  { encoding: 'utf8' });
+if (openfluxGolden.stdout) process.stdout.write(openfluxGolden.stdout);
+if (openfluxGolden.stderr) process.stderr.write(openfluxGolden.stderr);
+ok(openfluxGolden.status === 0, 'disabled OpenFlux golden isolation suite passes');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

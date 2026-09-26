@@ -415,10 +415,16 @@ sudo bash /opt/panel-naive-mieru/scripts/recover_access.sh
 | `/var/www/fake-site/` | Фейковый сайт (показывается неопознанным клиентам) |
 | `/var/log/caddy-naive/access.log` | Лог доступа caddy-naive |
 | `/var/log/rixxx-panel-install.log` | Лог установки |
+| `/var/log/panel-naive-mieru.log` | Файловый лог панели |
+| `/var/log/cascade-watchdog.log` | Журнал автовосстановления каскада |
 | `/var/lib/rixxx-panel/mita-state.json` | JSON-файл Mieru (применяется через `mita apply config`) |
 | `/var/lib/rixxx-panel/db.sqlite` | SQLite база данных пользователей |
 | `/opt/panel-naive-mieru/` | Файлы приложения панели |
 | `/usr/local/bin/caddy-naive` | Бинарный файл caddy-forwardproxy-naive |
+
+Файловые журналы панели, установщика и cascade-watchdog ротируются ежедневно
+или при достижении 10 MiB; хранится 14 сжатых поколений. Caddy использует собственную
+ротацию access-лога, поэтому `logrotate` его не обрабатывает.
 
 > ⚠️ **Важно:** `/etc/mita/` — внутреннее хранилище Mieru в формате protobuf, **не редактируется вручную**.  
 > Панель использует `/var/lib/rixxx-panel/mita-state.json` и применяет его командой `mita apply config <file>`.

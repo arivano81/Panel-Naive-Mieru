@@ -267,12 +267,12 @@ install_deps() {
     curl wget git ufw unzip tar xz-utils jq \
     ca-certificates gnupg lsb-release \
     systemd cron net-tools iproute2 \
-    coreutils acl 2>/dev/null || \
+    coreutils acl logrotate 2>/dev/null || \
   apt-get install -y \
     curl wget git ufw unzip tar xz-utils jq \
     ca-certificates gnupg lsb-release \
     systemd cron net-tools iproute2 \
-    coreutils acl
+    coreutils acl logrotate
   log_info "$(t 'Зависимости установлены ✓' 'Dependencies installed ✓')"
 }
 
@@ -1839,6 +1839,7 @@ main() {
   # Bug 41: install_panel BEFORE write_config_json so that bcryptjs (from
   # panel/node_modules) is available when we call  node -e "require('bcryptjs')"
   install_panel
+  bash "$PANEL_DIR/scripts/install_logrotate.sh"
   write_config_json
   write_version
   write_component_registry

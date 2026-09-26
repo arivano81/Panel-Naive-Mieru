@@ -125,6 +125,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Added an idempotent logrotate policy for the panel, installer and cascade
+  watchdog logs: daily or 10 MiB rotation, 14 compressed generations and
+  copy-truncate operation. Clean installs and updates both enforce it while
+  leaving Caddy's existing internal rolling writer untouched.
 - Strengthened the Linux OpenFlux multi-profile fixture: removing one active
   profile must leave the second profile's mode-600 key byte-identical, its
   instance active and its assigned listening socket present.

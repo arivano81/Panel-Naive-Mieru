@@ -2598,6 +2598,10 @@ do_update() {
 
   $DRY_RUN && { log_info "[DRY-RUN] No changes were made."; return; }
 
+  # Bound file-backed panel/installer/watchdog logs on upgraded servers too.
+  # Caddy uses its own rolling writer; Xray/OpenFlux stay in journald.
+  bash "$PANEL_DIR/scripts/install_logrotate.sh"
+
   # Bug 80/81: regenerate the Caddyfile from the (now-migrated) config + DB so the
   # new `servers { protocols h1 h2 }` block and probeMode take effect on update.
   # Older `do_update` only restarted caddy without re-rendering the config, so the

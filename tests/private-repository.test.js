@@ -117,6 +117,11 @@ const totpSecurity = spawnSync(process.execPath, [path.join(__dirname, 'totp-sec
 if (totpSecurity.stdout) process.stdout.write(totpSecurity.stdout);
 if (totpSecurity.stderr) process.stderr.write(totpSecurity.stderr);
 ok(totpSecurity.status === 0, 'optional administrator TOTP regression suite passes');
+const logrotate = spawnSync(process.execPath, [path.join(__dirname, 'logrotate.test.js')],
+  { encoding: 'utf8' });
+if (logrotate.stdout) process.stdout.write(logrotate.stdout);
+if (logrotate.stderr) process.stderr.write(logrotate.stderr);
+ok(logrotate.status === 0, 'bounded file log rotation regression suite passes');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

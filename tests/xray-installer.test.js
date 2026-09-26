@@ -21,6 +21,9 @@ ok(workflow.includes("if: matrix.release == '13'") && workflow.includes('bash te
   'Debian 13 CI runs the real pinned-binary canary');
 ok(binaryCanary.includes('run -test -config "$WORK/config.json"'),
   'binary canary validates the generated config with real Xray');
+ok(binaryCanary.includes('--socks5-hostname 127.0.0.1:18080') &&
+   binaryCanary.includes('vless-reality-canary') && binaryCanary.includes('openssl s_server'),
+  'Debian 13 canary carries HTTP through a real local VLESS REALITY client and server');
 for (const [name, source] of [['installer', script], ['binary canary', binaryCanary]]) {
   ok(source.includes('(PrivateKey|Private key)') && source.includes('Password \\(PublicKey\\)'),
     `${name} accepts the current and legacy X25519 labels`);

@@ -125,6 +125,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Extended the Debian 13 pinned-Xray canary from config validation to a real
+  local VLESS REALITY client/server tunnel, carrying an HTTP request through
+  the pinned client's SOCKS5 inbound against a disposable TLS decoy.
 - Added optional RFC 6238 administrator TOTP with confirmed QR enrollment,
   replay protection, secret masking and password-plus-code disable flow. The
   root-only access recovery script explicitly disables a lost second factor and

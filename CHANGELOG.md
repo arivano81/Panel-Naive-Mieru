@@ -113,7 +113,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Updated official checkout/setup-node CI actions to their Node 24 generations,
   removing the deprecated internal Node 20 action runtime while keeping the
-  application compatibility suite on Node.js 20.
+  application compatibility suite on Node.js 20. The runner is pinned to
+  Ubuntu 24.04 so the announced `ubuntu-latest` migration cannot silently
+  change the project's build environment.
 - Serialized the positive and wrong-key OpenFlux canary clients because one
   negotiated exit intentionally accepts only one active client session.
 - Made Direct transport and authenticated negotiation explicit in generated

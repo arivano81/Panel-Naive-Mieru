@@ -38,6 +38,7 @@ const { execSync, execFileSync } = require('child_process');
 const si             = require('systeminformation');
 const crypto         = require('crypto');   // Bug 100: module-level require so generateSafePassword() has a real Node crypto (not Web-Crypto globalThis.crypto, which lacks randomInt)
 const { readPanelVersion: resolvePanelVersion } = require('./version');
+const { applyFileTransaction } = require('./fileTransaction');
 
 // ── Paths ─────────────────────────────────────────────────────────────────────
 const PANEL_CONFIG    = '/etc/rixxx-panel/config.json';
@@ -744,9 +745,9 @@ function getLastMitaError() { return lastMitaError; }
 // panelBasicAuthHash) and drop caddy-naive into a "repeated too quickly" loop.
 // Validation up-front means a bad config is rejected without a restart, so the
 // caller can roll back while the running service stays up.
-function validateCaddyfile() {
+function validateCaddyfile(file = resolvedCaddyFile) {
   try {
-    execSync(`${resolvedCaddyBin} validate --config '${resolvedCaddyFile}' --adapter caddyfile 2>&1`,
+    execSync(`${resolvedCaddyBin} validate --config '${file}' --adapter caddyfile 2>&1`,
       { timeout: 15000 });
     return { ok: true, error: '' };
   } catch (e) {
@@ -815,6 +816,28 @@ function applyCaddyConfig() {
   return { ok: true, error: '' };
 }
 
+// Stage A: validate a candidate before it replaces the live Caddyfile. If the
+// reload/restart or its service check fails, restore and reapply the previous
+// known-good file before reporting the error to the panel.
+function applyCaddyTransaction(content) {
+  const result = applyFileTransaction({
+    targetPath: resolvedCaddyFile,
+    content,
+    mode: 0o640,
+    validate: validateCaddyfile,
+    afterWrite: fixCaddyPerms,
+    apply: applyCaddyConfig,
+    rollbackApply: applyCaddyConfig,
+  });
+  if (!result.ok) {
+    const rollback = result.rollbackError ? `; rollback failed: ${result.rollbackError}` : '';
+    lastCaddyError = `Caddy config ${result.phase}: ${result.error}${rollback}`;
+    return { ok: false, error: lastCaddyError, rolledBack: result.rolledBack };
+  }
+  lastCaddyError = '';
+  return { ok: true, error: '', rolledBack: false };
+}
+
 // Pull the real reason a (re)start failed: prefer the most recent journal lines,
 // fall back to the exception's stderr/stdout.
 function collectCaddyError(err) {
@@ -855,16 +878,6 @@ function ufwMieruRule(action, start, end, proto, comment) {
 
 // ── Mieru state JSON builder ──────────────────────────────────────────────────
 // Bug 51: use safe defaults for mieruPortStart/End in case config values absent
-// Bug 151 / Доработка 2: count the mieru-protocol users in the DB. mita FATALs
-// with "no user found" and enters a restart loop if it is started while this is
-// 0, so callers use it to keep mita idle on an empty base instead of crashing.
-function countMieruUsers() {
-  return getAllUsers().filter(u => {
-    try { return JSON.parse(u.protocols || '["naive","mieru"]').includes('mieru'); }
-    catch { return true; }
-  }).length;
-}
-
 // BUG-156: build a proto-correct mita `trafficPattern` object for a UI preset.
 // `seed` MUST be an int32 (not a boolean). We keep a STABLE per-install seed in
 // cfg.trafficPatternSeed so regenerating the config (key add/delete, toggling
@@ -913,7 +926,7 @@ function buildTrafficPattern(pat, _cfg) {
   }
 }
 
-function buildMitaStateFile() {
+function buildMitaStateContent() {
   const allUsers = getAllUsers();
   const mieruUsers = allUsers.filter(u => {
     try { return JSON.parse(u.protocols || '["naive","mieru"]').includes('mieru'); }
@@ -974,14 +987,16 @@ function buildMitaStateFile() {
     };
   }
 
+  return JSON.stringify(mieruCfg, null, 2);
+}
+
+// Kept for explicit restart/repair callers. Normal panel changes use the
+// transactional applyMitaConfig() path below.
+function buildMitaStateFile() {
   fs.mkdirSync(path.dirname(resolvedMitaFile), { recursive: true });
   const tmp = resolvedMitaFile + '.new';
-  fs.writeFileSync(tmp, JSON.stringify(mieruCfg, null, 2), { mode: 0o600 });
+  fs.writeFileSync(tmp, buildMitaStateContent(), { mode: 0o600 });
   fs.renameSync(tmp, resolvedMitaFile);
-
-  shredFile(resolvedMitaFile + '.last');
-  try { fs.copyFileSync(resolvedMitaFile, resolvedMitaFile + '.last'); } catch {}
-
   return resolvedMitaFile;
 }
 
@@ -1048,18 +1063,7 @@ function clearMitaPersistedState() {
   }
 }
 
-function applyMitaConfig() {
-  lastMitaError = '';
-  const file = buildMitaStateFile();
-  // BUG-156: structurally validate the config before doing anything with mita.
-  // A bad trafficPattern (e.g. seed as a boolean) used to be applied blindly,
-  // mita rejected it, the server config went empty and mita stayed IDLE with
-  // the Mieru port closed. We now refuse early and record the reason.
-  const v = validateMitaState(file);
-  if (!v.ok) {
-    lastMitaError = 'mita-state.json invalid (not applying): ' + v.error;
-    return false;
-  }
+function activateMitaConfig(file) {
   try {
     // Bug 96: always clear a lingering failed state first so subsequent
     //   start/restart commands are honoured by systemd.
@@ -1070,12 +1074,12 @@ function applyMitaConfig() {
     // "no user found" and spin in a restart loop. Apply the (userless) config so
     // the file is in sync, then keep the service stopped+reset until the first
     // key is created (creating a user calls applyAllConfigs() → here again).
-    if (countMieruUsers() === 0) {
+    const state = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (!Array.isArray(state.users) || state.users.length === 0) {
       try { execSync(`mita apply config ${file} 2>/dev/null`, { timeout: 15000 }); } catch {}
       try { execSync('mita stop 2>/dev/null || true', { timeout: 10000 }); } catch {}
       try { execSync('systemctl stop mita 2>/dev/null || true', { timeout: 10000 }); } catch {}
       resetMitaFailed();
-      shredFile(file + '.last');
       return true;   // idle is the correct, healthy state on an empty base
     }
 
@@ -1125,8 +1129,6 @@ function applyMitaConfig() {
       }
     }
 
-    shredFile(file + '.last');
-
     // BUG-156: with mieru users present, mita must end up RUNNING (not IDLE) —
     // an IDLE here means the config was rejected and the Mieru port stays shut.
     // Give it a moment, then verify; record the reason if it didn't come up.
@@ -1137,15 +1139,40 @@ function applyMitaConfig() {
       lastMitaError = '';
       return true;
     }
-    // Not RUNNING despite users — surface a diagnostic but don't hard-fail the
-    // whole apply (the caller may still have applied Caddy etc.).
+    // Not RUNNING despite users: fail the transaction so the previous working
+    // state is restored and reapplied instead of leaving Mieru silently IDLE.
     lastMitaError = 'mita is not RUNNING after apply (status: ' +
       (finalStatus.trim().split('\n')[0] || 'unknown') + '). Check: journalctl -u mita -n 50';
-    return true;
+    return false;
   } catch (e) {
     lastMitaError = 'applyMitaConfig error: ' + (e.message || String(e));
     return false;
   }
+}
+
+function applyMitaConfig() {
+  lastMitaError = '';
+  const result = applyFileTransaction({
+    targetPath: resolvedMitaFile,
+    content: buildMitaStateContent(),
+    mode: 0o600,
+    validate: validateMitaState,
+    apply: file => {
+      const ok = activateMitaConfig(file);
+      return { ok, error: lastMitaError || 'mita apply failed' };
+    },
+    rollbackApply: file => {
+      const ok = activateMitaConfig(file);
+      return { ok, error: lastMitaError || 'mita rollback apply failed' };
+    },
+  });
+  if (!result.ok) {
+    const rollback = result.rollbackError ? `; rollback failed: ${result.rollbackError}` : '';
+    lastMitaError = `Mieru config ${result.phase}: ${result.error}${rollback}`;
+    return false;
+  }
+  lastMitaError = '';
+  return true;
 }
 
 function restartMieru() {
@@ -1663,8 +1690,7 @@ function applyAllConfigs() {
   let caddyOk = false, mitaOk = false, hy2Ok = true, caddyError = '', hy2Error = '';
   try {
     const content = buildCaddyfile(cfg, getAllUsers());
-    writeCaddyfileAtomic(content);          // Bug 90: chown root:caddy inside
-    const r = applyCaddyConfig();           // Bug 91: full restart + verify
+    const r = applyCaddyTransaction(content);
     caddyOk = r.ok;
     if (!r.ok) {
       caddyError = r.error;

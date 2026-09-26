@@ -11,6 +11,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Added a reusable transactional configuration writer with pre-install
+  validation, atomic known-good backups and automatic rollback when service
+  apply or health checks fail. The unified Caddy and Mieru apply paths now use
+  it; sensitive Mieru backups remain restricted to mode `0600`.
 - Added GitHub Actions coverage for Node.js 20 and Debian 12/13, including the
   complete regression suite, Bash syntax checks, ShellCheck and production
   dependency audit.
@@ -26,6 +30,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Fixed Mieru rollback snapshots: the old `.last` logic copied the newly-written
+  state instead of the previous working state. A failed apply now restores and
+  reapplies the actual last-known-good configuration.
 - Fixed the cross-platform BUG-143 test: `version` and `VERSION` referred to
   the same file on case-insensitive Windows filesystems, which produced a false
   stale-version failure even though Linux behaved correctly.

@@ -34,8 +34,11 @@ ok(script.includes('port_is_busy "$port"') && script.includes('select(.port == $
 ok(script.includes('listening:$listening,healthy:$healthy') &&
    script.includes('[[ "$active" == true && "$listening" == true ]]'),
   'status requires both an active unit and its assigned listening socket');
-ok(script.includes('systemctl enable --now "$service"') && script.includes('systemctl is-active --quiet "$service"'),
-  'start enables reboot persistence and checks service health');
+ok(script.includes('timeout --signal=TERM --kill-after=5s "$limit" systemctl "$@"') &&
+   script.includes('svcctl enable --now "$service"') && script.includes('svcctl is-active --quiet "$service"'),
+  'service control is bounded and start verifies systemd health');
+ok(script.includes('validate_profile_config "$id"') && script.includes('cmp -s "$expected" "$config"'),
+  'service activation rejects a config that differs from validated metadata');
 ok(script.includes('profile failed its systemd health check; activation rolled back') &&
    script.includes('firewall_remove "$id" "$port"'), 'failed start rolls service and firewall back');
 ok(script.includes("RIXXX OpenFlux %s") &&
@@ -63,7 +66,8 @@ cmd=$1; shift
 case "$cmd" in
   is-active) [ "\${1:-}" != --quiet ] || shift; [ -f "$OPENFLUX_TEST_STATE/$1.active" ] ;;
   is-enabled) [ "\${1:-}" != --quiet ] || shift; [ -f "$OPENFLUX_TEST_STATE/$1.enabled" ] ;;
-  enable) shift; svc=$1; [ "\${OPENFLUX_TEST_FAIL_START:-0}" != 1 ] || exit 1
+  enable) shift; svc=$1; [ "\${OPENFLUX_TEST_HANG_START:-0}" != 1 ] || { sleep 5; exit 1; }
+    [ "\${OPENFLUX_TEST_FAIL_START:-0}" != 1 ] || exit 1
     id=\${svc#openflux-exit@}; id=\${id%.service}
     port=$(jq -er '.port' "$OPENFLUX_TEST_ROOT/etc/openflux/profiles/$id.json")
     touch "$OPENFLUX_TEST_STATE/$svc.active" "$OPENFLUX_TEST_STATE/$svc.enabled" "$OPENFLUX_TEST_STATE/listen.$port" ;;
@@ -109,6 +113,15 @@ echo "LISTEN 0 4096 0.0.0.0:$port 0.0.0.0:*"
   ok(listed.status === 0 && JSON.parse(listed.stdout)[0]?.id === 'alpha' &&
     !JSON.stringify(JSON.parse(listed.stdout)).includes('EncryptionKey'),
   'list returns profile state without key material');
+  const configPath = path.join(fixture, 'etc/openflux/profiles/alpha.conf');
+  const originalConfig = fs.readFileSync(configPath, 'utf8');
+  fs.writeFileSync(configPath, 'corrupted = true\n');
+  const corrupted = run(['start', 'alpha']);
+  ok(corrupted.status !== 0 && corrupted.stderr.includes('config differs from validated metadata') &&
+    !fs.existsSync(path.join(state, 'openflux-exit@alpha.service.active')) &&
+    !fs.existsSync(path.join(state, 'ufw.log')),
+  'corrupted profile config is rejected before systemd or firewall changes');
+  fs.writeFileSync(configPath, originalConfig);
   const failed = run(['start', 'alpha'], { OPENFLUX_TEST_FAIL_START: '1' });
   ok(failed.status !== 0 && !fs.existsSync(path.join(state, 'openflux-exit@alpha.service.active')),
     'failed systemd start leaves no active instance');
@@ -116,6 +129,16 @@ echo "LISTEN 0 4096 0.0.0.0:$port 0.0.0.0:*"
   ok(firewallAfterFailure.includes('allow 18445/tcp comment RIXXX OpenFlux alpha') &&
     firewallAfterFailure.includes('delete allow 18445/tcp comment RIXXX OpenFlux alpha'),
   'failed start removes the same scoped firewall rule');
+  const hungStartedAt = Date.now();
+  const hung = run(['start', 'alpha'], { OPENFLUX_TEST_HANG_START: '1' });
+  const hungElapsed = Date.now() - hungStartedAt;
+  ok(hung.status !== 0 && hungElapsed < 4000 &&
+    !fs.existsSync(path.join(state, 'openflux-exit@alpha.service.active')),
+  `hung systemd start is terminated and rolled back in bounded time (${hungElapsed} ms)`);
+  const firewallAfterHang = fs.readFileSync(path.join(state, 'ufw.log'), 'utf8');
+  ok((firewallAfterHang.match(/allow 18445\/tcp comment RIXXX OpenFlux alpha/g) || []).length ===
+    (firewallAfterHang.match(/delete allow 18445\/tcp comment RIXXX OpenFlux alpha/g) || []).length,
+  'hung start leaves no unmatched scoped firewall rule');
   const missingListener = run(['start', 'alpha'], { OPENFLUX_TEST_NO_LISTENER: '1' });
   ok(missingListener.status !== 0 &&
     !fs.existsSync(path.join(state, 'openflux-exit@alpha.service.active')),

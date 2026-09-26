@@ -70,6 +70,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Expanded the Linux lifecycle fixture to run two isolated profiles at once,
   verify distinct keys and ports, retain both enabled instance units for reboot,
   and prove that stopping/removing one profile leaves the other active.
+- Bounded every OpenFlux systemd operation with a hard timeout. Start, restart,
+  and Repair now reject a profile config that differs from its validated
+  metadata before changing a service or firewall; the Linux fault fixture
+  verifies corrupt-config refusal and hung-start rollback.
 - Documented the OpenFlux share-link compatibility gate: pinned release `0.0.5`
   has no `--share` or `openflux://` implementation, so the panel deliberately
   keeps the verified client bundle instead of inventing an incompatible QR URI.

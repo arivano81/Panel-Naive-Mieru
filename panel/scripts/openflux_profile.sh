@@ -34,7 +34,7 @@ profile_secret() { printf '%s/%s.key' "$SECRET_DIR" "$1"; }
 firewall_comment() { printf 'RIXXX OpenFlux %s' "$1"; }
 
 [[ -n "$TEST_ROOT" || $EUID -eq 0 ]] || die "run as root"
-for command in node jq openssl systemctl flock ss install; do
+for command in node jq openssl systemctl flock ss install cmp timeout; do
   command -v "$command" >/dev/null 2>&1 || die "missing dependency: $command"
 done
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -43,6 +43,12 @@ ADAPTER="$SCRIPT_DIR/../server/openfluxAdapter.js"
 mkdir -p "$(dirname "$LOCK")"
 exec 9>"$LOCK"
 flock -n 9 || die "another OpenFlux profile operation is running"
+
+svcctl() {
+  local limit=25s
+  [[ -z "$TEST_ROOT" ]] || limit=1s
+  timeout --signal=TERM --kill-after=5s "$limit" systemctl "$@"
+}
 
 require_installation() {
   [[ -x "$OPENFLUX_BIN" ]] || die "OpenFlux is not installed"
@@ -54,6 +60,24 @@ require_profile() {
   local id=$1
   [[ -f "$(profile_config "$id")" && -f "$(profile_meta "$id")" && -f "$(profile_secret "$id")" ]] \
     || die "profile '$id' does not exist or is incomplete"
+}
+
+validate_profile_config() {
+  local id=$1 meta config secret expected host port
+  meta=$(profile_meta "$id"); config=$(profile_config "$id"); secret=$(profile_secret "$id")
+  [[ -s "$secret" ]] || die "profile '$id' has an empty key"
+  host=$(jq -er '.host' "$meta") || die "profile '$id' metadata is invalid"
+  port=$(jq -er '.port' "$meta") || die "profile '$id' metadata is invalid"
+  expected=$(mktemp)
+  if ! OPENFLUX_ADAPTER="$ADAPTER" OPENFLUX_ID="$id" OPENFLUX_PORT="$port" OPENFLUX_HOST="$host" \
+    node <<'NODE' > "$expected"
+const { buildOpenFluxExitConfig } = require(process.env.OPENFLUX_ADAPTER);
+process.stdout.write(buildOpenFluxExitConfig({ id: process.env.OPENFLUX_ID,
+  port: Number(process.env.OPENFLUX_PORT), host: process.env.OPENFLUX_HOST }));
+NODE
+  then rm -f "$expected"; die "profile '$id' metadata failed validation"; fi
+  cmp -s "$expected" "$config" || { rm -f "$expected"; die "profile '$id' config differs from validated metadata"; }
+  rm -f "$expected"
 }
 
 firewall_add() {
@@ -153,16 +177,17 @@ start_profile() {
   require_installation; require_profile "$id"
   meta=$(profile_meta "$id"); port=$(jq -er '.port' "$meta"); valid_port "$port" || die "invalid stored port"
   service=$(service_name "$id")
-  if systemctl is-active --quiet "$service"; then
+  validate_profile_config "$id"
+  if svcctl is-active --quiet "$service"; then
     jq -n --arg id "$id" --arg service "$service" --argjson port "$port" \
       '{id:$id,service:$service,port:$port,active:true,changed:false}'
     return
   fi
   port_is_busy "$port" && die "TCP port $port is already in use"
   firewall_add "$id" "$port"
-  if ! systemctl enable --now "$service" >/dev/null 2>&1 ||
-     ! systemctl is-active --quiet "$service" || ! wait_for_port "$port"; then
-    systemctl disable --now "$service" >/dev/null 2>&1 || true
+  if ! svcctl enable --now "$service" >/dev/null 2>&1 ||
+     ! svcctl is-active --quiet "$service" || ! wait_for_port "$port"; then
+    svcctl disable --now "$service" >/dev/null 2>&1 || true
     firewall_remove "$id" "$port"
     die "profile failed its systemd health check; activation rolled back"
   fi
@@ -175,8 +200,8 @@ stop_profile() {
   valid_id "$id" || die "invalid profile id"
   require_installation; require_profile "$id"
   meta=$(profile_meta "$id"); port=$(jq -er '.port' "$meta"); service=$(service_name "$id")
-  systemctl is-active --quiet "$service" && was_active=true
-  systemctl disable --now "$service" >/dev/null 2>&1 || true
+  svcctl is-active --quiet "$service" && was_active=true
+  svcctl disable --now "$service" >/dev/null 2>&1 || true
   firewall_remove "$id" "$port"
   jq -n --arg id "$id" --arg service "$service" --argjson port "$port" --argjson changed "$was_active" \
     '{id:$id,service:$service,port:$port,active:false,changed:$changed}'
@@ -185,28 +210,28 @@ stop_profile() {
 restart_profile() {
   local id=$1 service meta port
   valid_id "$id" || die "invalid profile id"
-  require_installation; require_profile "$id"; service=$(service_name "$id")
+  require_installation; require_profile "$id"; validate_profile_config "$id"; service=$(service_name "$id")
   meta=$(profile_meta "$id"); port=$(jq -er '.port' "$meta"); valid_port "$port" || die "invalid stored port"
-  systemctl is-active --quiet "$service" || die "profile is not active"
-  systemctl restart "$service"
-  systemctl is-active --quiet "$service" && wait_for_port "$port" || die "profile failed after restart"
+  svcctl is-active --quiet "$service" || die "profile is not active"
+  svcctl restart "$service"
+  svcctl is-active --quiet "$service" && wait_for_port "$port" || die "profile failed after restart"
   jq -n --arg id "$id" --arg service "$service" '{id:$id,service:$service,active:true,restarted:true}'
 }
 
 reset_profile() {
   local id=$1 meta port service
   valid_id "$id" || die "invalid profile id"
-  require_installation; require_profile "$id"
+  require_installation; require_profile "$id"; validate_profile_config "$id"
   meta=$(profile_meta "$id"); port=$(jq -er '.port' "$meta"); valid_port "$port" || die "invalid stored port"
   service=$(service_name "$id")
-  systemctl disable --now "$service" >/dev/null 2>&1 || true
+  svcctl disable --now "$service" >/dev/null 2>&1 || true
   firewall_remove "$id" "$port"
-  systemctl reset-failed "$service" >/dev/null 2>&1 || true
+  svcctl reset-failed "$service" >/dev/null 2>&1 || true
   port_is_busy "$port" && die "TCP port $port is still in use after stopping the profile"
   firewall_add "$id" "$port"
-  if ! systemctl enable --now "$service" >/dev/null 2>&1 ||
-     ! systemctl is-active --quiet "$service" || ! wait_for_port "$port"; then
-    systemctl disable --now "$service" >/dev/null 2>&1 || true
+  if ! svcctl enable --now "$service" >/dev/null 2>&1 ||
+     ! svcctl is-active --quiet "$service" || ! wait_for_port "$port"; then
+    svcctl disable --now "$service" >/dev/null 2>&1 || true
     firewall_remove "$id" "$port"
     die "profile reset failed its listener health check; activation rolled back"
   fi
@@ -219,8 +244,8 @@ status_profile() {
   valid_id "$id" || die "invalid profile id"
   require_profile "$id"; meta=$(profile_meta "$id"); service=$(service_name "$id")
   port=$(jq -er '.port' "$meta"); valid_port "$port" || die "invalid stored port"
-  systemctl is-active --quiet "$service" && active=true
-  systemctl is-enabled --quiet "$service" && enabled=true
+  svcctl is-active --quiet "$service" && active=true
+  svcctl is-enabled --quiet "$service" && enabled=true
   port_is_busy "$port" && listening=true
   [[ "$active" == true && "$listening" == true ]] && healthy=true
   jq --arg service "$service" --argjson active "$active" --argjson enabled "$enabled" \
@@ -252,7 +277,7 @@ rotate_profile() (
   secret=$(profile_secret "$id"); bundle="$REPORT_DIR/openflux-${id}-client"
   service=$(service_name "$id")
   [[ -f "$bundle/openflux.key" ]] || die "client bundle is incomplete"
-  systemctl is-active --quiet "$service" && active=true
+  svcctl is-active --quiet "$service" && active=true
   work=$(mktemp -d)
   cp -- "$secret" "$work/old-server.key"
   cp -- "$bundle/openflux.key" "$work/old-client.key"
@@ -265,7 +290,7 @@ rotate_profile() (
       install -o root -g root -m 0600 "$work/old-client.key" "$bundle/openflux.key"
     fi
   }
-  trap 'status=$?; trap - EXIT; if (( status != 0 || committed == 0 )); then if (( applied == 1 )); then restore_old_keys; [[ "$active" == true ]] && systemctl restart "$service" >/dev/null 2>&1 || true; fi; fi; rm -rf "$work"; exit "$status"' EXIT
+  trap 'status=$?; trap - EXIT; if (( status != 0 || committed == 0 )); then if (( applied == 1 )); then restore_old_keys; [[ "$active" == true ]] && svcctl restart "$service" >/dev/null 2>&1 || true; fi; fi; rm -rf "$work"; exit "$status"' EXIT
   openssl rand -base64 48 > "$work/new.key"
   chmod 0600 "$work/new.key"
   if [[ -n "$TEST_ROOT" ]]; then
@@ -279,8 +304,8 @@ rotate_profile() (
   mv "${secret}.new" "$secret"
   mv "$bundle/openflux.key.new" "$bundle/openflux.key"
   if [[ "$active" == true ]]; then
-    systemctl restart "$service"
-    systemctl is-active --quiet "$service" || die "profile failed after key rotation"
+    svcctl restart "$service"
+    svcctl is-active --quiet "$service" || die "profile failed after key rotation"
   fi
   committed=1
   jq -n --arg id "$id" --arg service "$service" --argjson active "$active" \
@@ -292,7 +317,7 @@ remove_profile() {
   valid_id "$id" || die "invalid profile id"
   require_installation; require_profile "$id"
   meta=$(profile_meta "$id"); port=$(jq -er '.port' "$meta")
-  systemctl disable --now "$(service_name "$id")" >/dev/null 2>&1 || true
+  svcctl disable --now "$(service_name "$id")" >/dev/null 2>&1 || true
   firewall_remove "$id" "$port"
   rm -f -- "$(profile_config "$id")" "$meta" "$(profile_secret "$id")"
   bundle="$REPORT_DIR/openflux-${id}-client"

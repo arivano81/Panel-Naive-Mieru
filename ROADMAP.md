@@ -255,8 +255,8 @@ OpenFlux — отдельная подсистема, а не четвёртый
    и firewall; CI поднимает одноразовый encrypted L4/Direct туннель и отвергает неверный
    ключ. Изолированный CLI уже реализует create/start/stop/restart/status/remove с
    per-profile key и firewall rollback. Mock-systemd/UFW fault-тест проверяет failed-start
-   rollback, отказ до изменения службы при повреждённом config, bounded timeout зависшего
-   systemd и полный lifecycle в изолированном `/tmp` root. Далее нужен ручной
+   rollback, отказ до изменения службы при занятом порте или повреждённом config, bounded
+   timeout зависшего systemd и полный lifecycle в изолированном `/tmp` root. Далее нужен ручной
    systemd/reboot/uninstall canary на отдельном Debian 13.
 3. **Opt-in UI** — закрытый admin API и отдельная экспериментальная страница уже
    предоставляют install/list/create/start/stop/restart/remove без выдачи ключа. До полного
@@ -341,8 +341,8 @@ instance-unit, числом строк и фильтром потенциаль�
 - golden-тест подтверждает неизменность Caddyfile, Mieru, Hy2, Xray и подписок при выключенном модуле;
 - install, update, start, stop, reset и uninstall OpenFlux идемпотентны
   (точный install/update завершается до сети; reset и архивируемый uninstall покрыты Linux fixture);
-- fault-тесты покрывают повреждённый config, неудачный и зависший старт systemd; ещё нужны
-  исполняемые сценарии оборванной загрузки, неправильного SHA-256, занятого порта и пропавшей сети;
+- fault-тесты покрывают занятый порт, повреждённый config, неудачный и зависший старт systemd;
+  ещё нужны исполняемые сценарии оборванной загрузки, неправильного SHA-256 и пропавшей сети;
 - каждый сбой оставляет основные службы активными и исходные firewall-правила неизменными;
 - два профиля могут работать одновременно на разных портах — покрыто Linux lifecycle fixture;
 - один профиль не читает ключ другого — fixture проверяет разные mode-600 ключи и независимое удаление;

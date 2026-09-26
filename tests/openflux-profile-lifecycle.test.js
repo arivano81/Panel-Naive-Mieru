@@ -113,6 +113,14 @@ echo "LISTEN 0 4096 0.0.0.0:$port 0.0.0.0:*"
   ok(listed.status === 0 && JSON.parse(listed.stdout)[0]?.id === 'alpha' &&
     !JSON.stringify(JSON.parse(listed.stdout)).includes('EncryptionKey'),
   'list returns profile state without key material');
+  const occupiedPort = path.join(state, 'listen.18445');
+  fs.writeFileSync(occupiedPort, 'occupied\n');
+  const occupied = run(['start', 'alpha']);
+  ok(occupied.status !== 0 && occupied.stderr.includes('TCP port 18445 is already in use') &&
+    !fs.existsSync(path.join(state, 'openflux-exit@alpha.service.active')) &&
+    !fs.existsSync(path.join(state, 'ufw.log')),
+  'occupied port is rejected before systemd or firewall changes');
+  fs.rmSync(occupiedPort);
   const configPath = path.join(fixture, 'etc/openflux/profiles/alpha.conf');
   const originalConfig = fs.readFileSync(configPath, 'utf8');
   fs.writeFileSync(configPath, 'corrupted = true\n');

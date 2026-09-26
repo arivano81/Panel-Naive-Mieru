@@ -372,10 +372,28 @@ function deleteUser(id) {
   else memUsers.delete(id);
 }
 
+function measuredUsageMB(user) {
+  if (!user) return 0;
+  const nonVless = Math.max(0, Number(user.usedMB) || 0);
+  const vlessBytes = Math.max(0, Number(user.vlessUploadBytes) || 0) +
+    Math.max(0, Number(user.vlessDownloadBytes) || 0);
+  return nonVless + vlessBytes / 1048576;
+}
+
+function userAccessState(user, now = Date.now()) {
+  if (!user) return { active: false, reason: 'missing' };
+  if (user.expiry) {
+    const expiry = Date.parse(user.expiry);
+    if (!Number.isFinite(expiry) || expiry <= now) return { active: false, reason: 'expired' };
+  }
+  const quotaMB = Math.max(0, Number(user.quotaMB) || 0);
+  if (quotaMB > 0 && measuredUsageMB(user) >= quotaMB)
+    return { active: false, reason: 'quota' };
+  return { active: true, reason: null };
+}
+
 function userAccessActive(user, now = Date.now()) {
-  if (!user || !user.expiry) return true;
-  const expiry = Date.parse(user.expiry);
-  return Number.isFinite(expiry) && expiry > now;
+  return userAccessState(user, now).active;
 }
 
 // ── Persist config ────────────────────────────────────────────────────────────
@@ -5582,23 +5600,24 @@ wss.on('connection', ws => {
   ws.on('error',  () => clearInterval(iv));
 });
 
-// ── Expiry cron — every 5 min ─────────────────────────────────────────────────
-// Expiry suspends credentials; it must not destroy the user record. Keeping the
-// row lets an administrator extend the date and restore every protocol/UUID.
-let _expiredAccessIds = new Set();
+// ── Access-policy cron — every 5 min ──────────────────────────────────────────
+// Expiry/quota suspend credentials; they must not destroy the user record.
+// Keeping the row lets an administrator extend/increase the limit and restore
+// every protocol, password, UUID, subscription URL, and traffic history.
+let _suspendedAccessIds = new Set();
 cron.schedule('*/5 * * * *', () => {
   const allUsers = getAllUsers();
   const next = new Set(allUsers.filter(user => !userAccessActive(user)).map(user => user.id));
-  const changed = next.size !== _expiredAccessIds.size ||
-    [...next].some(id => !_expiredAccessIds.has(id));
+  const changed = next.size !== _suspendedAccessIds.size ||
+    [...next].some(id => !_suspendedAccessIds.has(id));
   if (!changed) return;
   for (const user of allUsers) {
-    if (next.has(user.id) && !_expiredAccessIds.has(user.id))
-      console.log('[CRON] Suspending expired user:', user.username);
-    if (!next.has(user.id) && _expiredAccessIds.has(user.id))
-      console.log('[CRON] Restoring renewed user:', user.username);
+    if (next.has(user.id) && !_suspendedAccessIds.has(user.id))
+      console.log(`[CRON] Suspending user (${userAccessState(user).reason}):`, user.username);
+    if (!next.has(user.id) && _suspendedAccessIds.has(user.id))
+      console.log('[CRON] Restoring user after policy change:', user.username);
   }
-  _expiredAccessIds = next;
+  _suspendedAccessIds = next;
   applyAllConfigsAsync();
 });
 
@@ -5617,6 +5636,8 @@ cron.schedule('* * * * *', () => {
     // Bug 97: also fold in NaiveProxy traffic from the Caddy access log so
     //   naive-only users are persisted with non-zero usage.
     const naive = parseCaddyTraffic(LOG_CADDY);
+    let hy2 = {};
+    try { hy2 = readHy2Traffic() || {}; } catch {}
 
     // Build a combined per-username map.
     const combined = {};
@@ -5636,6 +5657,13 @@ cron.schedule('* * * * *', () => {
       if (n.lastSeen && (!c.lastSeen || n.lastSeen > c.lastSeen)) c.lastSeen = n.lastSeen;
       combined[user] = c;
     }
+    for (const [user, h] of Object.entries(hy2)) {
+      const c = combined[user] || { uploadMB: 0, downloadMB: 0, usedMB: 0, lastSeen: null };
+      c.uploadMB += h.uploadMB || 0;
+      c.downloadMB += h.downloadMB || 0;
+      c.usedMB += h.usedMB || 0;
+      combined[user] = c;
+    }
 
     const entries = Object.entries(combined);
     if (!entries.length) return;
@@ -5644,7 +5672,10 @@ cron.schedule('* * * * *', () => {
     entries.forEach(([username, s]) => ins.run(username, s.uploadMB, s.downloadMB, ts));
     entries.forEach(([username, s]) => {
       const u = getUserByUsername(username);
-      if (u) upsertUser({ ...u, usedMB: s.usedMB, lastSeen: s.lastSeen || ts, updatedAt: ts });
+      // Never lower persisted measured usage when a runtime counter restarts or
+      // a rolling log/window expires. This prevents quota bypass by restart.
+      if (u) upsertUser({ ...u, usedMB: Math.max(Number(u.usedMB) || 0, s.usedMB || 0),
+        lastSeen: s.lastSeen || u.lastSeen || ts, updatedAt: ts });
     });
   } catch {}
 });

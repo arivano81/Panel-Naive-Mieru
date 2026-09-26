@@ -26,6 +26,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   durable totals through backup/restore.
 - Expired users are now suspended across Caddy, Mieru, Hy2, and Xray without
   deleting their credentials; extending the date restores the same keys.
+- Added a shared measurable-traffic quota gate across all installed protocols.
+  Raising the quota restores the same credentials. Persisted usage never moves
+  backwards after a runtime counter reset; unaffiliated Naive CONNECT bytes
+  remain server-wide and are deliberately not invented per user.
 
 ---
 

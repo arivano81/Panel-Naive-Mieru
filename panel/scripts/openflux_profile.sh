@@ -8,6 +8,20 @@ SECRET_DIR="$OPENFLUX_DIR/secrets"
 UNIT="/etc/systemd/system/openflux-exit@.service"
 LOCK="/run/lock/rixxx-openflux-profile.lock"
 REPORT_DIR="/root"
+TEST_ROOT="${OPENFLUX_TEST_ROOT:-}"
+
+if [[ -n "$TEST_ROOT" ]]; then
+  [[ "$TEST_ROOT" == /tmp/* && "$TEST_ROOT" != "/tmp/" ]] || {
+    echo "[OPENFLUX] ERROR: OPENFLUX_TEST_ROOT must be a dedicated /tmp subdirectory" >&2; exit 1;
+  }
+  OPENFLUX_BIN="$TEST_ROOT/usr/local/bin/openflux"
+  OPENFLUX_DIR="$TEST_ROOT/etc/openflux"
+  PROFILE_DIR="$OPENFLUX_DIR/profiles"
+  SECRET_DIR="$OPENFLUX_DIR/secrets"
+  UNIT="$TEST_ROOT/etc/systemd/system/openflux-exit@.service"
+  LOCK="$TEST_ROOT/run/lock/rixxx-openflux-profile.lock"
+  REPORT_DIR="$TEST_ROOT/root"
+fi
 
 log() { printf '[OPENFLUX] %s\n' "$*"; }
 die() { printf '[OPENFLUX] ERROR: %s\n' "$*" >&2; exit 1; }
@@ -19,7 +33,7 @@ profile_meta() { printf '%s/%s.json' "$PROFILE_DIR" "$1"; }
 profile_secret() { printf '%s/%s.key' "$SECRET_DIR" "$1"; }
 firewall_comment() { printf 'RIXXX OpenFlux %s' "$1"; }
 
-[[ $EUID -eq 0 ]] || die "run as root"
+[[ -n "$TEST_ROOT" || $EUID -eq 0 ]] || die "run as root"
 for command in node jq openssl systemctl flock ss install; do
   command -v "$command" >/dev/null 2>&1 || die "missing dependency: $command"
 done
@@ -33,7 +47,7 @@ flock -n 9 || die "another OpenFlux profile operation is running"
 require_installation() {
   [[ -x "$OPENFLUX_BIN" ]] || die "OpenFlux is not installed"
   [[ -f "$UNIT" ]] || die "OpenFlux systemd unit is not installed"
-  id openflux >/dev/null 2>&1 || die "OpenFlux system user is missing"
+  [[ -n "$TEST_ROOT" ]] || id openflux >/dev/null 2>&1 || die "OpenFlux system user is missing"
 }
 
 require_profile() {
@@ -95,9 +109,15 @@ NODE
     '{schema:1,id:$id,port:$port,host:$host,transport:"direct",mode:"l4",createdAt:$created}' \
     > "$work/profile.json"
 
-  install -o openflux -g openflux -m 0600 "$work/profile.key" "${secret}.new"
-  install -o root -g openflux -m 0640 "$work/profile.conf" "${config}.new"
-  install -o root -g openflux -m 0640 "$work/profile.json" "${meta}.new"
+  if [[ -n "$TEST_ROOT" ]]; then
+    install -m 0600 "$work/profile.key" "${secret}.new"
+    install -m 0640 "$work/profile.conf" "${config}.new"
+    install -m 0640 "$work/profile.json" "${meta}.new"
+  else
+    install -o openflux -g openflux -m 0600 "$work/profile.key" "${secret}.new"
+    install -o root -g openflux -m 0640 "$work/profile.conf" "${config}.new"
+    install -o root -g openflux -m 0640 "$work/profile.json" "${meta}.new"
+  fi
   mv "${secret}.new" "$secret"
   mv "${config}.new" "$config"
   mv "${meta}.new" "$meta"

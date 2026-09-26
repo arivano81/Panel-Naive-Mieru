@@ -248,7 +248,8 @@ OpenFlux — отдельная подсистема, а не четвёртый
 2. **Isolated canary** — opt-in установщик подготавливает проверенный бинарник без запуска
    и firewall; CI поднимает одноразовый encrypted L4/Direct туннель и отвергает неверный
    ключ. Изолированный CLI уже реализует create/start/stop/restart/status/remove с
-   per-profile key и firewall rollback. Далее нужны fault-тесты и ручной
+   per-profile key и firewall rollback. Mock-systemd/UFW fault-тест проверяет failed-start
+   rollback и полный lifecycle в изолированном `/tmp` root. Далее нужен ручной
    systemd/reboot/uninstall canary на отдельном Debian 13.
 3. **Opt-in UI** — кнопка установки появляется только после прохождения regression и fault-тестов.
 

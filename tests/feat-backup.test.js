@@ -31,8 +31,8 @@ ok(/app\.post\(\s*['"]\/api\/backup\/import['"]\s*,\s*requireAuth/.test(src),
    'POST /api/backup/import is registered and auth-gated');
 ok(/const BACKUP_FORMAT\s*=\s*'rixxx-panel-backup'/.test(backupRestoreSrc),
    'backup format tag is "rixxx-panel-backup"');
-ok(/const BACKUP_SCHEMA\s*=\s*3/.test(backupRestoreSrc),
-   'backup schema version is 3');
+ok(/const BACKUP_SCHEMA\s*=\s*4/.test(backupRestoreSrc),
+   'backup schema version is 4');
 
 // Import must reject a wrong format tag / bad schema / missing sections BEFORE
 // mutating anything.

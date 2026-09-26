@@ -21,6 +21,10 @@ ok(workflow.includes("if: matrix.release == '13'") && workflow.includes('bash te
   'Debian 13 CI runs the real pinned-binary canary');
 ok(binaryCanary.includes('run -test -config "$WORK/config.json"'),
   'binary canary validates the generated config with real Xray');
+for (const [name, source] of [['installer', script], ['binary canary', binaryCanary]]) {
+  ok(source.includes('(PrivateKey|Private key)') && source.includes('Password \\(PublicKey\\)'),
+    `${name} accepts the current and legacy X25519 labels`);
+}
 ok(/XRAY_ASSET="Xray-linux-64\.zip"/.test(script), 'amd64 release asset is pinned');
 ok(script.includes('23cd9af937744d97776ee35ecad4972cf4b2109d1e0fe6be9930467608f7c8ae'),
   'official SHA-256 is pinned');

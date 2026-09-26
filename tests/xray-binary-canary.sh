@@ -22,8 +22,8 @@ unzip -q "$ARCHIVE" xray -d "$WORK"
 "$WORK/xray" version | grep -F "${VERSION#v}" >/dev/null
 
 KEYS=$("$WORK/xray" x25519)
-PRIVATE_KEY=$(printf '%s\n' "$KEYS" | sed -nE 's/^Private key:[[:space:]]*//p' | head -n1)
-PUBLIC_KEY=$(printf '%s\n' "$KEYS" | sed -nE 's/^Public key:[[:space:]]*//p' | head -n1)
+PRIVATE_KEY=$(printf '%s\n' "$KEYS" | sed -nE 's/^(PrivateKey|Private key):[[:space:]]*//p' | head -n1)
+PUBLIC_KEY=$(printf '%s\n' "$KEYS" | sed -nE 's/^(Password \(PublicKey\)|Password|Public key):[[:space:]]*//p' | head -n1)
 [[ -n "$PRIVATE_KEY" && -n "$PUBLIC_KEY" ]] || {
   echo "pinned binary did not emit the expected X25519 key format" >&2; exit 1;
 }

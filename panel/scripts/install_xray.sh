@@ -61,8 +61,8 @@ unzip -q "$ARCHIVE" xray -d "$WORK/unpacked"
   || die "downloaded binary version does not match $XRAY_VERSION"
 
 KEYS=$("$WORK/unpacked/xray" x25519)
-PRIVATE_KEY=$(printf '%s\n' "$KEYS" | sed -nE 's/^Private key:[[:space:]]*//p' | head -n1)
-PUBLIC_KEY=$(printf '%s\n' "$KEYS" | sed -nE 's/^Public key:[[:space:]]*//p' | head -n1)
+PRIVATE_KEY=$(printf '%s\n' "$KEYS" | sed -nE 's/^(PrivateKey|Private key):[[:space:]]*//p' | head -n1)
+PUBLIC_KEY=$(printf '%s\n' "$KEYS" | sed -nE 's/^(Password \(PublicKey\)|Password|Public key):[[:space:]]*//p' | head -n1)
 [[ -n "$PRIVATE_KEY" && -n "$PUBLIC_KEY" ]] || die "could not generate REALITY key pair"
 SHORT_ID=$(openssl rand -hex 8)
 

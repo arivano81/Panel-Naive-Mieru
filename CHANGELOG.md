@@ -42,6 +42,12 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   version, generates real X25519 keys, and validates the generated user config
   with the actual `xray run -test` command.
 
+### Fixed
+
+- Updated REALITY key parsing for the current Xray `PrivateKey` and
+  `Password (PublicKey)` output while retaining compatibility with legacy
+  `Private key` and `Public key` labels.
+
 ---
 
 ## [v1.12.0] - 2026-09-26

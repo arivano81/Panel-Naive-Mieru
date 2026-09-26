@@ -14,6 +14,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added the first OpenFlux Experimental isolation layer: a pure pinned-release
   L4/Direct adapter, matching client config, hardened unit template, validation
   tests, and a stage specification. It is not imported or activated by the panel.
+- Added an internal opt-in OpenFlux `0.0.5` installer that verifies the release
+  SHA-256 and binary identity, installs no profile, opens no port, starts no
+  service, and records the disabled component without losing it on panel updates.
 - Began VLESS stage B with an isolated REALITY/Vision config adapter and a
   pinned Xray-core `v26.3.27` installer. The installer verifies the official
   amd64 SHA-256, validates config before activation, uses a hardened dedicated

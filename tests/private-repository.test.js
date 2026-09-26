@@ -27,7 +27,7 @@ for (const [name, source] of [['install.sh', install], ['update.sh', update]]) {
   ok(source.includes('COMPONENT_REGISTRY="/etc/rixxx-panel/components.json"'),
     `${name} uses the canonical component registry path`);
   ok(/write_component_registry\(\)/.test(source), `${name} defines component registry writer`);
-  ok(source.includes('vless:{installed:$xrayInstalled') && source.includes('openflux:{installed:false}'),
+  ok(source.includes('vless:{installed:$xrayInstalled') && source.includes('openflux:{installed:$openfluxInstalled'),
     `${name} detects VLESS while reserving a disabled OpenFlux registry entry`);
 }
 ok(update.includes('--doctor)    MODE="doctor"'), 'updater parses --doctor mode');
@@ -77,6 +77,9 @@ ok(vlessFederation.status === 0, 'VLESS federation regression suite passes');
 const openfluxAdapter = spawnSync(process.execPath, [path.join(__dirname, 'openflux-adapter.test.js')],
   { stdio: 'inherit' });
 ok(openfluxAdapter.status === 0, 'isolated OpenFlux adapter regression suite passes');
+const openfluxInstaller = spawnSync(process.execPath, [path.join(__dirname, 'openflux-installer.test.js')],
+  { stdio: 'inherit' });
+ok(openfluxInstaller.status === 0, 'opt-in OpenFlux installer regression suite passes');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

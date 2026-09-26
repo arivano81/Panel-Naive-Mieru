@@ -667,7 +667,7 @@ get_caddy_version_file() {
 
 write_component_registry() {
   local tmp="${COMPONENT_REGISTRY}.new"
-  local caddy_v mieru_v hy2_v="" hy2_installed=false xray_v="" xray_installed=false
+  local caddy_v mieru_v hy2_v="" hy2_installed=false xray_v="" xray_installed=false openflux_installed=false
   caddy_v=$("$CADDY_BIN" version 2>/dev/null | head -n1 || "$CADDY_BIN" --version 2>/dev/null | head -n1 || true)
   mieru_v=$(mita version 2>/dev/null | head -n1 || true)
   if [[ -x /usr/local/bin/hysteria ]]; then
@@ -678,6 +678,7 @@ write_component_registry() {
     xray_installed=true
     xray_v=$(/usr/local/bin/xray version 2>/dev/null | head -n1 || true)
   fi
+  [[ ! -x /usr/local/bin/openflux ]] || openflux_installed=true
   jq -n \
     --arg generated "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     --arg source "$REPO_URL" --arg branch "main" \
@@ -685,13 +686,14 @@ write_component_registry() {
     --arg mieru "$mieru_v" --arg hy2 "$hy2_v" \
     --argjson hy2Installed "$hy2_installed" \
     --arg xray "$xray_v" --argjson xrayInstalled "$xray_installed" \
+    --arg openflux "0.0.5" --argjson openfluxInstalled "$openflux_installed" \
     '{schema:1,generatedAt:$generated,source:{repository:$source,branch:$branch},components:{
       panel:{installed:true,version:$panel,path:"/opt/panel-naive-mieru"},
       caddyNaive:{installed:true,version:$caddy,path:"/usr/local/bin/caddy-naive"},
       mieru:{installed:true,version:$mieru,path:"/usr/local/bin/mita"},
       hysteria2:{installed:$hy2Installed,version:$hy2,path:"/usr/local/bin/hysteria"},
       vless:{installed:$xrayInstalled,version:$xray,path:"/usr/local/bin/xray",service:"xray.service"},
-      openflux:{installed:false}
+      openflux:{installed:$openfluxInstalled,version:(if $openfluxInstalled then $openflux else "" end),path:"/usr/local/bin/openflux",service:"openflux-exit@.service",enabled:false}
     }}' > "$tmp"
   chmod 644 "$tmp"
   mv "$tmp" "$COMPONENT_REGISTRY"

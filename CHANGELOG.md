@@ -47,6 +47,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added ordered `config.json` migrations with a persisted `schemaVersion`, safe
   opt-in defaults and forward-schema refusal. Unknown operator fields and
   explicit `false` settings are preserved.
+- Backup schema v2 now preserves subscription tokens and bonus links. Restore is
+  transactional across config and users, requires all services to pass health
+  checks, and reapplies the previous state automatically on failure.
 - Fixed installer, updater and panel links that still targeted the parent
   repository. Production installs now stay on this fork's `main` branch.
 - Fixed Mieru rollback snapshots: the old `.last` logic copied the newly-written

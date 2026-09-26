@@ -50,6 +50,9 @@ ok(migrations.status === 0, 'explicit SQLite migration regression suite passes')
 const configMigrations = spawnSync(process.execPath, [path.join(__dirname, 'config-migrations.test.js')],
   { stdio: 'inherit' });
 ok(configMigrations.status === 0, 'explicit config migration regression suite passes');
+const backupRestore = spawnSync(process.execPath, [path.join(__dirname, 'backup-restore.test.js')],
+  { stdio: 'inherit' });
+ok(backupRestore.status === 0, 'clean-install backup restore regression suite passes');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

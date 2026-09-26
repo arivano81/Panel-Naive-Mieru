@@ -24,6 +24,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  \u2713 ' + m); } else { f
 
 const ROOT      = path.join(__dirname, '..');
 const serverSrc = fs.readFileSync(path.join(ROOT, 'panel', 'server', 'index.js'), 'utf8');
+const migrationSrc = fs.readFileSync(path.join(ROOT, 'panel', 'server', 'databaseMigrations.js'), 'utf8');
 
 // ── Extract a named function's source by brace-matching (same as sub-link test) ──
 function extractFn(src, name) {
@@ -194,11 +195,10 @@ console.log('\n[bonus] arbitrary formats are stored AS-IS (no validation)');
 
 console.log('\n[bonus] SOURCE — DB migration + route append are wired');
 {
-  ok(/ALTER TABLE users ADD COLUMN bonus_links TEXT/.test(serverSrc),
-     'idempotent ALTER TABLE users ADD COLUMN bonus_links TEXT present');
-  // The migration is wrapped in the try{}catch{} idempotent pattern.
-  ok(/try\s*\{\s*db\.exec\(`ALTER TABLE users ADD COLUMN bonus_links TEXT`\);\s*\}\s*catch\s*\{\}/.test(serverSrc),
-     'bonus_links migration uses the try/catch idempotent pattern (update.sh-safe)');
+  ok(/addColumn\(db, 'users', 'bonus_links TEXT'\)/.test(migrationSrc),
+     'versioned migration adds bonus_links idempotently');
+  ok(/version:\s*4[\s\S]{0,100}name:\s*'bonus links'/.test(migrationSrc),
+     'bonus_links migration has an explicit ordered schema version');
   ok(/for \(const url of enabledBonusUrls\(user\)\) uris\.push\(url\);/.test(serverSrc),
      '/sub route appends enabledBonusUrls(user) before join+base64');
   ok(/function parseUserRow[\s\S]{0,600}bonus_links:\s*normalizeBonusLinks/.test(serverSrc),

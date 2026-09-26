@@ -21,30 +21,32 @@ const ok = (c, m) => { if (c) { pass++; console.log('  \u2713 ' + m); } else { f
 
 const SERVER = path.join(__dirname, '..', 'panel', 'server', 'index.js');
 const src = fs.readFileSync(SERVER, 'utf8');
+const backupRestoreSrc = fs.readFileSync(
+  path.join(__dirname, '..', 'panel', 'server', 'backupRestore.js'), 'utf8');
 
 // ── (a) Structural checks ────────────────────────────────────────────────────
 ok(/app\.get\(\s*['"]\/api\/backup\/export['"]\s*,\s*requireAuth/.test(src),
    'GET /api/backup/export is registered and auth-gated');
 ok(/app\.post\(\s*['"]\/api\/backup\/import['"]\s*,\s*requireAuth/.test(src),
    'POST /api/backup/import is registered and auth-gated');
-ok(/const BACKUP_FORMAT\s*=\s*'rixxx-panel-backup'/.test(src),
+ok(/const BACKUP_FORMAT\s*=\s*'rixxx-panel-backup'/.test(backupRestoreSrc),
    'backup format tag is "rixxx-panel-backup"');
-ok(/const BACKUP_SCHEMA\s*=\s*1/.test(src),
-   'backup schema version is 1');
+ok(/const BACKUP_SCHEMA\s*=\s*2/.test(backupRestoreSrc),
+   'backup schema version is 2');
 
 // Import must reject a wrong format tag / bad schema / missing sections BEFORE
 // mutating anything.
 const importBody = src.slice(src.indexOf("'/api/backup/import'"));
-ok(/bad format tag/.test(importBody),   'import validates the format tag');
-ok(/Unsupported backup schema/.test(importBody), 'import validates the schema version');
-ok(/missing its config section/.test(importBody), 'import requires a config section');
-ok(/missing its users list/.test(importBody),     'import requires a users list');
-ok(/malformed user record/.test(importBody),       'import validates each user record');
+ok(/bad format tag/.test(backupRestoreSrc),   'import validates the format tag');
+ok(/Unsupported backup schema/.test(backupRestoreSrc), 'import validates the schema version');
+ok(/missing its config section/.test(backupRestoreSrc), 'import requires a config section');
+ok(/missing its users list/.test(backupRestoreSrc),     'import requires a users list');
+ok(/malformed user record/.test(backupRestoreSrc),       'import validates each user record');
 
 // Import must go through the SAME rebuild path as normal add/delete.
-ok(/applyAllConfigs\(\)/.test(importBody),
+ok(/applyAllConfigs\(\)/.test(backupRestoreSrc),
    'import rebuilds real configs via applyAllConfigs() (same path as add/delete)');
-ok(/upsertUser\(/.test(importBody),
+ok(/upsertUser\(/.test(backupRestoreSrc),
    'import restores users via upsertUser (idempotent, non-destructive)');
 
 // Export must carry the plaintext password (needed to regenerate keys) and the
@@ -64,7 +66,7 @@ ok(/express\.json\(\{\s*limit:\s*'25mb'\s*\}\)/.test(src),
 function makeExport(cfg, users) {
   return {
     format: 'rixxx-panel-backup',
-    schema: 1,
+    schema: 2,
     version: '1.6.0',
     exportedAt: new Date().toISOString(),
     config: cfg,
@@ -73,7 +75,8 @@ function makeExport(cfg, users) {
       passHash: u.passHash, password: u.password || '',
       expiry: u.expiry || null, protocols: u.protocols || '["naive","mieru"]',
       quotaMB: u.quotaMB || 0, usedMB: u.usedMB || 0,
-      createdAt: u.createdAt, updatedAt: u.updatedAt, lastSeen: u.lastSeen || null
+      createdAt: u.createdAt, updatedAt: u.updatedAt, lastSeen: u.lastSeen || null,
+      sub_token: u.sub_token || null, bonus_links: u.bonus_links || null
     }))
   };
 }
@@ -85,15 +88,18 @@ const cfgOld = {
 };
 const usersOld = [
   { id: 'u1', username: 'alice', passHash: '$2a$a', password: 'secretA',
-    protocols: '["naive","mieru"]', createdAt: 't0', updatedAt: 't0' },
+    protocols: '["naive","mieru"]', sub_token: 'token-a',
+    bonus_links: '[{"url":"vless://example","enabled":true}]', createdAt: 't0', updatedAt: 't0' },
   { id: 'u2', username: 'bob', passHash: '$2a$b', password: 'secretB',
     protocols: '["mieru"]', createdAt: 't0', updatedAt: 't0' }
 ];
 const backup = makeExport(cfgOld, usersOld);
-ok(backup.format === 'rixxx-panel-backup' && backup.schema === 1, 'export shape is tagged');
+ok(backup.format === 'rixxx-panel-backup' && backup.schema === 2, 'export shape is tagged');
 ok(backup.users.length === 2, 'export carries all users');
 ok(backup.users[0].password === 'secretA', 'export preserves plaintext password');
 ok(backup.config.domain === 'old.example.com', 'export carries the domain');
+ok(backup.users[0].sub_token === 'token-a', 'export preserves subscription token');
+ok(backup.users[0].bonus_links.includes('vless://example'), 'export preserves bonus links');
 
 // round-trip: JSON serialise/parse must be lossless
 const rt = JSON.parse(JSON.stringify(backup));

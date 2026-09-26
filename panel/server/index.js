@@ -41,6 +41,7 @@ const { readPanelVersion: resolvePanelVersion } = require('./version');
 const { applyFileTransaction } = require('./fileTransaction');
 const { runDatabaseMigrations } = require('./databaseMigrations');
 const { runConfigMigrations } = require('./configMigrations');
+const { BACKUP_FORMAT, BACKUP_SCHEMA, validateBackup, restoreBackupState } = require('./backupRestore');
 
 // ── Paths ─────────────────────────────────────────────────────────────────────
 const PANEL_CONFIG    = '/etc/rixxx-panel/config.json';
@@ -276,17 +277,18 @@ function upsertUser(u) {
     const email = (u.email && String(u.email).trim()) ? String(u.email).trim() : null;
     db.prepare(`
       INSERT INTO users
-        (id,email,username,passHash,password,expiry,protocols,quotaMB,usedMB,createdAt,updatedAt,lastSeen,sub_token)
+        (id,email,username,passHash,password,expiry,protocols,quotaMB,usedMB,createdAt,updatedAt,lastSeen,sub_token,bonus_links)
       VALUES
-        (@id,@email,@username,@passHash,@password,@expiry,@protocols,@quotaMB,@usedMB,@createdAt,@updatedAt,@lastSeen,@sub_token)
+        (@id,@email,@username,@passHash,@password,@expiry,@protocols,@quotaMB,@usedMB,@createdAt,@updatedAt,@lastSeen,@sub_token,@bonus_links)
       ON CONFLICT(id) DO UPDATE SET
         email=excluded.email, username=excluded.username,
         passHash=excluded.passHash, password=excluded.password,
         expiry=excluded.expiry, protocols=excluded.protocols,
         quotaMB=excluded.quotaMB, usedMB=excluded.usedMB,
         updatedAt=excluded.updatedAt, lastSeen=excluded.lastSeen,
-        sub_token=COALESCE(excluded.sub_token, users.sub_token)
-    `).run({ ...u, email, password: u.password || '',
+        sub_token=COALESCE(excluded.sub_token, users.sub_token),
+        bonus_links=excluded.bonus_links
+    `).run({ ...u, email, password: u.password || '', bonus_links: u.bonus_links || null,
              sub_token: u.sub_token || crypto.randomBytes(16).toString('hex') });
   } else {
     memUsers.set(u.id, u);
@@ -314,11 +316,11 @@ function createUserAtomic(u) {
   if (db) {
     const info = db.prepare(`
       INSERT INTO users
-        (id,email,username,passHash,password,expiry,protocols,quotaMB,usedMB,createdAt,updatedAt,lastSeen,sub_token)
+        (id,email,username,passHash,password,expiry,protocols,quotaMB,usedMB,createdAt,updatedAt,lastSeen,sub_token,bonus_links)
       VALUES
-        (@id,@email,@username,@passHash,@password,@expiry,@protocols,@quotaMB,@usedMB,@createdAt,@updatedAt,@lastSeen,@sub_token)
+        (@id,@email,@username,@passHash,@password,@expiry,@protocols,@quotaMB,@usedMB,@createdAt,@updatedAt,@lastSeen,@sub_token,@bonus_links)
       ON CONFLICT(username) DO NOTHING
-    `).run({ ...u, email, password: u.password || '',
+    `).run({ ...u, email, password: u.password || '', bonus_links: u.bonus_links || null,
              sub_token: u.sub_token || crypto.randomBytes(16).toString('hex') });
 
     if (info.changes === 1)
@@ -361,7 +363,8 @@ function saveConfig() {
     const tmp = PANEL_CONFIG + '.new';
     fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2), { mode: 0o600 });
     fs.renameSync(tmp, PANEL_CONFIG);   // atomic replace
-  } catch (e) { console.error('[CFG]', e.message); }
+    return true;
+  } catch (e) { console.error('[CFG]', e.message); return false; }
 }
 
 // ── buildCaddyfile() ─────────────────────────────────────────────────────────
@@ -1600,7 +1603,7 @@ function applyAllConfigsAsync() {
 // writeCaddyfileAtomic and the full restart+verify in applyCaddyConfig, a new
 // key now activates immediately. We also surface the real caddy error.
 function applyAllConfigs() {
-  let caddyOk = false, mitaOk = false, hy2Ok = true, caddyError = '', hy2Error = '';
+  let caddyOk = false, mitaOk = false, hy2Ok = true, caddyError = '', mitaError = '', hy2Error = '';
   try {
     const content = buildCaddyfile(cfg, getAllUsers());
     const r = applyCaddyTransaction(content);
@@ -1610,8 +1613,8 @@ function applyAllConfigs() {
       console.error('[CADDY] apply failed:', r.error);
     }
   } catch (e) { caddyError = e.message; console.error('[CADDY]', e.message); }
-  try { mitaOk = applyMitaConfig(); }
-  catch (e) { console.error('[MITA]', e.message); }
+  try { mitaOk = applyMitaConfig(); mitaError = mitaOk ? '' : getLastMitaError(); }
+  catch (e) { mitaError = e.message; console.error('[MITA]', e.message); }
   // Hy2: only acts when installed (config file present); otherwise it's a
   // no-op success so user CRUD never fails just because Hy2 isn't deployed.
   try {
@@ -1619,7 +1622,7 @@ function applyAllConfigs() {
     hy2Ok = h.ok;
     if (!h.ok) { hy2Error = h.error || ''; console.error('[HY2] apply failed:', h.error); }
   } catch (e) { hy2Ok = false; hy2Error = e.message; console.error('[HY2]', e.message); }
-  return { caddyOk, mitaOk, hy2Ok, caddyError, hy2Error,
+  return { caddyOk, mitaOk, hy2Ok, caddyError, mitaError, hy2Error,
            servicesReloaded: caddyOk && mitaOk && hy2Ok };
 }
 
@@ -1934,9 +1937,6 @@ app.post('/api/config/password', requireAuth, (req, res) => {
 // by id, writes the config, then rebuilds the Caddyfile + mita config and
 // restarts the services — the very same code path used by every normal
 // add/delete, so nothing bespoke can drift.
-const BACKUP_FORMAT = 'rixxx-panel-backup';
-const BACKUP_SCHEMA = 1;
-
 app.get('/api/backup/export', requireAuth, (req, res) => {
   try {
     const users = getAllUsers().map(u => ({
@@ -1951,7 +1951,9 @@ app.get('/api/backup/export', requireAuth, (req, res) => {
       usedMB:    u.usedMB || 0,
       createdAt: u.createdAt,
       updatedAt: u.updatedAt,
-      lastSeen:  u.lastSeen || null
+      lastSeen:  u.lastSeen || null,
+      sub_token: u.sub_token || null,
+      bonus_links: u.bonus_links || null
     }));
 
     // Full config incl. admin credentials — this is a privileged, auth-gated
@@ -1984,91 +1986,55 @@ app.post('/api/backup/import', requireAuth, (req, res) => {
   const backup     = req.body && req.body.backup;
   const domainMode = (req.body && req.body.domainMode) === 'current' ? 'current' : 'backup';
 
-  // ── Validate shape before touching anything ────────────────────────────────
-  if (!backup || typeof backup !== 'object')
-    return res.status(400).json({ error: 'No backup payload provided' });
-  if (backup.format !== BACKUP_FORMAT)
-    return res.status(400).json({ error: 'Not a RIXXX panel backup file (bad format tag)' });
-  if (!Number.isInteger(backup.schema) || backup.schema > BACKUP_SCHEMA)
-    return res.status(400).json({ error: `Unsupported backup schema (${backup.schema}); this panel supports up to ${BACKUP_SCHEMA}` });
-  if (!backup.config || typeof backup.config !== 'object')
-    return res.status(400).json({ error: 'Backup is missing its config section' });
-  if (!Array.isArray(backup.users))
-    return res.status(400).json({ error: 'Backup is missing its users list' });
-
-  // Per-user validation — reject a malformed file rather than half-import it.
-  for (const u of backup.users) {
-    if (!u || typeof u !== 'object' || !u.id || !u.username || !u.passHash)
-      return res.status(400).json({ error: 'Backup contains a malformed user record (need id, username, passHash)' });
-  }
-
   try {
-    // ── 1) Restore config, honouring the chosen domain mode ──────────────────
-    // Keys that describe THIS box's network identity. In 'current' mode we keep
-    // the live values so we don't point the restored server at the wrong host.
-    const NETWORK_KEYS = ['domain', 'serverIp', 'naivePort', 'mieruPortStart', 'mieruPortEnd'];
-    const incoming = { ...backup.config };
-
-    if (domainMode === 'current') {
-      for (const k of NETWORK_KEYS) {
-        if (cfg[k] !== undefined) incoming[k] = cfg[k];
-      }
+    validateBackup(backup);
+    let transaction;
+    let memorySnapshot;
+    if (db) {
+      transaction = fn => db.transaction(fn)();
+    } else {
+      transaction = fn => {
+        memorySnapshot = new Map(memUsers);
+        try { return fn(); }
+        catch (error) {
+          memUsers.clear();
+          for (const [key, value] of memorySnapshot) memUsers.set(key, value);
+          throw error;
+        }
+      };
     }
-    // Never let a backup silently downgrade/overwrite the recorded version tag
-    // (the live version comes from readPanelVersion() anyway).
-    incoming.version = cfg.version || incoming.version;
-
-    // Preserve local runtime paths (dbPath/caddyBin/…) from the CURRENT server —
-    // a backup from another box may have different absolute paths.
-    const PATH_KEYS = ['dbPath', 'caddyBin', 'caddyFile', 'caddyConfigDir',
-                       'fakeSiteDir', 'mitaStateFile'];
-    for (const k of PATH_KEYS) {
-      if (cfg[k] !== undefined) incoming[k] = cfg[k];
-    }
-
-    cfg = incoming;
-    saveConfig();
-
-    // ── 2) Restore users (upsert by id — idempotent) ─────────────────────────
-    let restored = 0;
-    for (const u of backup.users) {
-      upsertUser({
-        id:        u.id,
-        email:     u.email || null,
-        username:  u.username,
-        passHash:  u.passHash,
-        password:  u.password || '',
-        expiry:    u.expiry || null,
-        protocols: u.protocols || '["naive","mieru"]',
-        quotaMB:   u.quotaMB || 0,
-        usedMB:    u.usedMB || 0,
-        createdAt: u.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        lastSeen:  u.lastSeen || null
-      });
-      restored++;
-    }
-
-    // ── 3) Rebuild real configs + restart services (same path as add/delete) ──
-    const apply = applyAllConfigs();
+    const restored = restoreBackupState({
+      backup, domainMode, currentConfig: cfg,
+      setConfig: value => { cfg = value; },
+      saveConfig: () => { if (!saveConfig()) throw new Error('could not persist restored config'); },
+      upsertUser, applyAllConfigs, transaction,
+    });
+    const apply = restored.apply;
 
     res.json({
       ok: true,
-      restoredUsers: restored,
+      restoredUsers: restored.restoredUsers,
       domainMode,
       domain: cfg.domain,
       servicesReloaded: apply.servicesReloaded,
       caddyOk: apply.caddyOk,
       mitaOk:  apply.mitaOk,
+      hy2Ok:   apply.hy2Ok,
       caddyError: apply.caddyError || undefined,
-      message: `Restored ${restored} user(s). ` +
+      mitaError: apply.mitaError || undefined,
+      hy2Error: apply.hy2Error || undefined,
+      message: `Restored ${restored.restoredUsers} user(s). ` +
         (domainMode === 'backup'
           ? 'Domains/ports taken from the backup — existing client keys keep working if DNS points here.'
           : 'Kept this server\'s current domains/ports — clients must download fresh keys.')
     });
   } catch (e) {
     console.error('[BACKUP] import failed:', e && e.message);
-    res.status(500).json({ error: 'Backup import failed: ' + (e && e.message) });
+    const validationError = /No backup|bad format|Unsupported backup schema|missing its|malformed user/.test(e && e.message);
+    res.status(validationError ? 400 : 500).json({
+      error: 'Backup import failed: ' + (e && e.message),
+      previousStateRestored: validationError ? undefined : !!e.recoverySucceeded,
+    });
   }
 });
 

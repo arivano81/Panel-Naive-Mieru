@@ -1835,6 +1835,8 @@ app.use(session({
 // Rate limits
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20,  message: { error: 'Too many attempts' } });
 const apiLimiter   = rateLimit({ windowMs:      60 * 1000, max: 300, message: { error: 'Rate limit exceeded' } });
+const openFluxSecretLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10,
+  message: { error: 'Too many secret export attempts' } });
 app.use('/api/', apiLimiter);
 
 // Static files
@@ -1849,7 +1851,9 @@ function requireAuth(req, res, next) {
 
 // OpenFlux remains a separately namespaced, opt-in subsystem. Its routes invoke
 // only the isolated lifecycle CLI and never rebuild or restart the main stack.
-registerOpenFluxRoutes(app, requireAuth, openFluxService);
+registerOpenFluxRoutes(app, requireAuth, openFluxService,
+  password => !!(cfg.adminPassHash && bcrypt.compareSync(password, cfg.adminPassHash)),
+  openFluxSecretLimiter);
 
 // ── Auth routes ───────────────────────────────────────────────────────────────
 app.post('/api/login', loginLimiter, (req, res) => {

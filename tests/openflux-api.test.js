@@ -21,9 +21,11 @@ const exists = new Set(['/bin/openflux', '/scripts/profile.sh', '/scripts/instal
 const service = createOpenFluxService({
   paths: { binary: '/bin/openflux', lifecycleScript: '/scripts/profile.sh', installScript: '/scripts/install.sh' },
   existsSync: file => exists.has(file),
+  lstatSync: () => ({ isFile: () => true, isSymbolicLink: () => false }),
   execFileSync: (file, args) => {
     calls.push([file, ...args]);
     if (file === 'journalctl') return 'normal line\nEncryptionKey = forbidden\npassword=forbidden\n';
+    if (file === 'tar') return Buffer.from('archive');
     if (args[1] === 'list') return '[{"id":"alpha","active":false}]';
     return '{"ok":true}';
   },
@@ -42,18 +44,22 @@ ok(logs.includes('normal line') && !logs.includes('forbidden') &&
   logs.match(/\[redacted sensitive line\]/g)?.length === 2, 'journal output is filtered before leaving the service');
 ok(calls.some(call => call.join('|').includes('journalctl|-u|openflux-exit@alpha.service|-n|500|--no-pager')),
   'logs are scoped to one validated unit and a bounded line count');
+ok(service.bundle('alpha').equals(Buffer.from('archive')), 'bundle is returned only as an archive buffer');
+ok(calls.some(call => call.join('|') === 'tar|-C|/root/openflux-alpha-client|-czf|-|client.conf|openflux.key'),
+  'archive contains only the two validated client files');
 ok(!routes.includes('execSync') && !routes.includes('child_process'), 'HTTP routes cannot execute shell commands directly');
 for (const route of [
   "app.get('/api/openflux', requireAuth",
   "app.post('/api/openflux/install', requireAuth",
   "app.post('/api/openflux/profiles', requireAuth",
+  "app.post('/api/openflux/profiles/:id/bundle', requireAuth",
   "app.post('/api/openflux/profiles/:id/:action', requireAuth",
   "app.get('/api/openflux/profiles/:id/logs', requireAuth",
   "app.delete('/api/openflux/profiles/:id', requireAuth",
 ]) ok(routes.includes(route), `${route.split(',')[0]} is authenticated`);
 ok(routes.includes("new Set(['start', 'stop', 'restart'])"), 'action endpoint has an explicit allowlist');
 ok(!/caddy|mieru|hysteria|xray|warp|cascade/i.test(routes), 'OpenFlux routes cannot address the primary stack');
-ok(server.includes('registerOpenFluxRoutes(app, requireAuth, openFluxService)'), 'isolated routes are registered by the panel');
+ok(server.includes('registerOpenFluxRoutes(app, requireAuth, openFluxService,'), 'isolated routes are registered by the panel');
 ok(html.includes('id="page-openflux"') && html.includes('OpenFlux Experimental'),
   'OpenFlux is visually separated on an experimental page');
 ok(html.includes('/root/openflux-&lt;id&gt;-client') && html.includes('Секрет не передаётся браузеру'),
@@ -62,6 +68,12 @@ ok(ui.includes("case 'openflux':    loadOpenFlux()") && ui.includes("'/api/openf
   'page loads isolated profile state and creates profiles through its namespace');
 ok(ui.includes("['start', 'stop', 'restart'].includes(action)"), 'browser action dispatcher repeats the server allowlist');
 ok(ui.includes("case 'openflux-logs'") && html.includes('id="openflux-logs"'), 'UI exposes the filtered per-profile journal');
+ok(routes.includes('verifyAdminPassword(req.body.password)') && routes.includes("'Cache-Control', 'no-store'"),
+  'secret bundle export requires password re-authentication and disables caching');
+ok(routes.includes('requireAuth, secretExportLimiter') && server.includes('openFluxSecretLimiter = rateLimit'),
+  'secret export password attempts have a dedicated rate limit');
+ok(ui.includes("case 'openflux-bundle'") && ui.includes("prompt('Повторно введите пароль администратора панели:'"),
+  'UI requires an explicit warning and administrator password before bundle export');
 ok(!/protocols[^\n]*openflux/i.test(ui), 'UI never adds OpenFlux to shared user protocols');
 ok(!safeFailure({ stderr: 'one\ntwo\nthree\nfour' }).includes('one'), 'external failure output is length-bounded to its tail');
 

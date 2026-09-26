@@ -3,7 +3,7 @@
 const PROFILE_ID_RE = /^[a-z][a-z0-9-]{0,31}$/;
 const ACTIONS = new Set(['start', 'stop', 'restart']);
 
-function registerOpenFluxRoutes(app, requireAuth, service) {
+function registerOpenFluxRoutes(app, requireAuth, service, verifyAdminPassword, secretExportLimiter) {
   const replyError = (res, error) => res.status(error.status || 500)
     .json({ error: error.message || 'OpenFlux operation failed' });
 
@@ -19,6 +19,18 @@ function registerOpenFluxRoutes(app, requireAuth, service) {
     const input = req.body || {};
     try { res.status(201).json(service.create({ id: input.id, port: input.port, host: input.host })); }
     catch (error) { replyError(res, error); }
+  });
+  app.post('/api/openflux/profiles/:id/bundle', requireAuth, secretExportLimiter, (req, res) => {
+    if (!PROFILE_ID_RE.test(req.params.id)) return res.status(400).json({ error: 'Invalid OpenFlux profile id' });
+    if (!req.body || typeof req.body.password !== 'string' || !verifyAdminPassword(req.body.password))
+      return res.status(403).json({ error: 'Administrator password confirmation failed' });
+    try {
+      const archive = service.bundle(req.params.id);
+      res.set('Cache-Control', 'no-store');
+      res.set('Content-Type', 'application/gzip');
+      res.set('Content-Disposition', `attachment; filename="openflux-${req.params.id}-client.tar.gz"`);
+      res.send(archive);
+    } catch (error) { replyError(res, error); }
   });
   app.post('/api/openflux/profiles/:id/:action', requireAuth, (req, res) => {
     if (!PROFILE_ID_RE.test(req.params.id) || !ACTIONS.has(req.params.action))

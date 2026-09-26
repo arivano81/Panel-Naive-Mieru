@@ -35,6 +35,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   server, warns about the one-client model, and never edits shared users.
 - Added a bounded per-profile OpenFlux journal endpoint and viewer. It invokes
   `journalctl` without a shell and redacts lines that may contain secrets.
+- Added an explicit client-bundle download protected by administrator password
+  re-authentication and a dedicated rate limit. The no-store archive contains
+  only the validated `client.conf` and `openflux.key` regular files.
 
 - Began VLESS stage B with an isolated REALITY/Vision config adapter and a
   pinned Xray-core `v26.3.27` installer. The installer verifies the official

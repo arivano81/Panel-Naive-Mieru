@@ -21,6 +21,7 @@ function createOpenFluxService(options = {}) {
   const paths = { ...DEFAULTS, ...(options.paths || {}) };
   const runFile = options.execFileSync || execFileSync;
   const fileExists = options.existsSync || fs.existsSync;
+  const fileStat = options.lstatSync || fs.lstatSync;
 
   function installed() {
     return fileExists(paths.binary) && fileExists(paths.lifecycleScript);
@@ -61,6 +62,25 @@ function createOpenFluxService(options = {}) {
       return output.replace(/\x1b\[[0-9;]*m/g, '').split(/\r?\n/).map(line =>
         /encryption.?key|password|secret|token/i.test(line) ? '[redacted sensitive line]' : line
       ).join('\n').slice(0, 65536);
+    },
+    bundle: id => {
+      if (!installed()) throw Object.assign(new Error('OpenFlux is not installed'), { status: 409 });
+      if (!PROFILE_ID_RE.test(String(id || '')))
+        throw Object.assign(new Error('Invalid OpenFlux profile id'), { status: 400 });
+      const dir = `/root/openflux-${id}-client`;
+      const files = ['client.conf', 'openflux.key'];
+      try {
+        for (const name of files) {
+          const stat = fileStat(path.join(dir, name));
+          if (!stat.isFile() || stat.isSymbolicLink()) throw new Error('unsafe bundle member');
+        }
+        return runFile('tar', ['-C', dir, '-czf', '-', ...files], {
+          timeout: 10000, encoding: null, maxBuffer: 1024 * 1024,
+          stdio: ['ignore', 'pipe', 'pipe'],
+        });
+      } catch {
+        throw Object.assign(new Error('OpenFlux client bundle is unavailable'), { status: 404 });
+      }
     },
     install: () => {
       if (installed()) throw Object.assign(new Error('OpenFlux is already installed'), { status: 409 });

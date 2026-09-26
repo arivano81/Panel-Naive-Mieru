@@ -316,6 +316,7 @@ function handleDelegatedClick(e) {
     case 'openflux-action':      openFluxProfileAction(btn.dataset.id, btn.dataset.profileAction); break;
     case 'openflux-remove':      removeOpenFluxProfile(btn.dataset.id); break;
     case 'openflux-logs':        loadOpenFluxLogs(btn.dataset.id); break;
+    case 'openflux-bundle':      downloadOpenFluxBundle(btn.dataset.id); break;
     case 'change-traffic-pattern': changeTrafficPattern(); break;
     case 'change-udp-mode':      changeUdpMode(); break;
     case 'change-language':      changeLanguage(); break;
@@ -1997,6 +1998,7 @@ async function loadOpenFlux() {
             data-id="${esc(p.id)}" data-profile-action="${active ? 'stop' : 'start'}">${active ? 'Остановить' : 'Запустить'}</button>
           ${active ? `<button class="btn btn-xs btn-secondary" data-action="openflux-action" data-id="${esc(p.id)}" data-profile-action="restart">Перезапустить</button>` : ''}
           <button class="btn btn-xs btn-ghost" data-action="openflux-logs" data-id="${esc(p.id)}">Журнал</button>
+          <button class="btn btn-xs btn-secondary" data-action="openflux-bundle" data-id="${esc(p.id)}">Скачать bundle</button>
           <button class="btn btn-xs btn-danger" data-action="openflux-remove" data-id="${esc(p.id)}">Удалить</button>
         </td></tr>`;
     }).join('');
@@ -2068,6 +2070,29 @@ async function loadOpenFluxLogs(id) {
   } catch (error) {
     if (el('openflux-logs')) el('openflux-logs').textContent = error.message;
   }
+}
+
+async function downloadOpenFluxBundle(id) {
+  if (!confirm(`Экспортировать секретный client bundle профиля ${id}? Храните архив как пароль.`)) return;
+  const password = prompt('Повторно введите пароль администратора панели:');
+  if (password === null || password === '') return;
+  try {
+    const response = await fetch(apiUrl(`/api/openflux/profiles/${encodeURIComponent(id)}/bundle`), {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      body: JSON.stringify({ password }),
+    });
+    if (!response.ok) {
+      const detail = await response.json().catch(() => ({}));
+      throw new Error(detail.error || `HTTP ${response.status}`);
+    }
+    const blob = await response.blob();
+    const href = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = href; link.download = `openflux-${id}-client.tar.gz`;
+    document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(href);
+    toast(`Секретный bundle ${id} загружен`, 'success');
+  } catch (error) { toast(error.message, 'error'); }
 }
 
 // ── Hy2 (Hysteria2) ──────────────────────────────────────────────────────────

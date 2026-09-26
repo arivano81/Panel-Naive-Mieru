@@ -73,9 +73,18 @@ esac
   const run = (args, extra = {}) => spawnSync('bash', ['panel/scripts/openflux_profile.sh', ...args],
     { cwd: root, env: { ...env, ...extra }, encoding: 'utf8' });
   const created = run(['create', 'alpha', '18445', 'vpn.example.com']);
-  ok(created.status === 0 && JSON.parse(created.stdout).created === true, 'fixture creates an inactive profile');
-  ok((fs.statSync(path.join(fixture, 'etc/openflux/secrets/alpha.key')).mode & 0o777) === 0o600,
+  let createdJson = null;
+  try { createdJson = JSON.parse(created.stdout); } catch {}
+  ok(created.status === 0 && createdJson?.created === true,
+    `fixture creates an inactive profile${created.stderr ? `: ${created.stderr.trim()}` : ''}`);
+  const secretPath = path.join(fixture, 'etc/openflux/secrets/alpha.key');
+  ok(fs.existsSync(secretPath) && (fs.statSync(secretPath).mode & 0o777) === 0o600,
     'functional fixture writes a mode-600 key');
+  if (!fs.existsSync(secretPath)) {
+    fs.rmSync(fixture, { recursive: true, force: true });
+    console.log(`\nResult: ${pass} passed, ${fail} failed`);
+    process.exit(1);
+  }
   const failed = run(['start', 'alpha'], { OPENFLUX_TEST_FAIL_START: '1' });
   ok(failed.status !== 0 && !fs.existsSync(path.join(state, 'openflux-exit@alpha.service.active')),
     'failed systemd start leaves no active instance');

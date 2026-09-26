@@ -1,6 +1,6 @@
 'use strict';
 
-const LATEST_CONFIG_SCHEMA = 8;
+const LATEST_CONFIG_SCHEMA = 9;
 
 const CONFIG_MIGRATIONS = [
   { version: 1, name: 'probe mode', up(config) {
@@ -49,6 +49,11 @@ const CONFIG_MIGRATIONS = [
     if (config.vlessXhttpPort == null) config.vlessXhttpPort = 10443;
     if (!config.vlessXhttp || typeof config.vlessXhttp !== 'object' || Array.isArray(config.vlessXhttp))
       config.vlessXhttp = { host: '', path: '' };
+  } },
+  { version: 9, name: 'optional administrator TOTP', up(config) {
+    if (config.totpEnabled == null) config.totpEnabled = false;
+    if (config.totpSecret == null) config.totpSecret = '';
+    if (!Number.isInteger(config.totpLastCounter)) config.totpLastCounter = -1;
   } },
 ];
 

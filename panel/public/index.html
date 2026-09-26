@@ -903,6 +903,37 @@
             <div id="pw-msg" class="msg-inline hidden"></div>
           </div>
         </div>
+
+        <div class="card" id="card-totp">
+          <div class="card-header" data-i18n="settings.totpTitle">Two-factor authentication</div>
+          <div class="card-body">
+            <p class="card-desc" data-i18n="settings.totpDesc">Protect administrator login with a six-digit authenticator code.</p>
+            <div id="totp-status" class="msg-inline"></div>
+            <div class="form-group">
+              <label for="totp-password" data-i18n="settings.currentPassword">Current password</label>
+              <input type="password" id="totp-password" autocomplete="current-password" />
+            </div>
+            <button class="btn btn-primary" id="totp-setup-btn" data-action="totp-setup" data-i18n="settings.totpSetup">Set up TOTP</button>
+            <div id="totp-setup-box" class="hidden mt-2">
+              <canvas id="totp-qr" width="200" height="200"></canvas>
+              <p class="card-desc" data-i18n="settings.totpManual">If scanning is unavailable, enter this secret manually:</p>
+              <code id="totp-secret"></code>
+              <div class="form-group mt-2">
+                <label for="totp-confirm-code" data-i18n="settings.totpCode">Six-digit code</label>
+                <input type="text" id="totp-confirm-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+              </div>
+              <button class="btn btn-primary" data-action="totp-enable" data-i18n="settings.totpEnable">Confirm and enable</button>
+            </div>
+            <div id="totp-disable-box" class="hidden mt-2">
+              <div class="form-group">
+                <label for="totp-disable-code" data-i18n="settings.totpCode">Six-digit code</label>
+                <input type="text" id="totp-disable-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+              </div>
+              <button class="btn btn-danger" data-action="totp-disable" data-i18n="settings.totpDisable">Disable TOTP</button>
+            </div>
+            <div id="totp-msg" class="msg-inline hidden"></div>
+          </div>
+        </div>
       </div>
 
       <!-- v1.6.0: Backup / Restore card -->
@@ -914,7 +945,7 @@
             If the new server uses the same domain (just point DNS to it), existing client keys keep working with no changes.
           </p>
           <div class="warn-box" data-i18n="settings.backupWarn">
-            ⚠ The backup file contains user passwords in plain text. Store it somewhere safe and never share it.
+            ⚠ The backup file contains user passwords and administrator secrets in plain text. Store it somewhere safe and never share it.
           </div>
           <div class="btn-row mt-2">
             <button class="btn btn-primary"   data-action="backup-export">
@@ -987,6 +1018,12 @@
           </div>
           <div id="openflux-msg" class="msg-inline hidden"></div>
         </div>
+      </div>
+      <div class="form-group hidden" id="login-totp-group">
+        <label for="login-totp" data-i18n="login.totp">Authenticator code</label>
+        <input type="text" id="login-totp" inputmode="numeric" pattern="[0-9]{6}" maxlength="6"
+               autocomplete="one-time-code" data-i18n-ph="login.totpPlaceholder"
+               placeholder="123456" aria-label="Authenticator code" />
       </div>
       <div class="card" id="openflux-profiles-card">
         <div class="card-header">Профили <button class="btn btn-ghost btn-sm" data-action="openflux-refresh">Обновить</button></div>
@@ -1120,6 +1157,7 @@
             </tbody>
           </table>
         </div>
+
       </div>
     </section>
 

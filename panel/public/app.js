@@ -328,6 +328,9 @@ function handleDelegatedClick(e) {
     case 'change-udp-mode':      changeUdpMode(); break;
     case 'change-language':      changeLanguage(); break;
     case 'change-password':      changePassword(); break;
+    case 'totp-setup':          setupTotp(); break;
+    case 'totp-enable':         enableTotp(); break;
+    case 'totp-disable':        disableTotp(); break;
     case 'change-probe-secret':  changeProbeSecret(); break;
     case 'apply-probe-mode':     applyProbeMode(); break;
     case 'change-cascade':       changeCascade(); break;
@@ -385,17 +388,23 @@ async function handleLogin(e) {
   const err = document.getElementById('login-error');
   const username = document.getElementById('login-user').value.trim();
   const password = document.getElementById('login-pass').value;
+  const totp = document.getElementById('login-totp').value.trim();
 
   btn.disabled = true;
   btn.innerHTML = `<span>${t('login.signingIn') || '…'}</span>`;
   err.classList.add('hidden');
 
   try {
-    const res = await api('POST', '/api/login', { username, password });
+    const res = await api('POST', '/api/login', { username, password, totp });
     state.authenticated = true;
     state.username = res.username;
     enterApp();
   } catch (ex) {
+    if (ex.code === 'TOTP_REQUIRED') {
+      el('login-totp-group').classList.remove('hidden');
+      el('login-totp').required = true;
+      el('login-totp').focus();
+    }
     err.textContent = ex.message || t('login.invalidCreds');
     err.classList.remove('hidden');
   } finally {
@@ -1451,6 +1460,7 @@ async function loadSettings() {
     // Доработка 2: gate the cascade/restart buttons whenever the settings page
     // is opened (the user may land here before visiting the keys page).
     applyFoolproofGates();
+    renderTotpStatus(cfg.totpEnabled === true);
   } catch {}
 }
 
@@ -2339,6 +2349,55 @@ async function changePassword() {
   }
 }
 
+function renderTotpStatus(enabled) {
+  state.config.totpEnabled = enabled;
+  const status = el('totp-status');
+  if (status) status.textContent = enabled ? t('settings.totpEnabled') : t('settings.totpDisabled');
+  el('totp-setup-btn')?.classList.toggle('hidden', enabled);
+  el('totp-disable-box')?.classList.toggle('hidden', !enabled);
+  if (enabled) el('totp-setup-box')?.classList.add('hidden');
+}
+
+async function setupTotp() {
+  const password = el('totp-password').value;
+  if (!password) return showMsg('totp-msg', t('settings.allFieldsRequired'), false);
+  try {
+    const data = await api('POST', '/api/totp/setup', { password });
+    el('totp-secret').textContent = data.secret;
+    el('totp-setup-box').classList.remove('hidden');
+    if (typeof QRCode !== 'undefined') {
+      await QRCode.toCanvas(el('totp-qr'), data.otpauthUrl, { width: 200, margin: 2 });
+    }
+    showMsg('totp-msg', t('settings.totpScan'), true);
+  } catch (error) { showMsg('totp-msg', error.message, false); }
+}
+
+async function enableTotp() {
+  const code = el('totp-confirm-code').value.trim();
+  if (!/^\d{6}$/.test(code)) return showMsg('totp-msg', t('settings.totpInvalid'), false);
+  try {
+    await api('POST', '/api/totp/enable', { code });
+    el('totp-password').value = '';
+    el('totp-confirm-code').value = '';
+    renderTotpStatus(true);
+    showMsg('totp-msg', t('settings.totpEnabled'), true);
+  } catch (error) { showMsg('totp-msg', error.message, false); }
+}
+
+async function disableTotp() {
+  const password = el('totp-password').value;
+  const code = el('totp-disable-code').value.trim();
+  if (!password || !/^\d{6}$/.test(code))
+    return showMsg('totp-msg', t('settings.totpInvalid'), false);
+  try {
+    await api('POST', '/api/totp/disable', { password, code });
+    el('totp-password').value = '';
+    el('totp-disable-code').value = '';
+    renderTotpStatus(false);
+    showMsg('totp-msg', t('settings.totpDisabled'), true);
+  } catch (error) { showMsg('totp-msg', error.message, false); }
+}
+
 // Bug 81: show/hide the secret input depending on the selected probe mode.
 function toggleProbeSecretVisibility() {
   const sel = el('s-probe-mode');
@@ -2865,15 +2924,18 @@ async function api(method, path, body, apiOpts = {}) {
     }
   }
 
-  // Bug 10: auto-redirect on 401
-  if (res.status === 401) {
-    redirectToLogin();
-    throw new Error(t('login.invalidCreds') || 'Session expired');
-  }
-
   const ct   = res.headers.get('Content-Type') || '';
   const data = ct.includes('json') ? await res.json() : await res.text();
   if (data && typeof data === 'object' && data.csrfToken) state.csrfToken = data.csrfToken;
+
+  // Bug 10: auto-redirect authenticated sessions on 401, while preserving the
+  // structured login error needed for the optional second-factor prompt.
+  if (res.status === 401) {
+    if (path !== '/api/login') redirectToLogin();
+    const authError = new Error((data && data.error) || t('login.invalidCreds') || 'Session expired');
+    if (data && typeof data === 'object' && data.code) authError.code = data.code;
+    throw authError;
+  }
 
   if (!res.ok) {
     const msg = (typeof data === 'object' && data.error) ? data.error : String(data);

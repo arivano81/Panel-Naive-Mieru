@@ -45,6 +45,9 @@ const bcrypt = require(process.env.RIXXX_APP + '/node_modules/bcryptjs');
 const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 cfg.adminUser = process.env.RIXXX_ADMIN_USER;
 cfg.adminPassHash = bcrypt.hashSync(process.env.RIXXX_ADMIN_PASS, 12);
+cfg.totpEnabled = false;
+cfg.totpSecret = '';
+cfg.totpLastCounter = -1;
 const tmp = configPath + '.access-new';
 fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2) + '\n', { mode: 0o600 });
 fs.renameSync(tmp, configPath);
@@ -56,20 +59,22 @@ COOKIE="$(mktemp)"
 trap 'rm -f "$COOKIE"' EXIT
 LOGIN_JSON="$(jq -nc --arg username "$ADMIN_USER" --arg password "$ADMIN_PASS" '{username:$username,password:$password}')"
 for _ in 1 2 3 4 5; do
-  if curl -fsS -c "$COOKIE" -H 'Content-Type: application/json' -d "$LOGIN_JSON" \
-      http://127.0.0.1:3000/api/login >/dev/null; then
+  if LOGIN_RESPONSE="$(curl -fsS -c "$COOKIE" -H 'Content-Type: application/json' -d "$LOGIN_JSON" \
+      http://127.0.0.1:3000/api/login)"; then
     LOGIN_OK=1
     break
   fi
   sleep 2
 done
 [[ "${LOGIN_OK:-0}" == 1 ]] || die "Пароль изменён, но локальный вход не прошёл. Резервная копия: $BACKUP"
+CSRF_TOKEN="$(jq -r '.csrfToken // empty' <<<"$LOGIN_RESPONSE")"
+[[ -n "$CSRF_TOKEN" ]] || die "Локальный вход не вернул CSRF-токен. Резервная копия: $BACKUP"
 
 if [[ -n "$PANEL_DOMAIN" && -n "$WEB_BASE_PATH" ]]; then
   ACCESS_JSON="$(jq -nc --arg domain "$PANEL_DOMAIN" --arg path "$WEB_BASE_PATH" \
     --arg user "$BASIC_USER" --arg pass "$BASIC_PASS" \
     '{enabled:true,panelDomain:$domain,webBasePath:$path,basicAuthUser:$user,basicAuthPass:$pass}')"
-  curl -fsS -b "$COOKIE" -H 'Content-Type: application/json' -d "$ACCESS_JSON" \
+  curl -fsS -b "$COOKIE" -H 'Content-Type: application/json' -H "X-CSRF-Token: $CSRF_TOKEN" -d "$ACCESS_JSON" \
     http://127.0.0.1:3000/api/panel/external-access >/dev/null
 fi
 
@@ -85,6 +90,7 @@ Panel username:        ${ADMIN_USER}
 Panel password:        ${ADMIN_PASS}
 HTTP Basic username:   ${BASIC_USER}
 HTTP Basic password:   ${BASIC_PASS}
+TOTP:                  disabled (configure again in Settings)
 Local panel URL:       http://127.0.0.1:3000/
 Config backup:         ${BACKUP}
 EOF

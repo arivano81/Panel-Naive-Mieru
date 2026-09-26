@@ -125,6 +125,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Added optional RFC 6238 administrator TOTP with confirmed QR enrollment,
+  replay protection, secret masking and password-plus-code disable flow. The
+  root-only access recovery script explicitly disables a lost second factor and
+  now carries the session CSRF token when restoring external access.
 - Consolidated regression coverage for the existing dedicated login,
   subscription-token and federation rate limits, including every public
   federation mutation endpoint.

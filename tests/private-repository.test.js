@@ -112,6 +112,11 @@ const adminAudit = spawnSync(process.execPath, [path.join(__dirname, 'admin-audi
 if (adminAudit.stdout) process.stdout.write(adminAudit.stdout);
 if (adminAudit.stderr) process.stderr.write(adminAudit.stderr);
 ok(adminAudit.status === 0, 'administrator audit regression suite passes');
+const totpSecurity = spawnSync(process.execPath, [path.join(__dirname, 'totp-security.test.js')],
+  { encoding: 'utf8' });
+if (totpSecurity.stdout) process.stdout.write(totpSecurity.stdout);
+if (totpSecurity.stderr) process.stderr.write(totpSecurity.stderr);
+ok(totpSecurity.status === 0, 'optional administrator TOTP regression suite passes');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

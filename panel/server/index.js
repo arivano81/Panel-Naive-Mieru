@@ -28,6 +28,7 @@ const helmet         = require('helmet');
 const morgan         = require('morgan');
 const rateLimit      = require('express-rate-limit');
 const { newCsrfToken, csrfProtection } = require('./csrf');
+const { generateSecret, verifyTotp, otpauthUrl } = require('./totp');
 const bcrypt         = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const cron           = require('node-cron');
@@ -85,6 +86,7 @@ try {
     domain: 'localhost', serverIp: '127.0.0.1',
     adminUser: 'admin',
     adminPassHash: bcrypt.hashSync('admin', 12),
+    totpEnabled: false, totpSecret: '', totpLastCounter: -1,
     naivePort: 443, mieruPortStart: 2012, mieruPortEnd: 2022,
     // Hy2 (Hysteria2) — QUIC/UDP proxy. Default UDP/443 coexists with Naive on
     // TCP/443 (our Caddy runs `protocols h1 h2` → HTTP/3 off → UDP/443 free).
@@ -1891,6 +1893,8 @@ const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20,  message: { 
 const apiLimiter   = rateLimit({ windowMs:      60 * 1000, max: 300, message: { error: 'Rate limit exceeded' } });
 const openFluxSecretLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10,
   message: { error: 'Too many secret export attempts' } });
+const totpLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10,
+  message: { error: 'Too many two-factor attempts' } });
 app.use('/api/', apiLimiter);
 app.use('/api/', (req, res, next) => {
   const method = String(req.method || '').toUpperCase();
@@ -1939,7 +1943,7 @@ registerOpenFluxRoutes(app, requireAuth, openFluxService,
 
 // ── Auth routes ───────────────────────────────────────────────────────────────
 app.post('/api/login', loginLimiter, (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, totp } = req.body;
   if (!username || !password)
     return res.status(400).json({ error: 'Missing credentials' });
 
@@ -1949,6 +1953,13 @@ app.post('/api/login', loginLimiter, (req, res) => {
     bcrypt.compareSync(password, cfg.adminPassHash);
 
   if (!isAdmin) return res.status(401).json({ error: 'Invalid credentials' });
+  if (cfg.totpEnabled) {
+    if (!totp) return res.status(401).json({ error: 'Two-factor code required', code: 'TOTP_REQUIRED' });
+    const counter = verifyTotp(cfg.totpSecret, totp, { lastCounter: cfg.totpLastCounter });
+    if (counter === null) return res.status(401).json({ error: 'Invalid credentials' });
+    cfg.totpLastCounter = counter;
+    if (!saveConfig()) return res.status(500).json({ error: 'Could not persist two-factor state' });
+  }
   req.session.regenerate(error => {
     if (error) return res.status(500).json({ error: 'Could not establish session' });
     req.session.authenticated = true;
@@ -1970,11 +1981,60 @@ app.get('/api/me', requireAuth, (req, res) => {
   res.json({ username: req.session.username, authenticated: true, csrfToken: req.session.csrfToken });
 });
 
+app.get('/api/totp/status', requireAuth, (_req, res) => {
+  res.json({ enabled: cfg.totpEnabled === true });
+});
+
+app.post('/api/totp/setup', requireAuth, totpLimiter, (req, res) => {
+  const password = String(req.body?.password || '');
+  if (!cfg.adminPassHash || !bcrypt.compareSync(password, cfg.adminPassHash))
+    return res.status(401).json({ error: 'Current password incorrect' });
+  if (cfg.totpEnabled) return res.status(409).json({ error: 'Two-factor authentication is already enabled' });
+  const secret = generateSecret();
+  req.session.pendingTotpSecret = secret;
+  req.session.save(error => {
+    if (error) return res.status(500).json({ error: 'Could not persist TOTP setup session' });
+    res.set('Cache-Control', 'no-store');
+    res.json({ secret, otpauthUrl: otpauthUrl({ secret, account: cfg.adminUser || 'admin' }) });
+  });
+});
+
+app.post('/api/totp/enable', requireAuth, totpLimiter, (req, res) => {
+  const secret = req.session.pendingTotpSecret;
+  if (!secret) return res.status(409).json({ error: 'Start TOTP setup first' });
+  const counter = verifyTotp(secret, req.body?.code, { lastCounter: -1 });
+  if (counter === null) return res.status(400).json({ error: 'Invalid two-factor code' });
+  cfg.totpSecret = secret;
+  cfg.totpEnabled = true;
+  cfg.totpLastCounter = counter;
+  if (!saveConfig()) return res.status(500).json({ error: 'Could not persist TOTP configuration' });
+  delete req.session.pendingTotpSecret;
+  req.session.save(error => {
+    if (error) return res.status(500).json({ error: 'TOTP enabled but session cleanup failed' });
+    res.json({ ok: true, enabled: true });
+  });
+});
+
+app.post('/api/totp/disable', requireAuth, totpLimiter, (req, res) => {
+  if (!cfg.totpEnabled) return res.json({ ok: true, enabled: false });
+  const password = String(req.body?.password || '');
+  if (!cfg.adminPassHash || !bcrypt.compareSync(password, cfg.adminPassHash))
+    return res.status(401).json({ error: 'Current password incorrect' });
+  if (verifyTotp(cfg.totpSecret, req.body?.code, { lastCounter: -1 }) === null)
+    return res.status(400).json({ error: 'Invalid two-factor code' });
+  cfg.totpEnabled = false;
+  cfg.totpSecret = '';
+  cfg.totpLastCounter = -1;
+  if (!saveConfig()) return res.status(500).json({ error: 'Could not persist TOTP configuration' });
+  res.json({ ok: true, enabled: false });
+});
+
 // ── Config API ────────────────────────────────────────────────────────────────
 app.get('/api/config', requireAuth, (req, res) => {
   // v1.4.0: never leak the panel basic-auth bcrypt hash to the browser — expose
   // a boolean "set" flag instead so the UI can show whether a password exists.
-  const { adminPassHash, panelBasicAuthHash, ...safe } = cfg;
+  const { adminPassHash, panelBasicAuthHash, totpSecret, totpLastCounter, ...safe } = cfg;
+  safe.totpEnabled = cfg.totpEnabled === true;
   safe.panelBasicAuthSet = !!panelBasicAuthHash;
   // Bug 143 (recurring): the UI also reads `version` from here (loadConfig +
   // settings render). The in-memory cfg.version can lag behind after an update
@@ -2152,7 +2212,7 @@ app.post('/api/config', requireAuth, (req, res) => {
       console.warn('[CONFIG] Caddy reload after config change failed:', e && e.message);
     }
   }
-  const { adminPassHash, ...safe } = cfg;
+  const { adminPassHash, totpSecret, totpLastCounter, ...safe } = cfg;
   res.json({ ok: true, cfg: safe });
 });
 

@@ -18,6 +18,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added opt-in VLESS management to the panel: per-user UUID migration, protocol
   gate, transactional Xray rebuild, install/status APIs, user link/QR, base64
   subscription output, backup preservation, UI controls, and doctor checks.
+- Added the managed VLESS REALITY outbound to universal Karing/sing-box
+  configs, de-duplicated matching bonus VLESS nodes, and exposed Xray logs.
 
 ---
 

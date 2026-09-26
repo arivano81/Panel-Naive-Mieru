@@ -3928,6 +3928,13 @@ function bonusUrlToSingboxOutbound(rawUrl, tag) {
   return null; // unknown scheme → silently skipped
 }
 
+function singboxOutboundIdentity(outbound) {
+  if (!outbound || typeof outbound !== 'object') return '';
+  if (outbound.type === 'vless')
+    return ['vless', outbound.uuid, outbound.server, outbound.server_port].join('|').toLowerCase();
+  return '';
+}
+
 // ── v1.8.7: sing-box JSON builder (universal download + Karing subscription) ──
 // Builds a complete sing-box config containing an outbound for EACH protocol
 // the user has enabled (naive / mieru / hy2). The urltest selector is built
@@ -3993,12 +4000,29 @@ function buildProxyOutbounds(user, opts = {}) {
       tls: { enabled: true, server_name: cfg.domain, insecure: false }
     });
   }
+  if (protos.includes('vless') && cfg.stack && cfg.stack.vless && xrayInstalled()) {
+    try {
+      const tag = tagFor('vless-out');
+      const link = buildVlessRealityLink(getVlessRealitySettings(), {
+        id: user.vless_uuid, email: user.username,
+      }, tag);
+      const outbound = bonusUrlToSingboxOutbound(link, tag);
+      if (outbound) { proxyOutbounds.push(outbound); selectTags.push(tag); }
+    } catch (error) {
+      console.error('[XRAY] could not build sing-box VLESS outbound for', user.username, error.message);
+    }
+  }
 
   // Personal bonus links → sing-box outbounds (unparseable ones skipped).
   const bonusUrls = enabledBonusUrls(user);
+  const identities = new Set(proxyOutbounds.map(singboxOutboundIdentity).filter(Boolean));
   for (let i = 0; i < bonusUrls.length; i++) {
     const ob = bonusUrlToSingboxOutbound(bonusUrls[i], `bonus-${i + 1}${suffix}`);
-    if (ob) { proxyOutbounds.push(ob); selectTags.push(ob.tag); }
+    if (!ob) continue;
+    const identity = singboxOutboundIdentity(ob);
+    if (identity && identities.has(identity)) continue;
+    if (identity) identities.add(identity);
+    proxyOutbounds.push(ob); selectTags.push(ob.tag);
   }
 
   return { proxyOutbounds, selectTags };
@@ -5379,6 +5403,10 @@ app.get('/api/logs/:service', requireAuth, (req, res) => {
     case 'hy2':
     case 'hysteria':
       cmd = `journalctl -u hysteria-server -n ${lines} --no-pager 2>/dev/null`;
+      break;
+    case 'vless':
+    case 'xray':
+      cmd = `journalctl -u xray -n ${lines} --no-pager 2>/dev/null`;
       break;
     case 'panel': cmd = `tail -n ${lines} ${LOG_PANEL} 2>/dev/null`; break;
     default: return res.status(400).json({ error: 'Unknown service' });

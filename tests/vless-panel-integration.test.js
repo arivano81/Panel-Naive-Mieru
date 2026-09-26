@@ -45,6 +45,21 @@ ok(app.includes("protocols.push('vless')") && app.includes('function applyVlessG
   'user editor gates VLESS on component installation');
 ok(app.includes('function installVless()') && app.includes('function rebuildVless()') &&
    app.includes('function downloadVlessLink()'), 'panel supports install, rebuild, and client link actions');
+ok(source.includes("tagFor('vless-out')") && source.includes('bonusUrlToSingboxOutbound(link, tag)'),
+  'universal sing-box config includes the managed local VLESS REALITY outbound');
+ok(source.includes('const identities = new Set(proxyOutbounds.map(singboxOutboundIdentity)') &&
+   source.includes('identities.has(identity)'), 'matching bonus VLESS nodes are de-duplicated');
+const identitySource = source.match(/function singboxOutboundIdentity\(outbound\) \{[\s\S]*?\n\}/);
+const identity = identitySource && Function(`${identitySource[0]}; return singboxOutboundIdentity;`)();
+const managed = { type: 'vless', tag: 'vless-out', uuid: 'AA', server: 'VPN.EXAMPLE', server_port: 8443 };
+const bonusCopy = { ...managed, tag: 'bonus-1', uuid: 'aa', server: 'vpn.example' };
+ok(identity && identity(managed) === identity(bonusCopy),
+  'de-duplication identity ignores tag and normalizes VLESS case');
+ok(identity && identity(managed) !== identity({ ...bonusCopy, uuid: 'bb' }),
+  'different VLESS UUID remains a distinct bonus node');
+ok(source.includes("case 'vless':") && html.includes('id="log-btn-vless"') &&
+   app.includes("['caddy', 'mieru', 'hy2', 'vless', 'panel']"),
+  'Xray journal is available from the Logs page');
 
 console.log(`\nResult: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

@@ -1350,6 +1350,7 @@ function hy2ChownConfig(file) {
       const dir = path.dirname(file || HY2_CONFIG);
       targets.push(dir);
       if (file) targets.push(file + '.last-good');
+      if (file) targets.push(file + '.previous-good');
     } catch {}
     for (const t of targets) {
       try {

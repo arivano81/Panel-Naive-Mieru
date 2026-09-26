@@ -44,6 +44,8 @@ function applyFileTransaction({
   const tmp = targetPath + '.new';
   const backup = targetPath + '.last-good';
   const backupTmp = backup + '.new';
+  const previous = targetPath + '.previous-good';
+  const previousTmp = previous + '.new';
   const hadOriginal = io.existsSync(targetPath);
 
   io.mkdirSync(dir, { recursive: true });
@@ -60,8 +62,16 @@ function applyFileTransaction({
 
   try {
     safeRemove(backupTmp, io);
+    safeRemove(previousTmp, io);
     if (hadOriginal) {
       io.copyFileSync(targetPath, backupTmp);
+      // Keep two generations: the old last-good becomes previous-good only
+      // after its replacement has been prepared successfully.
+      if (io.existsSync(backup)) {
+        io.copyFileSync(backup, previousTmp);
+        io.renameSync(previousTmp, previous);
+        if (typeof io.chmodSync === 'function') io.chmodSync(previous, mode);
+      }
       io.renameSync(backupTmp, backup);
       if (typeof io.chmodSync === 'function') io.chmodSync(backup, mode);
     }
@@ -69,8 +79,9 @@ function applyFileTransaction({
   } catch (error) {
     safeRemove(tmp, io);
     safeRemove(backupTmp, io);
+    safeRemove(previousTmp, io);
     return { ok: false, phase: 'write', error: errorMessage(error), rolledBack: false,
-             backup: hadOriginal ? backup : null };
+             backup: hadOriginal ? backup : null, previous: io.existsSync(previous) ? previous : null };
   }
 
   let operation;
@@ -87,7 +98,7 @@ function applyFileTransaction({
 
   if (operation.ok) {
     return { ok: true, phase: 'complete', error: '', rolledBack: false,
-             backup: hadOriginal ? backup : null };
+             backup: hadOriginal ? backup : null, previous: io.existsSync(previous) ? previous : null };
   }
 
   let rollbackError = '';
@@ -112,6 +123,7 @@ function applyFileTransaction({
     rollbackError,
     rolledBack,
     backup: hadOriginal ? backup : null,
+    previous: io.existsSync(previous) ? previous : null,
   };
 }
 

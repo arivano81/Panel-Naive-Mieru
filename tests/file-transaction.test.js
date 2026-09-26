@@ -84,6 +84,17 @@ ok(!result.ok && result.rolledBack, 'permission failure triggers rollback');
 ok(fs.readFileSync(target, 'utf8') === 'known-good', 'old target is restored');
 ok(applyCalls === 0, 'candidate is not applied after permission failure');
 
+console.log('\n[6] two previous working generations are retained');
+const retained = path.join(tmp, 'retained.conf');
+fs.writeFileSync(retained, 'v1');
+for (const content of ['v2', 'v3', 'v4']) {
+  result = applyFileTransaction({ targetPath: retained, content });
+  ok(result.ok, `${content} applied`);
+}
+ok(fs.readFileSync(retained, 'utf8') === 'v4', 'latest content is active');
+ok(fs.readFileSync(retained + '.last-good', 'utf8') === 'v3', 'last-good keeps generation v3');
+ok(fs.readFileSync(retained + '.previous-good', 'utf8') === 'v2', 'previous-good keeps generation v2');
+
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(`\nResult: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

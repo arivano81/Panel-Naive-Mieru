@@ -38,6 +38,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   rejects nodes without active Xray and reports `unsupportedProtocols` to the hub.
 - WARP and cascade status now probe the public egress IP as the dedicated
   `xray` service user, exposing the actual VLESS route in the existing status UI.
+- Debian 13 CI now downloads the pinned Xray archive, verifies its checksum and
+  version, generates real X25519 keys, and validates the generated user config
+  with the actual `xray run -test` command.
 
 ---
 

@@ -1,6 +1,7 @@
 # VLESS REALITY — спецификация этапа B
 
-Статус: adapter/config-generator, серверный компонент ещё не включается пользователям.
+Статус: предварительный opt-in профиль работает в панели; production-статус ожидает
+ручной canary установки и подключения минимум двух клиентов на Debian 13.
 
 ## Граница изменений
 
@@ -34,8 +35,9 @@
 
 `generate → xray run -test → last-good backup → atomic replace → restart → is-active → rollback`.
 
-До подключения UI должны пройти unit-тесты генератора, отрицательные тесты полей REALITY,
-тест checksum installer и тест неизменности существующих конфигов.
+CI на Debian 13 скачивает закреплённый архив, повторно проверяет checksum и версию,
+генерирует X25519-пару настоящим бинарником и выполняет `xray run -test` для конфига
+с canary-пользователем. Полный systemd/firewall/client canary остаётся ручным gate.
 
 ## Ручной canary-install (только тестовый Debian 13)
 

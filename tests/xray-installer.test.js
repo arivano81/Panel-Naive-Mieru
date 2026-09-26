@@ -7,6 +7,8 @@ const script = fs.readFileSync(path.join(__dirname, '../panel/scripts/install_xr
 const configMigrations = fs.readFileSync(path.join(__dirname, '../panel/server/configMigrations.js'), 'utf8');
 const install = fs.readFileSync(path.join(__dirname, '../install.sh'), 'utf8');
 const update = fs.readFileSync(path.join(__dirname, '../update.sh'), 'utf8');
+const workflow = fs.readFileSync(path.join(__dirname, '../.github/workflows/ci.yml'), 'utf8');
+const binaryCanary = fs.readFileSync(path.join(__dirname, 'xray-binary-canary.sh'), 'utf8');
 let pass = 0, fail = 0;
 function ok(value, message) {
   if (value) { console.log('  ✓', message); pass++; }
@@ -15,6 +17,10 @@ function ok(value, message) {
 
 console.log('Pinned Xray installer regression test');
 ok(/XRAY_VERSION="v26\.3\.27"/.test(script), 'stable Xray version is pinned');
+ok(workflow.includes("if: matrix.release == '13'") && workflow.includes('bash tests/xray-binary-canary.sh'),
+  'Debian 13 CI runs the real pinned-binary canary');
+ok(binaryCanary.includes('run -test -config "$WORK/config.json"'),
+  'binary canary validates the generated config with real Xray');
 ok(/XRAY_ASSET="Xray-linux-64\.zip"/.test(script), 'amd64 release asset is pinned');
 ok(script.includes('23cd9af937744d97776ee35ecad4972cf4b2109d1e0fe6be9930467608f7c8ae'),
   'official SHA-256 is pinned');

@@ -1,0 +1,30 @@
+#!/usr/bin/env node
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+const install = fs.readFileSync(path.join(__dirname, '..', 'install.sh'), 'utf8');
+let passed = 0;
+let failed = 0;
+function ok(value, message) {
+  if (value) { passed++; console.log('  ✓', message); }
+  else { failed++; console.error('  ✗', message); }
+}
+
+console.log('Bundled private source working-directory regression test');
+const caddyStart = install.indexOf('install_caddy_naive()');
+const caddyEnd = install.indexOf('\n# ── Mieru', caddyStart);
+const caddy = install.slice(caddyStart, caddyEnd);
+const panelStart = install.indexOf('install_panel()');
+const panelEnd = install.indexOf('\n# ── config.json', panelStart);
+const panel = install.slice(panelStart, panelEnd);
+
+ok(caddy.includes('tar -C "$tmp_dir"'), 'Caddy archive extraction is directory-scoped');
+ok(!/^\s*cd\s+(?:"?\$tmp_dir"?|\/)(?:\s|$)/m.test(caddy),
+  'Caddy installation cannot change the caller working directory');
+ok(panel.includes('script_dir/panel') && panel.includes('PWD/panel'),
+  'panel installation retains both bundled source discovery paths');
+ok(caddyStart < panelStart, 'regression covers the production install order');
+
+console.log(`\nResult: ${passed} passed, ${failed} failed`);
+process.exit(failed === 0 ? 0 : 1);

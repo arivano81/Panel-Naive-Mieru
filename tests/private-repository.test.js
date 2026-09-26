@@ -132,6 +132,11 @@ const securityPolicy = spawnSync(process.execPath, [path.join(__dirname, 'securi
 if (securityPolicy.stdout) process.stdout.write(securityPolicy.stdout);
 if (securityPolicy.stderr) process.stderr.write(securityPolicy.stderr);
 ok(securityPolicy.status === 0, 'security reporting and release revocation policy suite passes');
+const installerSourceCwd = spawnSync(process.execPath, [path.join(__dirname, 'installer-source-cwd.test.js')],
+  { encoding: 'utf8' });
+if (installerSourceCwd.stdout) process.stdout.write(installerSourceCwd.stdout);
+if (installerSourceCwd.stderr) process.stderr.write(installerSourceCwd.stderr);
+ok(installerSourceCwd.status === 0, 'bundled private source working-directory regression suite passes');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

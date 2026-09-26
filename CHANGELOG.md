@@ -125,6 +125,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Fixed clean installation from a bundled/private checkout: Caddy archive
+  extraction no longer changes the process working directory to `/`, so the
+  following panel step cannot unexpectedly prompt for an interactive GitHub
+  clone. The defect was reproduced on a real Debian 13 VPS.
 - Documented private vulnerability reporting, administrator containment and a
   non-silent release revocation procedure in `SECURITY.md`.
 - Added centralized runtime and HTTP access-log redaction for passwords, UUIDs,

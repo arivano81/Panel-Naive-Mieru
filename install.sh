@@ -344,9 +344,12 @@ install_caddy_naive() {
   wget -q --show-progress --connect-timeout 30 -O "$archive_path" "$asset_url" || \
     die "$(t 'Ошибка загрузки caddy-forwardproxy-naive' 'Failed to download caddy-forwardproxy-naive')"
 
-  # Extract
-  cd "$tmp_dir"
-  tar -xJf "$archive_path" 2>/dev/null || tar -xf "$archive_path" 2>/dev/null || \
+  # Extract without changing the caller's working directory. install_panel()
+  # deliberately discovers a bundled private-repository checkout relative to
+  # the original invocation directory; a stray `cd /` here used to make a
+  # verified local install unexpectedly fall back to an interactive git clone.
+  tar -C "$tmp_dir" -xJf "$archive_path" 2>/dev/null || \
+    tar -C "$tmp_dir" -xf "$archive_path" 2>/dev/null || \
     die "$(t 'Ошибка распаковки архива' 'Failed to extract archive')"
 
   # Find the caddy binary (named 'caddy' or 'caddy-naive' inside the archive)
@@ -359,7 +362,7 @@ install_caddy_naive() {
     die "$(t 'caddy бинарный файл не найден в архиве' 'caddy binary not found in archive')"
 
   install -m 755 "$caddy_found" "$CADDY_BIN"
-  rm -rf "$tmp_dir"; cd /
+  rm -rf "$tmp_dir"
 
   # Bug 1: setcap so caddy-naive can bind port 443 without root
   if command -v setcap &>/dev/null; then

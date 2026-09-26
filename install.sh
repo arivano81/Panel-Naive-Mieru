@@ -1381,7 +1381,7 @@ start_services() {
     local _port_wait=0
     while [[ $_port_wait -lt 30 ]]; do
       ss -tlnp 2>/dev/null | grep -q ":${NAIVE_PORT} " && break
-      sleep 2; (( _port_wait++ ))
+      sleep 2; (( ++_port_wait ))
     done
     if ! ss -tlnp 2>/dev/null | grep -q ":${NAIVE_PORT} "; then
       log_warn "$(t "caddy-naive ещё не слушает :${NAIVE_PORT} после 60 с — ACME challenge может быть в процессе" \
@@ -1473,7 +1473,7 @@ smoke_test_configs() {
     -d "{\"username\":\"admin\",\"password\":\"$ADMIN_PASS\"}" 2>/dev/null) || true
 
   if echo "$login_res" | grep -q '"ok":true'; then
-    echo -e "  ${GREEN}✓${NC} smoke login OK"; (( pass++ ))
+    echo -e "  ${GREEN}✓${NC} smoke login OK"; (( ++pass ))
   else
     echo -e "  ${YELLOW}⚠${NC}  smoke login skipped (panel may still be starting)"
     rm -f "$cookie_file"
@@ -1490,9 +1490,9 @@ smoke_test_configs() {
   user_id=$(echo "$create_res" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(String(JSON.parse(s).id||""));}catch(_){}})' 2>/dev/null || true)
 
   if [[ -n "$user_id" ]]; then
-    echo -e "  ${GREEN}✓${NC} smoke test user created (id: ${user_id:0:8}…)"; (( pass++ ))
+    echo -e "  ${GREEN}✓${NC} smoke test user created (id: ${user_id:0:8}…)"; (( ++pass ))
   else
-    echo -e "  ${RED}✗${NC} smoke test user creation failed"; (( fail++ ))
+    echo -e "  ${RED}✗${NC} smoke test user creation failed"; (( ++fail ))
     rm -f "$cookie_file"; return 0
   fi
 
@@ -1503,16 +1503,16 @@ smoke_test_configs() {
     2>/dev/null) || true
 
   if echo "$naive_cfg" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const d=JSON.parse(s);process.exit("link" in d?0:1)})' 2>/dev/null; then
-    echo -e "  ${GREEN}✓${NC} naive config link valid"; (( pass++ ))
+    echo -e "  ${GREEN}✓${NC} naive config link valid"; (( ++pass ))
     # Bug 5: verify transport field
     local naive_link; naive_link=$(echo "$naive_cfg" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(String(JSON.parse(s).link||""));}catch(_){}})' 2>/dev/null || true)
     if echo "$naive_link" | grep -q "naive+https://"; then
-      echo -e "  ${GREEN}✓${NC} naive link uses HTTPS transport"; (( pass++ ))
+      echo -e "  ${GREEN}✓${NC} naive link uses HTTPS transport"; (( ++pass ))
     else
-      echo -e "  ${RED}✗${NC} naive link missing HTTPS transport"; (( fail++ ))
+      echo -e "  ${RED}✗${NC} naive link missing HTTPS transport"; (( ++fail ))
     fi
   else
-    echo -e "  ${RED}✗${NC} naive config invalid"; (( fail++ ))
+    echo -e "  ${RED}✗${NC} naive config invalid"; (( ++fail ))
   fi
 
   # Fetch mieru (sing-box) config
@@ -1535,9 +1535,9 @@ smoke_test_configs() {
       } catch (_) { process.exit(1); }
     });
   ' 2>/dev/null; then
-    echo -e "  ${GREEN}✓${NC} mieru config valid (transport + port fields)"; (( pass++ ))
+    echo -e "  ${GREEN}✓${NC} mieru config valid (transport + port fields)"; (( ++pass ))
   else
-    echo -e "  ${RED}✗${NC} mieru config validation failed"; (( fail++ ))
+    echo -e "  ${RED}✗${NC} mieru config validation failed"; (( ++fail ))
   fi
 
   # Cleanup test user
@@ -1558,9 +1558,9 @@ smoke_test() {
 
   chk() {
     if eval "$2" &>/dev/null; then
-      echo -e "  ${GREEN}✓${NC} $1"; (( pass++ ))
+      echo -e "  ${GREEN}✓${NC} $1"; (( ++pass ))
     else
-      echo -e "  ${RED}✗${NC} $1"; (( fail++ ))
+      echo -e "  ${RED}✗${NC} $1"; (( ++fail ))
     fi
   }
 
@@ -1589,7 +1589,7 @@ smoke_test() {
 
   if timedatectl status 2>/dev/null | grep -q "synchronized: yes"; then
     echo -e "  ${GREEN}✓${NC} $(t 'Время синхронизировано' 'Time synchronised')"
-    (( pass++ ))
+    (( ++pass ))
   else
     echo -e "  ${YELLOW}⚠${NC}  $(t 'Время НЕ синхронизировано — критично для Mieru!' \
                                     'Time NOT synchronised — critical for Mieru!')"

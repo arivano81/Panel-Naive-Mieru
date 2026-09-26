@@ -1719,9 +1719,9 @@ smoke_test() {
 
   check_svc() {
     if systemctl is-active --quiet "$1"; then
-      echo -e "  ${GREEN}✓${NC} $1 active"; (( pass++ ))
+      echo -e "  ${GREEN}✓${NC} $1 active"; (( ++pass ))
     else
-      echo -e "  ${RED}✗${NC} $1 INACTIVE"; (( fail++ ))
+      echo -e "  ${RED}✗${NC} $1 INACTIVE"; (( ++fail ))
     fi
   }
 
@@ -1734,7 +1734,7 @@ smoke_test() {
   # never enabled Hy2 must NOT be flagged as failing.
   if [[ -f /etc/hysteria/config.yaml && -x /usr/local/bin/hysteria ]]; then
     if systemctl is-active --quiet hysteria-server; then
-      echo -e "  ${GREEN}✓${NC} hysteria-server active (Hy2)"; (( pass++ ))
+      echo -e "  ${GREEN}✓${NC} hysteria-server active (Hy2)"; (( ++pass ))
     else
       echo -e "  ${YELLOW}⚠${NC}  hysteria-server INACTIVE (Hy2 installed) — journalctl -u hysteria-server -n 20"
     fi
@@ -1743,48 +1743,48 @@ smoke_test() {
   # caddy-naive version check
   if timeout 5 "$CADDY_BIN" version &>/dev/null 2>&1 || \
      timeout 5 "$CADDY_BIN" --version &>/dev/null 2>&1; then
-    echo -e "  ${GREEN}✓${NC} caddy-naive version OK"; (( pass++ ))
+    echo -e "  ${GREEN}✓${NC} caddy-naive version OK"; (( ++pass ))
   else
-    echo -e "  ${RED}✗${NC} caddy-naive version FAILED"; (( fail++ ))
+    echo -e "  ${RED}✗${NC} caddy-naive version FAILED"; (( ++fail ))
   fi
 
   # Caddyfile present
   if [[ -f "$CADDY_FILE" ]]; then
-    echo -e "  ${GREEN}✓${NC} Caddyfile present"; (( pass++ ))
+    echo -e "  ${GREEN}✓${NC} Caddyfile present"; (( ++pass ))
   else
-    echo -e "  ${RED}✗${NC} Caddyfile MISSING"; (( fail++ ))
+    echo -e "  ${RED}✗${NC} Caddyfile MISSING"; (( ++fail ))
   fi
 
   # Fake site present
   if [[ -f "${FAKE_SITE_DIR}/index.html" ]]; then
-    echo -e "  ${GREEN}✓${NC} fake-site/index.html present"; (( pass++ ))
+    echo -e "  ${GREEN}✓${NC} fake-site/index.html present"; (( ++pass ))
   else
     echo -e "  ${YELLOW}⚠${NC}  fake-site/index.html missing (non-critical)"; 
   fi
 
   # Panel HTTP
   if curl -sf http://127.0.0.1:3000/ -o /dev/null 2>/dev/null; then
-    echo -e "  ${GREEN}✓${NC} Panel HTTP :3000 OK"; (( pass++ ))
+    echo -e "  ${GREEN}✓${NC} Panel HTTP :3000 OK"; (( ++pass ))
   else
     echo -e "  ${YELLOW}⚠${NC}  Panel :3000 not responding"
   fi
 
   # mita status
   if mita status 2>/dev/null | grep -qi "running\|active"; then
-    echo -e "  ${GREEN}✓${NC} mita reports running"; (( pass++ ))
+    echo -e "  ${GREEN}✓${NC} mita reports running"; (( ++pass ))
   else
     echo -e "  ${YELLOW}⚠${NC}  mita status unclear"
   fi
 
   # Bug 103: real outbound egress check (IPv4 always; IPv6 only if a route exists).
   if curl -4 -fsS --max-time 8 -o /dev/null https://www.google.com 2>/dev/null; then
-    echo -e "  ${GREEN}✓${NC} IPv4 outbound OK"; (( pass++ ))
+    echo -e "  ${GREEN}✓${NC} IPv4 outbound OK"; (( ++pass ))
   else
     echo -e "  ${YELLOW}⚠${NC}  IPv4 outbound check failed (firewall/DNS?)"
   fi
   if has_working_ipv6; then
     if curl -6 -fsS --max-time 8 -o /dev/null https://www.google.com 2>/dev/null; then
-      echo -e "  ${GREEN}✓${NC} IPv6 outbound OK"; (( pass++ ))
+      echo -e "  ${GREEN}✓${NC} IPv6 outbound OK"; (( ++pass ))
     else
       echo -e "  ${YELLOW}⚠${NC}  IPv6 advertised but unreachable — enforcing IPv4 preference"
       ensure_ipv4_preference

@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const install = fs.readFileSync(path.join(__dirname, '..', 'install.sh'), 'utf8');
+const update = fs.readFileSync(path.join(__dirname, '..', 'update.sh'), 'utf8');
 let passed = 0;
 let failed = 0;
 function ok(value, message) {
@@ -25,6 +26,8 @@ ok(!/^\s*cd\s+(?:"?\$tmp_dir"?|\/)(?:\s|$)/m.test(caddy),
 ok(panel.includes('script_dir/panel') && panel.includes('PWD/panel'),
   'panel installation retains both bundled source discovery paths');
 ok(caddyStart < panelStart, 'regression covers the production install order');
+ok(!/\(\(\s*[A-Za-z_][A-Za-z0-9_]*\+\+\s*\)\)/.test(install + update),
+  'set -e production scripts contain no zero-valued postfix increments');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

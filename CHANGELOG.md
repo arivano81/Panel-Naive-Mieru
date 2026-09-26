@@ -129,6 +129,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   extraction no longer changes the process working directory to `/`, so the
   following panel step cannot unexpectedly prompt for an interactive GitHub
   clone. The defect was reproduced on a real Debian 13 VPS.
+- Fixed `set -e` aborting installer and updater health reports on the first
+  successful counter increment. Smoke tests now collect every result and reach
+  the final root-only administrator report.
 - Documented private vulnerability reporting, administrator containment and a
   non-silent release revocation procedure in `SECURITY.md`.
 - Added centralized runtime and HTTP access-log redaction for passwords, UUIDs,

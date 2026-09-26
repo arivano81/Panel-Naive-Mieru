@@ -97,6 +97,11 @@ const openfluxGolden = spawnSync(process.execPath, [path.join(__dirname, 'openfl
 if (openfluxGolden.stdout) process.stdout.write(openfluxGolden.stdout);
 if (openfluxGolden.stderr) process.stderr.write(openfluxGolden.stderr);
 ok(openfluxGolden.status === 0, 'disabled OpenFlux golden isolation suite passes');
+const openfluxSystemdCanary = spawnSync(process.execPath, [path.join(__dirname, 'openflux-systemd-canary.test.js')],
+  { encoding: 'utf8' });
+if (openfluxSystemdCanary.stdout) process.stdout.write(openfluxSystemdCanary.stdout);
+if (openfluxSystemdCanary.stderr) process.stderr.write(openfluxSystemdCanary.stderr);
+ok(openfluxSystemdCanary.status === 0, 'Debian 13 OpenFlux systemd canary contract passes');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

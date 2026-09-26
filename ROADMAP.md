@@ -256,8 +256,9 @@ OpenFlux — отдельная подсистема, а не четвёртый
    ключ. Изолированный CLI уже реализует create/start/stop/restart/status/remove с
    per-profile key и firewall rollback. Mock-systemd/UFW fault-тест проверяет failed-start
    rollback, отказ до изменения службы при занятом порте или повреждённом config, bounded
-   timeout зависшего systemd и полный lifecycle в изолированном `/tmp` root. Далее нужен ручной
-   systemd/reboot/uninstall canary на отдельном Debian 13.
+   timeout зависшего systemd и полный lifecycle в изолированном `/tmp` root. Для отдельного
+   Debian 13 подготовлен guarded трёхфазный systemd/reboot/uninstall canary; остаётся
+   зафиксировать его внешний прогон.
 3. **Opt-in UI** — закрытый admin API и отдельная экспериментальная страница уже
    предоставляют install/list/create/start/stop/restart/remove без выдачи ключа. До полного
    UI остаются QR/ссылка; безопасный журнал, подтверждаемый экспорт bundle и транзакционная

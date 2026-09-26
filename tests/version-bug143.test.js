@@ -22,30 +22,20 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { readPanelVersion, parseVersionFile } = require('../panel/server/version');
 
 let pass = 0, fail = 0;
 function ok(c, m) { if (c) { console.log('  \u2713', m); pass++; } else { console.error('  \u2717', m); fail++; } }
 
-// Replica of readPanelVersion() with injectable paths/cfg (logic must match
-// panel/server/index.js exactly).
 function makeReader(versionFile, bundledVersionPaths, cfg, fallback) {
-  return function readPanelVersion() {
-    try {
-      const raw = fs.readFileSync(versionFile, 'utf8');
-      const m = raw.match(/panel_version\s*=\s*([^\s#]+)/);
-      const v = (m ? m[1] : raw.split('\n')[0]).trim();
-      if (v) return v;
-    } catch {}
-    for (const p of bundledVersionPaths) {
-      try { const v = fs.readFileSync(p, 'utf8').trim(); if (v) return v; } catch {}
-    }
-    if (cfg && cfg.version) return String(cfg.version).trim();
-    return fallback;
-  };
+  return () => readPanelVersion({ versionFile, bundledVersionPaths, cfg, fallback });
 }
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ver143-'));
-const verFile = path.join(tmp, 'version');
+// Keep the names distinct even on case-insensitive filesystems. The old test
+// used `version` and `VERSION`, so Windows overwrote the canonical file with
+// the bundled fallback and produced a false BUG-143 failure.
+const verFile = path.join(tmp, 'installed-version');
 const bundled = path.join(tmp, 'VERSION');
 
 console.log('BUG-143 version single-source regression test');
@@ -55,6 +45,7 @@ fs.writeFileSync(verFile, 'panel_version=1.4.4\n');
 fs.writeFileSync(bundled, '9.9.9\n');
 let read = makeReader(verFile, [bundled], { version: '1.0.0' }, 'FB');
 ok(read() === '1.4.4', `parsed panel_version=1.4.4 from version file (got ${read()})`);
+ok(parseVersionFile('panel_version=1.4.4\n') === '1.4.4', 'production parser is used by the test');
 
 console.log('\n[2] version file with comment + spacing parses cleanly');
 fs.writeFileSync(verFile, '# written by update.sh\npanel_version = 1.4.5  # release\n');
@@ -83,6 +74,26 @@ read = makeReader(verFile, [bundled], { version: '1.4.2' }, 'FB');  // stale cfg
 ok(read() === '1.4.3', 'before update: live read shows 1.4.3 (not stale cfg 1.4.2)');
 fs.writeFileSync(verFile, 'panel_version=1.4.4\n');                 // update.sh runs
 ok(read() === '1.4.4', 'after update: SAME reader now returns 1.4.4 with no restart');
+
+console.log('\n[7] transient Windows file lock is retried before falling back');
+let attempts = 0;
+const transientReader = (file, encoding) => {
+  if (file === verFile && attempts++ === 0) {
+    const error = new Error('temporary lock');
+    error.code = 'EPERM';
+    throw error;
+  }
+  return fs.readFileSync(file, encoding);
+};
+read = () => readPanelVersion({
+  versionFile: verFile,
+  bundledVersionPaths: [bundled],
+  cfg: { version: '1.0.0' },
+  fallback: 'FB',
+  readFileSync: transientReader,
+});
+ok(read() === '1.4.4', 'transient EPERM is retried and canonical version still wins');
+ok(attempts === 2, `canonical file was read twice (got ${attempts})`);
 
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(`\nResult: ${pass} passed, ${fail} failed`);

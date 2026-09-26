@@ -11,12 +11,24 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Added GitHub Actions coverage for Node.js 20 and Debian 12/13, including the
+  complete regression suite, Bash syntax checks, ShellCheck and production
+  dependency audit.
+- Extracted the live panel-version resolver into a reusable production module.
+  Canonical version-file reads retry transient Windows file-lock errors before
+  falling back to a bundled or config version.
 - Debian 13 is accepted by the installer on amd64 systems.
 - The installer writes `/root/rixxx-panel-install-report.txt` before risky
   service-configuration steps and refreshes it after a successful installation.
 - `panel/scripts/recover_access.sh` resets both the panel password and public
   HTTP Basic Auth without requiring the old passwords, while backing up config.
 - Added a regression test for Debian 13, early credential reporting and recovery.
+
+### Fixed
+
+- Fixed the cross-platform BUG-143 test: `version` and `VERSION` referred to
+  the same file on case-insensitive Windows filesystems, which produced a false
+  stale-version failure even though Linux behaved correctly.
 
 ### Documentation
 

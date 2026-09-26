@@ -37,6 +37,7 @@ const path           = require('path');
 const { execSync, execFileSync } = require('child_process');
 const si             = require('systeminformation');
 const crypto         = require('crypto');   // Bug 100: module-level require so generateSafePassword() has a real Node crypto (not Web-Crypto globalThis.crypto, which lacks randomInt)
+const { readPanelVersion: resolvePanelVersion } = require('./version');
 
 // ── Paths ─────────────────────────────────────────────────────────────────────
 const PANEL_CONFIG    = '/etc/rixxx-panel/config.json';
@@ -148,25 +149,13 @@ if (cfg.stack.hy2   === undefined) cfg.stack.hy2   = false;
 // Returns a clean semver-ish string. Cheap (tiny file reads); fine per-request.
 const VERSION_FALLBACK = '1.6.0';
 function readPanelVersion() {
-  // 1) /etc/rixxx-panel/version  → "panel_version=1.4.4"
-  try {
-    const raw = fs.readFileSync(VERSION_FILE, 'utf8');
-    const m = raw.match(/panel_version\s*=\s*([^\s#]+)/);
-    const v = (m ? m[1] : raw.split('\n')[0]).trim();
-    if (v) return v;
-  } catch {}
-  // 2) bundled VERSION file (../../VERSION relative to server/index.js)
-  for (const p of [path.join(__dirname, '..', '..', 'VERSION'),
-                   path.join(__dirname, '..', 'VERSION')]) {
-    try {
-      const v = fs.readFileSync(p, 'utf8').trim();
-      if (v) return v;
-    } catch {}
-  }
-  // 3) config.json
-  if (cfg && cfg.version) return String(cfg.version).trim();
-  // 4) fallback
-  return VERSION_FALLBACK;
+  return resolvePanelVersion({
+    versionFile: VERSION_FILE,
+    bundledVersionPaths: [path.join(__dirname, '..', '..', 'VERSION'),
+                          path.join(__dirname, '..', 'VERSION')],
+    cfg,
+    fallback: VERSION_FALLBACK,
+  });
 }
 
 // Resolved paths (prefer config values, fall back to constants)

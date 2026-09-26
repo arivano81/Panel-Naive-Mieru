@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  panel-tests:
+    name: Panel tests (Node.js 20)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: panel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: panel/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm audit --omit=dev --audit-level=high
+
+  debian:
+    name: Debian ${{ matrix.release }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container: debian:${{ matrix.release }}-slim
+    strategy:
+      fail-fast: false
+      matrix:
+        release: ['12', '13']
+    steps:
+      - name: Install runner prerequisites
+        run: apt-get update && apt-get install -y --no-install-recommends ca-certificates curl git shellcheck xz-utils
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: panel/package-lock.json
+      - name: Install dependencies
+        working-directory: panel
+        run: npm ci
+      - name: Run regression suite
+        working-directory: panel
+        run: npm test
+      - name: Check Bash syntax
+        run: |
+          find . -type f -name '*.sh' -not -path './panel/node_modules/*' -print0 |
+            xargs -0 -n1 bash -n
+      - name: Run ShellCheck (errors only)
+        run: |
+          find . -type f -name '*.sh' -not -path './panel/node_modules/*' -print0 |
+            xargs -0 shellcheck --severity=error

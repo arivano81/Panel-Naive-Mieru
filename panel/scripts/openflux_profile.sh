@@ -191,6 +191,23 @@ status_profile() {
     '. + {service:$service,active:$active,enabled:$enabled}' "$meta"
 }
 
+list_profiles() {
+  local meta id
+  local -a profiles=()
+  shopt -s nullglob
+  profiles=("$PROFILE_DIR"/*.json)
+  shopt -u nullglob
+  if (( ${#profiles[@]} == 0 )); then
+    printf '[]\n'
+    return
+  fi
+  for meta in "${profiles[@]}"; do
+    id=$(jq -er '.id' "$meta")
+    valid_id "$id" || die "invalid profile metadata: $meta"
+    status_profile "$id"
+  done | jq -s 'sort_by(.id)'
+}
+
 remove_profile() {
   local id=$1 meta port bundle
   valid_id "$id" || die "invalid profile id"
@@ -209,12 +226,13 @@ remove_profile() {
 }
 
 usage() {
-  echo "Usage: $0 create <id> <port> <public-host> | start|stop|restart|status|remove <id>" >&2
+  echo "Usage: $0 list | create <id> <port> <public-host> | start|stop|restart|status|remove <id>" >&2
   exit 2
 }
 
 ACTION=${1:-}; ID=${2:-}
 case "$ACTION" in
+  list)   [[ $# -eq 1 ]] || usage; list_profiles ;;
   create) [[ $# -eq 4 ]] || usage; create_profile "$ID" "${3:-}" "${4:-}" ;;
   start)   [[ $# -eq 2 ]] || usage; start_profile "$ID" ;;
   stop)    [[ $# -eq 2 ]] || usage; stop_profile "$ID" ;;

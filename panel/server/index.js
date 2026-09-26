@@ -44,6 +44,8 @@ const { runConfigMigrations } = require('./configMigrations');
 const { BACKUP_FORMAT, BACKUP_SCHEMA, validateBackup, restoreBackupState } = require('./backupRestore');
 const { buildXrayRealityConfig, buildVlessRealityLink } = require('./xrayConfig');
 const { parseXrayStats, accumulateXrayStats } = require('./xrayStats');
+const { createOpenFluxService } = require('./openfluxService');
+const { registerOpenFluxRoutes } = require('./openfluxRoutes');
 
 // ── Paths ─────────────────────────────────────────────────────────────────────
 const PANEL_CONFIG    = '/etc/rixxx-panel/config.json';
@@ -172,6 +174,7 @@ const resolvedCaddyFile = cfg.caddyFile     || CADDY_FILE;
 const resolvedCaddyBin  = cfg.caddyBin      || CADDY_BIN;
 const resolvedCaddyCfgDir = cfg.caddyConfigDir || CADDY_CONFIG_DIR;
 const resolvedFakeSiteDir = cfg.fakeSiteDir  || FAKE_SITE_DIR;
+const openFluxService = createOpenFluxService();
 
 // ── SQLite (better-sqlite3) ───────────────────────────────────────────────────
 let db = null;
@@ -1843,6 +1846,10 @@ function requireAuth(req, res, next) {
   if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Unauthorized' });
   res.redirect('/');
 }
+
+// OpenFlux remains a separately namespaced, opt-in subsystem. Its routes invoke
+// only the isolated lifecycle CLI and never rebuild or restart the main stack.
+registerOpenFluxRoutes(app, requireAuth, openFluxService);
 
 // ── Auth routes ───────────────────────────────────────────────────────────────
 app.post('/api/login', loginLimiter, (req, res) => {

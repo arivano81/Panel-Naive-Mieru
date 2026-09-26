@@ -26,6 +26,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added a Linux fault fixture with a constrained `/tmp` test-root and mocked
   systemd/UFW to exercise failed-start firewall rollback and the complete
   create/start/stop/remove lifecycle without touching the host.
+- Added an authenticated, namespaced `/api/openflux/*` management layer for
+  explicit installation and profile list/create/start/stop/restart/remove.
+  Routes delegate only to the isolated argument-safe lifecycle service, expose
+  no key material, and do not activate a newly installed component.
 
 - Began VLESS stage B with an isolated REALITY/Vision config adapter and a
   pinned Xray-core `v26.3.27` installer. The installer verifies the official

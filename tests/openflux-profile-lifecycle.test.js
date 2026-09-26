@@ -17,7 +17,7 @@ function ok(value, message) {
 console.log('OpenFlux profile lifecycle regression test');
 const syntax = spawnSync('bash', ['-n', 'panel/scripts/openflux_profile.sh'], { cwd: root, encoding: 'utf8' });
 ok(syntax.status === 0, `profile CLI has valid Bash syntax${syntax.stderr ? `: ${syntax.stderr}` : ''}`);
-for (const action of ['create', 'start', 'stop', 'restart', 'status', 'remove']) {
+for (const action of ['list', 'create', 'start', 'stop', 'restart', 'status', 'remove']) {
   ok(new RegExp(`\\b${action}\\)`).test(script), `${action} command is explicitly dispatched`);
 }
 ok(script.includes('flock -n 9'), 'profile mutations are serialized');
@@ -85,6 +85,10 @@ esac
     console.log(`\nResult: ${pass} passed, ${fail} failed`);
     process.exit(1);
   }
+  const listed = run(['list']);
+  ok(listed.status === 0 && JSON.parse(listed.stdout)[0]?.id === 'alpha' &&
+    !JSON.stringify(JSON.parse(listed.stdout)).includes('EncryptionKey'),
+  'list returns profile state without key material');
   const failed = run(['start', 'alpha'], { OPENFLUX_TEST_FAIL_START: '1' });
   ok(failed.status !== 0 && !fs.existsSync(path.join(state, 'openflux-exit@alpha.service.active')),
     'failed systemd start leaves no active instance');

@@ -24,6 +24,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   counters in the Users table. The panel snapshots them every minute, detects
   Xray restarts, preserves completed generations in SQLite, and carries the
   durable totals through backup/restore.
+- Expired users are now suspended across Caddy, Mieru, Hy2, and Xray without
+  deleting their credentials; extending the date restores the same keys.
 
 ---
 

@@ -372,6 +372,12 @@ function deleteUser(id) {
   else memUsers.delete(id);
 }
 
+function userAccessActive(user, now = Date.now()) {
+  if (!user || !user.expiry) return true;
+  const expiry = Date.parse(user.expiry);
+  return Number.isFinite(expiry) && expiry > now;
+}
+
 // ── Persist config ────────────────────────────────────────────────────────────
 // Bug 53: atomic write via .new temp file then rename — prevents partial reads
 //         if the process is interrupted during the write.
@@ -437,7 +443,7 @@ function buildCaddyfile(config, users) {
   // Bug 44: skip users without a plaintext password — caddy-forwardproxy-naive
   //         hashes the password internally; we cannot feed it a bcrypt hash.
   //         Log a warning so operators know which users are missing.
-  const naiveUsers = users.filter(u => {
+  const naiveUsers = users.filter(userAccessActive).filter(u => {
     try { return JSON.parse(u.protocols || '["naive","mieru"]').includes('naive'); }
     catch { return true; }
   }).map(u => {
@@ -873,7 +879,7 @@ function buildTrafficPattern(pat, _cfg) {
 
 function buildMitaStateContent() {
   const allUsers = getAllUsers();
-  const mieruUsers = allUsers.filter(u => {
+  const mieruUsers = allUsers.filter(userAccessActive).filter(u => {
     try { return JSON.parse(u.protocols || '["naive","mieru"]').includes('mieru'); }
     catch { return true; }
   });
@@ -1316,6 +1322,7 @@ function hy2ChownConfig(file) {
 function getHy2Users() {
   return getAllUsers()
     .map(parseUserRow)
+    .filter(userAccessActive)
     .filter(u => Array.isArray(u.protocols) && u.protocols.includes('hy2'));
 }
 
@@ -1605,6 +1612,7 @@ function xrayInstalled() {
 
 function getVlessUsers() {
   return getAllUsers().map(parseUserRow)
+    .filter(userAccessActive)
     .filter(user => user.protocols.includes('vless'))
     .map(user => ({ id: user.vless_uuid, email: user.username }));
 }
@@ -5575,23 +5583,23 @@ wss.on('connection', ws => {
 });
 
 // ── Expiry cron — every 5 min ─────────────────────────────────────────────────
+// Expiry suspends credentials; it must not destroy the user record. Keeping the
+// row lets an administrator extend the date and restore every protocol/UUID.
+let _expiredAccessIds = new Set();
 cron.schedule('*/5 * * * *', () => {
-  const now = new Date().toISOString();
-  let changed = false;
-  getAllUsers().forEach(u => {
-    if (u.expiry && u.expiry < now) {
-      console.log('[CRON] Removing expired user:', u.username);
-      deleteUser(u.id); changed = true;
-    }
-  });
-  if (changed) {
-    try {
-      const content = buildCaddyfile(cfg, getAllUsers());
-      writeCaddyfileAtomic(content);
-      reloadCaddy();
-    } catch {}
-    try { applyMitaConfig(); } catch {}
+  const allUsers = getAllUsers();
+  const next = new Set(allUsers.filter(user => !userAccessActive(user)).map(user => user.id));
+  const changed = next.size !== _expiredAccessIds.size ||
+    [...next].some(id => !_expiredAccessIds.has(id));
+  if (!changed) return;
+  for (const user of allUsers) {
+    if (next.has(user.id) && !_expiredAccessIds.has(user.id))
+      console.log('[CRON] Suspending expired user:', user.username);
+    if (!next.has(user.id) && _expiredAccessIds.has(user.id))
+      console.log('[CRON] Restoring renewed user:', user.username);
   }
+  _expiredAccessIds = next;
+  applyAllConfigsAsync();
 });
 
 // ── Traffic snapshot cron — every 60 s ───────────────────────────────────────

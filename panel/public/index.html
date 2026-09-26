@@ -358,9 +358,11 @@
                   <label class="checkbox"><input type="checkbox" id="p-naive" checked /> <span data-i18n="users.naiveProxyLabel">NaiveProxy</span></label>
                   <label class="checkbox"><input type="checkbox" id="p-mieru" checked /> <span data-i18n="users.mieruLabel">Mieru</span></label>
                   <label class="checkbox" id="p-hy2-wrap"><input type="checkbox" id="p-hy2" /> <span data-i18n="users.hy2Label">Hysteria2</span></label>
+                  <label class="checkbox" id="p-vless-wrap"><input type="checkbox" id="p-vless" /> <span>VLESS REALITY</span></label>
                 </div>
                 <p id="p-hy2-hint" class="hidden" style="margin-top:4px;color:var(--text-secondary);font-size:12px"
                    data-i18n="users.hy2NotInstalled">Hysteria2 не установлен — доустановите его в «Настройках сервера», чтобы выдавать hy2-ключи.</p>
+                <p id="p-vless-hint" class="hidden" style="margin-top:4px;color:var(--text-secondary);font-size:12px">VLESS REALITY не установлен — сначала включите его в «Настройках сервера».</p>
               </div>
             </div>
             <div id="user-modal-error" class="alert alert-error hidden"></div>
@@ -437,6 +439,9 @@
             <button class="btn btn-secondary hidden"  id="btn-dl-hy2-link" data-action="dl-hy2-link">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
               <span data-i18n="config.hy2Link">Hy2 Link</span>
+            </button>
+            <button class="btn btn-secondary hidden" id="btn-dl-vless-link" data-action="dl-vless-link">
+              <span>VLESS REALITY Link</span>
             </button>
             <button class="btn btn-secondary"  data-action="dl-mieru-config">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -637,6 +642,28 @@
             </div>
             <button class="btn btn-primary mt-2" data-action="change-mieru-ports" data-i18n="settings.applyMieruPorts">Apply Mieru Ports</button>
             <div id="mieru-port-msg" class="msg-inline hidden"></div>
+          </div>
+        </div>
+
+        <div class="card" id="card-vless">
+          <div class="card-header">VLESS REALITY (Xray)</div>
+          <div class="card-body">
+            <p class="card-desc">Изолированный дополнительный протокол. Основные NaiveProxy, Mieru и Hysteria2 продолжают работать независимо.</p>
+            <div id="vless-not-installed">
+              <div class="alert alert-warning"><strong>ℹ</strong> Xray ещё не установлен.</div>
+              <div class="form-row">
+                <div class="form-group"><label>TCP-порт</label><input type="number" id="s-vless-port" min="1024" max="65535" value="8443" /></div>
+                <div class="form-group"><label>REALITY server name</label><input type="text" id="s-vless-server-name" value="www.microsoft.com" /></div>
+              </div>
+              <div class="alert alert-warning"><strong>⚠</strong> Установка добавляет отдельный сервис xray. Приватный ключ остаётся только на сервере.</div>
+              <button class="btn btn-primary mt-2" data-action="install-vless" id="btn-install-vless">Установить VLESS REALITY</button>
+              <div id="vless-install-msg" class="msg-inline hidden"></div>
+            </div>
+            <div id="vless-installed" class="hidden">
+              <div class="alert alert-success"><strong>✅</strong> Xray установлен. <span id="vless-status-txt"></span></div>
+              <button class="btn btn-secondary mt-2" data-action="rebuild-vless">Проверить и пересобрать конфигурацию</button>
+              <div id="vless-rebuild-msg" class="msg-inline hidden"></div>
+            </div>
           </div>
         </div>
 

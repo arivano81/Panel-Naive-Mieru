@@ -274,6 +274,7 @@ function handleDelegatedClick(e) {
     case 'dl-naive-link':    downloadNaiveLink(); break;
     case 'dl-mieru-link':    downloadMieruLink(); break;
     case 'dl-hy2-link':      downloadHy2Link(); break;
+    case 'dl-vless-link':    downloadVlessLink(); break;
     case 'dl-mieru-config':  downloadMieruConfig(); break;
     case 'dl-universal-config': downloadUniversalConfig(); break;
     case 'dl-sub-link':      downloadSubLink(); break;
@@ -306,6 +307,8 @@ function handleDelegatedClick(e) {
     case 'install-hy2':          installHy2(false); break;
     case 'reinstall-hy2':        installHy2(true); break;
     case 'change-hy2-port':      changeHy2Port(); break;
+    case 'install-vless':        installVless(); break;
+    case 'rebuild-vless':        rebuildVless(); break;
     case 'change-traffic-pattern': changeTrafficPattern(); break;
     case 'change-udp-mode':      changeUdpMode(); break;
     case 'change-language':      changeLanguage(); break;
@@ -521,6 +524,8 @@ async function loadDashboard() {
         hy2Card.classList.add('hidden');
       }
     }
+    const vless = status.services.vless || {};
+    state.vlessInstalled = !!vless.installed;
     el('d-user-count').textContent = status.panel.userCount;
     el('d-domain').textContent     = status.domain || '—';
 
@@ -752,7 +757,9 @@ function openAddUser() {
   el('p-naive').checked    = true;
   el('p-mieru').checked    = true;
   if (el('p-hy2')) el('p-hy2').checked = false;
+  if (el('p-vless')) el('p-vless').checked = false;
   applyHy2Gate();
+  applyVlessGate();
   el('u-pass-hint').textContent = t('users.passwordHintNew');
   el('user-modal-error').classList.add('hidden');
   el('user-modal').classList.remove('hidden');
@@ -766,6 +773,16 @@ function applyHy2Gate() {
   const hint = el('p-hy2-hint');
   if (!cb) return;
   const installed = !!state.hy2Installed;
+  cb.disabled = !installed;
+  if (!installed) cb.checked = false;
+  if (hint) hint.classList.toggle('hidden', installed);
+}
+
+function applyVlessGate() {
+  const cb = el('p-vless');
+  const hint = el('p-vless-hint');
+  if (!cb) return;
+  const installed = !!state.vlessInstalled;
   cb.disabled = !installed;
   if (!installed) cb.checked = false;
   if (hint) hint.classList.toggle('hidden', installed);
@@ -788,11 +805,16 @@ function openEditUser(id) {
   el('p-naive').checked  = protocols.includes('naive');
   el('p-mieru').checked  = protocols.includes('mieru');
   applyHy2Gate();
+  applyVlessGate();
   // After gating: reflect the saved hy2 state (a user may already have hy2 even
   // if the checkbox got disabled — keep it checked so an edit doesn't drop it).
   if (el('p-hy2')) {
     el('p-hy2').checked = protocols.includes('hy2');
     if (protocols.includes('hy2')) el('p-hy2').disabled = false;
+  }
+  if (el('p-vless')) {
+    el('p-vless').checked = protocols.includes('vless');
+    if (protocols.includes('vless')) el('p-vless').disabled = false;
   }
   el('u-pass-hint').textContent = t('users.passwordHintEdit');
   el('user-modal-error').classList.add('hidden');
@@ -817,6 +839,7 @@ async function saveUser() {
   if (el('p-naive').checked) protocols.push('naive');
   if (el('p-mieru').checked) protocols.push('mieru');
   if (el('p-hy2') && el('p-hy2').checked) protocols.push('hy2');
+  if (el('p-vless') && el('p-vless').checked) protocols.push('vless');
 
   if (!username)            return showUserError(t('users.usernameRequired'));
   if (!id && !password)     return showUserError(t('users.passwordRequired'));
@@ -1015,6 +1038,8 @@ function openConfigDownload(id) {
   const uProtos = user ? (Array.isArray(user.protocols) ? user.protocols : safeParseJSON(user.protocols, [])) : [];
   const hy2Btn = el('btn-dl-hy2-link');
   if (hy2Btn) hy2Btn.classList.toggle('hidden', !(state.hy2Installed && uProtos.includes('hy2')));
+  const vlessBtn = el('btn-dl-vless-link');
+  if (vlessBtn) vlessBtn.classList.toggle('hidden', !(state.vlessInstalled && uProtos.includes('vless')));
   // P3: no password prompt — the server uses the user's stored password.
   // Auto-load the naive link + QR right away.
   loadNaiveLink();
@@ -1172,6 +1197,17 @@ async function downloadHy2Link() {
   } catch (err) { toast(err.message, 'error'); }
 }
 
+async function downloadVlessLink() {
+  try {
+    const data = await api('GET', `/api/users/${state.selectedUserId}/config/vless`);
+    el('naive-link-box').textContent = data.link;
+    el('naive-link-box').classList.remove('hidden');
+    copyToClipboard(data.link);
+    toast('VLESS REALITY link copied', 'success');
+    generateQR(data.link);
+  } catch (err) { toast(err.message, 'error'); }
+}
+
 async function generateQR(text) {
   const container = el('qr-container');
   const canvas    = el('qr-canvas');
@@ -1313,6 +1349,12 @@ async function loadSettings() {
       const h = await api('GET', '/api/settings/hy2');
       state.hy2Installed = !!(h && h.installed);
       renderHy2Card(h || {});
+    } catch {}
+    try {
+      const v = await api('GET', '/api/settings/vless');
+      state.vlessInstalled = !!(v && v.installed);
+      renderVlessCard(v || {});
+      applyVlessGate();
     } catch {}
     const cascadeNaiveEl = el('s-cascade-naive-upstream');
     if (cascadeNaiveEl) cascadeNaiveEl.value = cfg.cascadeNaiveUpstream || '';
@@ -1872,6 +1914,50 @@ async function changeMieruPorts() {
   } finally {
     setBtnBusy(btn, false);
   }
+}
+
+// ── VLESS REALITY (Xray) ─────────────────────────────────────────────────────
+function renderVlessCard(v) {
+  const installed = !!v.installed;
+  el('vless-not-installed')?.classList.toggle('hidden', installed);
+  el('vless-installed')?.classList.toggle('hidden', !installed);
+  if (installed) {
+    const status = v.active ? 'active' : 'inactive';
+    const target = v.serverName || '—';
+    if (el('vless-status-txt'))
+      el('vless-status-txt').textContent = `${status} · ${v.port}/tcp · SNI ${target} · ${v.users || 0} users`;
+  }
+}
+
+async function installVless() {
+  const port = parseInt(el('s-vless-port')?.value, 10);
+  const serverName = el('s-vless-server-name')?.value.trim();
+  if (!Number.isInteger(port) || port < 1024 || port > 65535)
+    return showMsg('vless-install-msg', 'Неверный TCP-порт (1024–65535)', false);
+  if (!serverName) return showMsg('vless-install-msg', 'Укажите REALITY server name', false);
+  if (!confirm('Установить отдельный сервис Xray/VLESS REALITY? Основной стек изменён не будет.')) return;
+  const btn = el('btn-install-vless');
+  setBtnBusy(btn, true);
+  showMsg('vless-install-msg', 'Установка и проверка Xray…', true);
+  try {
+    await api('POST', '/api/settings/vless/install', { port, serverName });
+    const v = await api('GET', '/api/settings/vless');
+    state.vlessInstalled = !!v.installed;
+    renderVlessCard(v);
+    applyVlessGate();
+    toast('VLESS REALITY установлен', 'success');
+  } catch (error) { showMsg('vless-install-msg', error.message, false); }
+  finally { setBtnBusy(btn, false); }
+}
+
+async function rebuildVless() {
+  showMsg('vless-rebuild-msg', 'Проверка конфигурации Xray…', true);
+  try {
+    await api('POST', '/api/settings/vless/rebuild', {});
+    const v = await api('GET', '/api/settings/vless');
+    renderVlessCard(v);
+    showMsg('vless-rebuild-msg', 'Конфигурация проверена и применена', true);
+  } catch (error) { showMsg('vless-rebuild-msg', error.message, false); }
 }
 
 // ── Hy2 (Hysteria2) ──────────────────────────────────────────────────────────

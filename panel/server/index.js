@@ -63,6 +63,7 @@ const LOG_CADDY         = '/var/log/caddy-naive/access.log';
 const LOG_PANEL         = '/var/log/panel-naive-mieru.log';
 const XRAY_BIN          = '/usr/local/bin/xray';
 const XRAY_CONFIG       = '/etc/xray/config.json';
+const XRAY_INSTALL_SCRIPT = path.join(__dirname, '../scripts/install_xray.sh');
 
 // Legacy path kept for migration detection only
 const LEGACY_NAIVE_BIN = '/usr/local/bin/naive';
@@ -2804,6 +2805,30 @@ app.post('/api/settings/vless/rebuild', requireAuth, (_req, res) => {
   if (!xrayInstalled()) return res.status(409).json({ error: 'Xray is not installed' });
   const result = applyXrayConfig();
   res.status(result.ok ? 200 : 409).json(result);
+});
+
+app.post('/api/settings/vless/install', requireAuth, (req, res) => {
+  if (xrayInstalled()) return res.status(409).json({ error: 'Xray is already installed' });
+  const port = Number(req.body && req.body.port || 8443);
+  const serverName = String(req.body && req.body.serverName || 'www.microsoft.com').trim().toLowerCase();
+  if (!Number.isInteger(port) || port < 1024 || port > 65535)
+    return res.status(400).json({ error: 'VLESS port must be 1024..65535' });
+  if (!/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i.test(serverName))
+    return res.status(400).json({ error: 'REALITY server name must be a DNS hostname' });
+  try {
+    execFileSync('bash', [XRAY_INSTALL_SCRIPT], {
+      timeout: 180000,
+      env: { ...process.env, XRAY_PORT: String(port), XRAY_SERVER_NAME: serverName },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    cfg = runConfigMigrations(JSON.parse(fs.readFileSync(PANEL_CONFIG, 'utf8'))).config;
+    const result = applyXrayConfig();
+    if (!result.ok) return res.status(409).json({ error: result.error, ...result });
+    return res.json({ ok: true, installed: true, port, serverName });
+  } catch (error) {
+    const detail = String(error.stderr || error.stdout || error.message).trim().split('\n').slice(-3).join(' ');
+    return res.status(500).json({ error: `Xray installation failed: ${detail}` });
+  }
 });
 
 app.get('/api/settings/hy2', requireAuth, (req, res) => {

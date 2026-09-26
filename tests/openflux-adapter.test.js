@@ -45,6 +45,9 @@ ok(client.includes('Role = client') && client.includes('Dial = vpn.example.com:1
    client.includes('EncryptionKeyFile = ./openflux.key'), 'matching SOCKS5 client config is generated');
 ok(buildOpenFluxClientConfig({ ...profile, host: '2001:db8::1' }).includes('Dial = [2001:db8::1]:18445'),
   'IPv6 client endpoint is bracketed');
+ok(buildOpenFluxClientConfig({ ...profile, socksPort: 11080 }).includes('Socks5 = 127.0.0.1:11080'),
+  'canary can isolate its local SOCKS5 listener');
+rejects(() => buildOpenFluxClientConfig({ ...profile, socksPort: 80 }), /SOCKS5/, 'privileged SOCKS5 port rejected');
 ok(unit.includes('User=openflux') && unit.includes('ProtectSystem=strict') &&
    unit.includes('CapabilityBoundingSet=') && !unit.includes('ExecStartPre=/bin/sh'),
   'unit is unprivileged, hardened and contains no shell hook');

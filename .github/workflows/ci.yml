@@ -59,6 +59,9 @@ jobs:
       - name: Validate pinned Xray binary and generated config
         if: matrix.release == '13'
         run: bash tests/xray-binary-canary.sh
+      - name: Validate pinned OpenFlux encrypted Direct tunnel
+        if: matrix.release == '13'
+        run: bash tests/openflux-binary-canary.sh
       - name: Test rollback lifecycle
         run: bash tests/rollback-lifecycle.sh
       - name: Run ShellCheck (errors only)

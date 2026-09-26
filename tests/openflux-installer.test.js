@@ -6,6 +6,8 @@ const path = require('path');
 const script = fs.readFileSync(path.join(__dirname, '../panel/scripts/install_openflux.sh'), 'utf8');
 const install = fs.readFileSync(path.join(__dirname, '../install.sh'), 'utf8');
 const update = fs.readFileSync(path.join(__dirname, '../update.sh'), 'utf8');
+const workflow = fs.readFileSync(path.join(__dirname, '../.github/workflows/ci.yml'), 'utf8');
+const canary = fs.readFileSync(path.join(__dirname, 'openflux-binary-canary.sh'), 'utf8');
 let pass = 0, fail = 0;
 function ok(value, message) {
   if (value) { console.log('  ✓', message); pass++; }
@@ -29,6 +31,10 @@ ok(!/ufw allow|iptables|nft /.test(script), 'installer cannot change firewall');
 ok(!/enable --now|systemctl start|systemctl restart/.test(script), 'installer cannot start a profile or service');
 ok(/rollback\(\)/.test(script) && script.includes('restoring previous OpenFlux files') &&
    script.includes('COMMITTED=1'), 'partial system writes roll back before commit');
+ok(workflow.includes("if: matrix.release == '13'") && workflow.includes('bash tests/openflux-binary-canary.sh'),
+  'Debian 13 CI runs the real OpenFlux tunnel canary');
+ok(canary.includes('--socks5-hostname 127.0.0.1:11080') && canary.includes('wrong encryption key'),
+  'canary checks an encrypted tunnel and rejects a mismatched key');
 for (const [name, source] of [['main installer', install], ['updater', update]]) {
   ok(source.includes('openflux_installed=false') && source.includes('openfluxInstalled'),
     `${name} detects an already installed OpenFlux binary`);

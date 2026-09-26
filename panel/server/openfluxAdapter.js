@@ -61,11 +61,14 @@ function buildOpenFluxExitConfig(input) {
 function buildOpenFluxClientConfig(input) {
   const profile = validateProfile(input, { requireHost: true });
   const endpointHost = net.isIP(profile.host) === 6 ? `[${profile.host}]` : profile.host;
+  const socksPort = input.socksPort == null ? 1080 : Number(input.socksPort);
+  assert(Number.isInteger(socksPort) && socksPort >= 1024 && socksPort <= 65535,
+    'OpenFlux SOCKS5 port must be 1024..65535');
   return [
     '[Interface]',
     'Role = client',
     'Inbound = socks5',
-    'Socks5 = 127.0.0.1:1080',
+    `Socks5 = 127.0.0.1:${socksPort}`,
     'Codec = batched',
     'EncryptionKeyFile = ./openflux.key',
     `URL = openflux-direct://${profile.id}`,

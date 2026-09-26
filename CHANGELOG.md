@@ -33,6 +33,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Integrated managed Xray/VLESS egress with the existing routing modes: WARP's
   connection-mark design already covers Xray safely, while cascade now adds and
   removes a dedicated `xray` owner rule with the shared Exit anti-loop bypass.
+- Extended federation capability handling for VLESS. Ready VLESS URIs and
+  sing-box outbounds flow through the existing fetch path, while provision now
+  rejects nodes without active Xray and reports `unsupportedProtocols` to the hub.
 
 ---
 

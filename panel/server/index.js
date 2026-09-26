@@ -4391,6 +4391,17 @@ app.post('/api/federation/provision', fedLimiter, (req, res) => {
   }, false);
   if (v.error) return res.status(400).json({ error: v.error });
 
+  // Never acknowledge a federated VLESS deployment that this node cannot
+  // actually serve. The hub gets an explicit per-node capability failure
+  // instead of a misleading action:"created" with no working Xray listener.
+  if (v.protocols.includes('vless') &&
+      (!xrayInstalled() || !(cfg.stack && cfg.stack.vless))) {
+    return res.status(409).json({
+      error: 'VLESS is not installed or enabled on this node',
+      unsupportedProtocols: ['vless'],
+    });
+  }
+
   const expiry = (req.body && req.body.expiry) || null;
   if (expiry && isNaN(Date.parse(expiry)))
     return res.status(400).json({ error: 'expiry must be a valid ISO date string' });
@@ -4768,9 +4779,12 @@ async function broadcastProvision(user) {
       });
       if (!r.ok) {
         // 404 = feature off / wrong token / old node (no provision endpoint).
+        const failure = await r.json().catch(() => null);
         return { ...base, ok: false,
                  error: r.status === 404 ? 'node unreachable or federation write disabled'
-                                         : `node returned HTTP ${r.status}` };
+                   : (failure && failure.error) || `node returned HTTP ${r.status}`,
+                 unsupportedProtocols: failure && Array.isArray(failure.unsupportedProtocols)
+                   ? failure.unsupportedProtocols : undefined };
       }
       const data = await r.json().catch(() => null);
       if (!data || data.ok !== true)

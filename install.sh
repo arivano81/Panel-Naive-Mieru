@@ -2,7 +2,7 @@
 # ==============================================================================
 # Panel Naive + Mieru by RIXXX — install.sh  v1.2.6
 # Caddy-forwardproxy-naive (amd64-only) + Mieru (mita) + fake-site + probe-resistance
-# Supports: Ubuntu 20.04/22.04/24.04, Debian 11/12 | x86_64 only
+# Supports: Ubuntu 20.04/22.04/24.04, Debian 11/12/13 | x86_64 only
 # ==============================================================================
 set -euo pipefail
 
@@ -26,6 +26,7 @@ export PYTHONIOENCODING=utf-8
 
 # ── Capture all installer output to a log file ────────────────────────────────
 INSTALL_LOG="/var/log/rixxx-panel-install.log"
+ADMIN_REPORT="/root/rixxx-panel-install-report.txt"
 mkdir -p "$(dirname "$INSTALL_LOG")"
 exec > >(tee -a "$INSTALL_LOG") 2>&1
 echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] install.sh v1.2.6 started (PID $$)"
@@ -179,7 +180,7 @@ check_os() {
       esac ;;
     debian)
       case "$VERSION_ID" in
-        11|12) log_info "OS: Debian $VERSION_ID ✓" ;;
+        11|12|13) log_info "OS: Debian $VERSION_ID ✓" ;;
         *) die "$(t "Неподдерживаемый Debian: $VERSION_ID" "Unsupported Debian: $VERSION_ID")" ;;
       esac ;;
     *) die "$(t "Неподдерживаемая ОС: $ID" "Unsupported OS: $ID")" ;;
@@ -1587,6 +1588,39 @@ maybe_ufw() {
   [[ "${ans^^}" =~ ^(Y|Д)$ ]] && setup_ufw || true
 }
 
+# Save access details before service configuration starts. This intentionally
+# happens early: even if a later download, certificate request or smoke test
+# fails, the administrator still knows the generated credentials. The report
+# contains secrets and is therefore readable by root only.
+write_admin_report() {
+  local phase="${1:-installation in progress}"
+  local panel_url="http://127.0.0.1:3000/"
+  if [[ "${EXPOSE_PANEL_BOOL:-0}" == "1" && -n "${PANEL_DOMAIN:-}" ]]; then
+    panel_url="https://${PANEL_DOMAIN}/${WEB_BASE_PATH}/"
+  fi
+  {
+    echo "RIXXX PANEL INSTALLATION REPORT"
+    echo "Status:              $phase"
+    echo "Generated:           $(date --iso-8601=seconds)"
+    echo "Panel version:       ${CURRENT_VERSION:-unknown}"
+    echo "Server domain:       ${DOMAIN:-unknown}"
+    echo "Panel URL:           $panel_url"
+    echo "Panel username:      ${ADMIN_USER:-unknown}"
+    echo "Panel password:      ${ADMIN_PASS:-unknown}"
+    if [[ "${EXPOSE_PANEL_BOOL:-0}" == "1" ]]; then
+      echo "HTTP Basic user:     ${PANEL_BASIC_AUTH_USER:-unknown}"
+      echo "HTTP Basic password: ${PANEL_BASIC_AUTH_PASS:-unknown}"
+    fi
+    echo "Probe secret:        ${PROBE_SECRET:-unknown}"
+    echo "NaiveProxy:          ${DOMAIN:-unknown}:${NAIVE_PORT:-443}/tcp"
+    echo "Mieru:               ${DOMAIN:-unknown}:${MIERU_PORT_START:-2012}-${MIERU_PORT_END:-2022}/tcp"
+    echo "Install log:         $INSTALL_LOG"
+    echo "Recovery command:    sudo bash ${PANEL_DIR}/scripts/recover_access.sh"
+  } > "$ADMIN_REPORT"
+  chmod 600 "$ADMIN_REPORT"
+  log_info "$(t "Данные администратора сохранены: $ADMIN_REPORT" "Administrator report saved: $ADMIN_REPORT")"
+}
+
 # ── Final banner ──────────────────────────────────────────────────────────────
 print_banner() {
   local server_ip
@@ -1744,6 +1778,7 @@ main() {
   install_caddy_naive
   install_mieru
   gather_config
+  write_admin_report "installation in progress"
   setup_fake_site
   setup_panel_stub
   write_mita_state
@@ -1760,6 +1795,7 @@ main() {
   start_services
   smoke_test
   smoke_test_outbound      # Bug 103: verify real egress (curl -4 / -6)
+  write_admin_report "installation completed"
   print_banner
 }
 

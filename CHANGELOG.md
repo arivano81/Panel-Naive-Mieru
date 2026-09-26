@@ -67,6 +67,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   canonical unit and registry state return `changed:false` before any network
   request. Drifted installations reuse the transactional installer and refuse
   replacement while any OpenFlux profile is active.
+- Expanded the Linux lifecycle fixture to run two isolated profiles at once,
+  verify distinct keys and ports, retain both enabled instance units for reboot,
+  and prove that stopping/removing one profile leaves the other active.
 - Documented the OpenFlux share-link compatibility gate: pinned release `0.0.5`
   has no `--share` or `openflux://` implementation, so the panel deliberately
   keeps the verified client bundle instead of inventing an incompatible QR URI.

@@ -63,8 +63,14 @@ cmd=$1; shift
 case "$cmd" in
   is-active) [ "\${1:-}" != --quiet ] || shift; [ -f "$OPENFLUX_TEST_STATE/$1.active" ] ;;
   is-enabled) [ "\${1:-}" != --quiet ] || shift; [ -f "$OPENFLUX_TEST_STATE/$1.enabled" ] ;;
-  enable) shift; svc=$1; [ "\${OPENFLUX_TEST_FAIL_START:-0}" != 1 ] || exit 1; touch "$OPENFLUX_TEST_STATE/$svc.active" "$OPENFLUX_TEST_STATE/$svc.enabled" ;;
-  disable) shift; svc=$1; rm -f "$OPENFLUX_TEST_STATE/$svc.active" "$OPENFLUX_TEST_STATE/$svc.enabled" ;;
+  enable) shift; svc=$1; [ "\${OPENFLUX_TEST_FAIL_START:-0}" != 1 ] || exit 1
+    id=\${svc#openflux-exit@}; id=\${id%.service}
+    port=$(jq -er '.port' "$OPENFLUX_TEST_ROOT/etc/openflux/profiles/$id.json")
+    touch "$OPENFLUX_TEST_STATE/$svc.active" "$OPENFLUX_TEST_STATE/$svc.enabled" "$OPENFLUX_TEST_STATE/listen.$port" ;;
+  disable) shift; svc=$1; id=\${svc#openflux-exit@}; id=\${id%.service}
+    port=$(jq -r '.port // empty' "$OPENFLUX_TEST_ROOT/etc/openflux/profiles/$id.json" 2>/dev/null || true)
+    rm -f "$OPENFLUX_TEST_STATE/$svc.active" "$OPENFLUX_TEST_STATE/$svc.enabled"
+    [ -z "$port" ] || rm -f "$OPENFLUX_TEST_STATE/listen.$port" ;;
   restart) svc=$1; [ "\${OPENFLUX_TEST_FAIL_RESTART:-0}" != 1 ] && [ -f "$OPENFLUX_TEST_STATE/$svc.active" ] ;;
   *) exit 0 ;;
 esac
@@ -73,9 +79,9 @@ esac
   fs.writeFileSync(path.join(bin, 'ss'), `#!/bin/sh
 set -eu
 [ "\${OPENFLUX_TEST_NO_LISTENER:-0}" != 1 ] || exit 1
-set -- "$OPENFLUX_TEST_STATE"/*.active
-[ -e "$1" ] || exit 1
-echo 'LISTEN 0 4096 0.0.0.0:18445 0.0.0.0:*'
+port=$(printf '%s' "$*" | sed -n 's/.*:\\([0-9][0-9]*\\).*/\\1/p')
+[ -n "$port" ] && [ -f "$OPENFLUX_TEST_STATE/listen.$port" ] || exit 1
+echo "LISTEN 0 4096 0.0.0.0:$port 0.0.0.0:*"
 `, { mode: 0o755 });
   const env = { ...process.env, OPENFLUX_TEST_ROOT: fixture, OPENFLUX_TEST_STATE: state,
     PATH: `${bin}:${process.env.PATH}` };
@@ -94,6 +100,11 @@ echo 'LISTEN 0 4096 0.0.0.0:18445 0.0.0.0:*'
     console.log(`\nResult: ${pass} passed, ${fail} failed`);
     process.exit(1);
   }
+  const betaCreated = run(['create', 'beta', '18446', 'vpn.example.com']);
+  const betaSecretPath = path.join(fixture, 'etc/openflux/secrets/beta.key');
+  ok(betaCreated.status === 0 && fs.existsSync(betaSecretPath) &&
+    fs.readFileSync(betaSecretPath, 'utf8') !== fs.readFileSync(secretPath, 'utf8'),
+  'two profiles receive independent ports and different keys');
   const listed = run(['list']);
   ok(listed.status === 0 && JSON.parse(listed.stdout)[0]?.id === 'alpha' &&
     !JSON.stringify(JSON.parse(listed.stdout)).includes('EncryptionKey'),
@@ -114,6 +125,12 @@ echo 'LISTEN 0 4096 0.0.0.0:18445 0.0.0.0:*'
   try { startedJson = JSON.parse(started.stdout); } catch {}
   ok(started.status === 0 && startedJson?.active === true,
     `fixture starts and enables the instance${started.stderr ? `: ${started.stderr.trim()}` : ''}`);
+  const betaStarted = run(['start', 'beta']);
+  ok(betaStarted.status === 0 && JSON.parse(betaStarted.stdout).port === 18446,
+    'two profiles can listen simultaneously on distinct ports');
+  ok(fs.existsSync(path.join(state, 'openflux-exit@alpha.service.enabled')) &&
+    fs.existsSync(path.join(state, 'openflux-exit@beta.service.enabled')),
+  'both instance units persist as enabled for reboot restoration');
   const reset = run(['reset', 'alpha']);
   ok(reset.status === 0 && JSON.parse(reset.stdout).reset === true && JSON.parse(reset.stdout).listening === true,
     'reset repairs and health-checks the same profile idempotently');
@@ -129,10 +146,14 @@ echo 'LISTEN 0 4096 0.0.0.0:18445 0.0.0.0:*'
     fs.readFileSync(path.join(fixture, 'root/openflux-alpha-client/openflux.key'), 'utf8') === rotatedKey,
   'failed active restart restores both previous keys');
   const stopped = run(['stop', 'alpha']);
-  ok(stopped.status === 0 && JSON.parse(stopped.stdout).active === false, 'fixture stops the instance idempotently');
+  ok(stopped.status === 0 && JSON.parse(stopped.stdout).active === false &&
+    fs.existsSync(path.join(state, 'openflux-exit@beta.service.active')),
+  'stopping one profile leaves the other profile active');
   const removed = run(['remove', 'alpha']);
   ok(removed.status === 0 && !fs.existsSync(path.join(fixture, 'etc/openflux/secrets/alpha.key')) &&
     !fs.existsSync(path.join(fixture, 'root/openflux-alpha-client')), 'fixture removes only the selected secret and bundle');
+  const betaRemoved = run(['remove', 'beta']);
+  ok(betaRemoved.status === 0 && !fs.existsSync(betaSecretPath), 'second isolated profile removes cleanly');
   fs.rmSync(fixture, { recursive: true, force: true });
 } else {
   ok(true, 'functional fault fixture runs in Linux CI');

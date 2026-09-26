@@ -23,6 +23,29 @@
 
 ---
 
+## 🌿 О нашем форке
+
+Это самостоятельная версия панели, основанная на родительском проекте RIXXX. Мы стараемся
+сохранять совместимость с исходной панелью, но выпускаем и проверяем свои изменения в этом
+репозитории. Для установки и обновления используйте именно
+[`arivano81/Panel-Naive-Mieru`](https://github.com/arivano81/Panel-Naive-Mieru).
+
+Что уже добавлено в нашем форке:
+
+- установка на **Debian 13** наряду с Debian 11 и 12;
+- защищённый итоговый отчёт с адресом панели и данными администратора;
+- утилита восстановления доступа, если пароль был потерян;
+- понятное описание трёх DNS-имён: основного, панели и подписки;
+- дальнейшая разработка новых протоколов и улучшений без удаления упоминания авторов основы.
+
+Исходный родительский проект:
+[`cwash797-cmd/Panel-Naive-Mieru-by-RIXXX`](https://github.com/cwash797-cmd/Panel-Naive-Mieru-by-RIXXX)
+
+> Обновления родительского проекта не попадают в этот форк автоматически. Перед обновлением
+> рабочего сервера прочитайте журнал изменений и сохраните резервную копию.
+
+---
+
 ## ✨ Возможности
 
 | Sprint | Функционал |
@@ -342,7 +365,7 @@ sudo bash uninstall.sh     # Полное удаление
 обновлении **не трогаются**, плюс автоматически снимается бэкап (включая БД).
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/cwash797-cmd/Panel-Naive-Mieru-by-RIXXX/main/update.sh | sudo bash -s -- -y
+curl -fsSL https://raw.githubusercontent.com/arivano81/Panel-Naive-Mieru/main/update.sh | sudo bash -s -- -y
 ```
 
 Начиная с v1.3.0 установщик кладёт `update.sh` и `VERSION` прямо в
@@ -361,7 +384,7 @@ sudo bash /opt/panel-naive-mieru/update.sh -y
 
 ```bash
 # Обновиться одной командой (на проде, без git):
-curl -fsSL https://raw.githubusercontent.com/cwash797-cmd/Panel-Naive-Mieru-by-RIXXX/main/update.sh | sudo bash -s -- -y
+curl -fsSL https://raw.githubusercontent.com/arivano81/Panel-Naive-Mieru/main/update.sh | sudo bash -s -- -y
 
 bash update.sh                    # Интерактивное обновление
 bash update.sh --dry-run          # Предпросмотр изменений (без записи)
@@ -450,7 +473,7 @@ ufw status
 
 ## 📋 Стек технологий
 
-- **Установщик:** Bash (Ubuntu 20.04–24.04, Debian 11–12)
+- **Установщик:** Bash (Ubuntu 20.04–24.04, Debian 11–13)
 - **Панель:** Node.js 20 LTS + Express + better-sqlite3 + WebSocket
 - **Процесс-менеджер:** PM2
 - **NaiveProxy:** caddy-naive (Caddy + forward_proxy plugin)

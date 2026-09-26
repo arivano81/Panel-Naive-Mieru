@@ -4,18 +4,45 @@
 
 <div align="center">
 
-# 🛡 Panel Naive + Mieru by RIXXX
+# 🛡 Panel Naive + Mieru (+Hysteria2) by RIXXX
 
-**v1.8.8** — Web management panel for NaiveProxy + Mieru + Hysteria2 on Ubuntu/Debian VPS
+**v1.11.4** — Web management panel for a personal VPN server on Ubuntu or Debian
 
 [![Telegram](https://img.shields.io/badge/Telegram-@russian__paradice__vpn-2CA5E0?logo=telegram&logoColor=white)](https://t.me/russian_paradice_vpn)
-[![GitHub](https://img.shields.io/badge/GitHub-cwash797--cmd-181717?logo=github)](https://github.com/cwash797-cmd/Panel-Naive-Mieru-by-RIXXX)
+[![GitHub](https://img.shields.io/badge/GitHub-arivano81-181717?logo=github)](https://github.com/arivano81/Panel-Naive-Mieru)
 [![License](https://img.shields.io/badge/License-MIT-bronze?color=c08552)](LICENSE)
 
 > 💬 **Support & updates:** [t.me/russian_paradice_vpn](https://t.me/russian_paradice_vpn)  
 > ☕ **Support the project:** [app.lava.top/2107724612](https://app.lava.top/2107724612?tabId=donate)
 
+This repository is a community fork of
+[cwash797-cmd/Panel-Naive-Mieru-by-RIXXX](https://github.com/cwash797-cmd/Panel-Naive-Mieru-by-RIXXX).
+We keep credit to the original authors while improving installation, reliability, and protocol support.
+
 </div>
+
+---
+
+## 🌿 About this fork
+
+This is an independently maintained version based on the RIXXX parent project. We aim to remain
+compatible with the original panel, but changes in this repository are released and tested separately.
+Use [`arivano81/Panel-Naive-Mieru`](https://github.com/arivano81/Panel-Naive-Mieru) for installation
+and updates of this fork.
+
+Additions in this fork include:
+
+- **Debian 13** installation support;
+- a protected post-installation report containing the panel address and administrator details;
+- an access recovery utility for lost panel credentials;
+- clear documentation for the main, panel, and subscription DNS names;
+- ongoing protocol and reliability improvements.
+
+Parent project:
+[`cwash797-cmd/Panel-Naive-Mieru-by-RIXXX`](https://github.com/cwash797-cmd/Panel-Naive-Mieru-by-RIXXX)
+
+> Parent-project updates are not imported automatically. Read the changelog and make a backup before
+> updating a production server.
 
 ---
 
@@ -51,8 +78,8 @@
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/cwash797-cmd/Panel-Naive-Mieru-by-RIXXX.git
-cd Panel-Naive-Mieru-by-RIXXX
+git clone https://github.com/arivano81/Panel-Naive-Mieru.git
+cd Panel-Naive-Mieru
 
 # 2. Run the installer as root
 sudo bash install.sh
@@ -347,7 +374,7 @@ ufw status
 
 ## 📋 Tech Stack
 
-- **Installer:** Bash (Ubuntu 20.04–24.04, Debian 11–12)
+- **Installer:** Bash (Ubuntu 20.04–24.04, Debian 11–13)
 - **Panel:** Node.js 20 LTS + Express + better-sqlite3 + WebSocket
 - **Process manager:** PM2
 - **NaiveProxy:** caddy-naive (Caddy + forward_proxy plugin)

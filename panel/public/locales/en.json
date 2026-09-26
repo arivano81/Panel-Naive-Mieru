@@ -344,11 +344,13 @@
     "mieru": "Mieru",
     "hy2": "Hy2",
     "panel": "Panel",
+    "audit": "Audit",
     "refresh": "Refresh",
     "lines50": "50 lines",
     "lines100": "100 lines",
     "lines200": "200 lines",
     "lines500": "500 lines",
+    "lines1000": "1000 lines",
     "loading": "Loading…",
     "selectLog": "Select a log above…",
     "error": "Error: {{msg}}"

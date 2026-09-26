@@ -178,6 +178,7 @@ const resolvedCaddyBin  = cfg.caddyBin      || CADDY_BIN;
 const resolvedCaddyCfgDir = cfg.caddyConfigDir || CADDY_CONFIG_DIR;
 const resolvedFakeSiteDir = cfg.fakeSiteDir  || FAKE_SITE_DIR;
 const openFluxService = createOpenFluxService();
+const ADMIN_AUDIT_LIMIT = 10000;
 
 // ── SQLite (better-sqlite3) ───────────────────────────────────────────────────
 let db = null;
@@ -1891,6 +1892,33 @@ const apiLimiter   = rateLimit({ windowMs:      60 * 1000, max: 300, message: { 
 const openFluxSecretLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10,
   message: { error: 'Too many secret export attempts' } });
 app.use('/api/', apiLimiter);
+app.use('/api/', (req, res, next) => {
+  const method = String(req.method || '').toUpperCase();
+  if (['GET', 'HEAD', 'OPTIONS'].includes(method) || !req.session?.authenticated) return next();
+  const event = {
+    ts: new Date().toISOString(),
+    username: String(req.session.username || 'admin').slice(0, 128),
+    method: method.slice(0, 16),
+    path: String(req.path || '/').slice(0, 512),
+    remoteAddress: String(req.ip || req.socket?.remoteAddress || '').slice(0, 128),
+    started: Date.now(),
+  };
+  res.once('finish', () => {
+    if (!db) return;
+    try {
+      db.prepare(`INSERT INTO admin_audit
+        (ts,username,method,path,status,remoteAddress,durationMs) VALUES (?,?,?,?,?,?,?)`)
+        .run(event.ts, event.username, event.method, event.path, res.statusCode,
+          event.remoteAddress, Math.max(0, Date.now() - event.started));
+      db.prepare(`DELETE FROM admin_audit WHERE id NOT IN
+        (SELECT id FROM admin_audit ORDER BY id DESC LIMIT ?)`)
+        .run(ADMIN_AUDIT_LIMIT);
+    } catch (error) {
+      console.error('[AUDIT] failed to persist administrator action:', error.message);
+    }
+  });
+  next();
+});
 app.use('/api/', csrfProtection);
 
 // Static files
@@ -5648,7 +5676,17 @@ function parseCaddyTraffic(logPath) {
 // ── Logs API ──────────────────────────────────────────────────────────────────
 app.get('/api/logs/:service', requireAuth, (req, res) => {
   const { service } = req.params;
-  const lines = Math.min(parseInt(req.query.lines || '100', 10), 1000);
+  const requestedLines = parseInt(req.query.lines || '100', 10);
+  const lines = Number.isInteger(requestedLines) ? Math.min(Math.max(requestedLines, 1), 1000) : 100;
+  if (service === 'audit') {
+    if (!db) return res.json({ logs: '(audit log unavailable without SQLite)' });
+    const rows = db.prepare(`SELECT ts,username,method,path,status,remoteAddress,durationMs
+      FROM admin_audit ORDER BY id DESC LIMIT ?`).all(lines);
+    const logs = rows.map(row =>
+      `${row.ts} user=${row.username} ${row.method} ${row.path} status=${row.status} ip=${row.remoteAddress || '-'} duration=${row.durationMs}ms`
+    ).reverse().join('\n');
+    return res.json({ logs: logs || '(empty)' });
+  }
   let cmd;
   switch (service) {
     // v1.2.3: caddy-naive logs (supports legacy 'naive' and 'caddy' aliases)

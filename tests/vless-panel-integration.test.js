@@ -79,7 +79,7 @@ ok(identity && identity(managed) === identity(bonusCopy),
 ok(identity && identity(managed) !== identity({ ...bonusCopy, uuid: 'bb' }),
   'different VLESS UUID remains a distinct bonus node');
 ok(source.includes("case 'vless':") && html.includes('id="log-btn-vless"') &&
-   app.includes("['caddy', 'mieru', 'hy2', 'vless', 'panel']"),
+   /\[[^\]]*'vless'[^\]]*\]\.forEach\(s =>/.test(app),
   'Xray journal is available from the Logs page');
 
 console.log(`\nResult: ${pass} passed, ${fail} failed`);

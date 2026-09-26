@@ -2,7 +2,23 @@
 
 const crypto = require('crypto');
 
-const LATEST_DB_SCHEMA = 6;
+const LATEST_DB_SCHEMA = 7;
+
+function ensureAdminAuditTable(db) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS admin_audit (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts TEXT NOT NULL,
+      username TEXT NOT NULL,
+      method TEXT NOT NULL,
+      path TEXT NOT NULL,
+      status INTEGER NOT NULL,
+      remoteAddress TEXT NOT NULL DEFAULT '',
+      durationMs INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_admin_audit_ts ON admin_audit(ts DESC);
+  `);
+}
 
 function columns(db, table) {
   return db.prepare(`PRAGMA table_info(${table})`).all();
@@ -103,6 +119,11 @@ const MIGRATIONS = [
       addColumn(db, 'users', 'vlessLastDownloadBytes INTEGER DEFAULT 0');
     },
   },
+  {
+    version: 7,
+    name: 'administrator audit log',
+    up(db) { ensureAdminAuditTable(db); },
+  },
 ];
 
 function runDatabaseMigrations(db, {
@@ -138,6 +159,7 @@ function runDatabaseMigrations(db, {
     addColumn(db, 'users', 'vlessDownloadBytes INTEGER DEFAULT 0');
     addColumn(db, 'users', 'vlessLastUploadBytes INTEGER DEFAULT 0');
     addColumn(db, 'users', 'vlessLastDownloadBytes INTEGER DEFAULT 0');
+    ensureAdminAuditTable(db);
     db.prepare("UPDATE users SET email = NULL WHERE email = ''").run();
     missing = db.prepare("SELECT id FROM users WHERE sub_token IS NULL OR sub_token = ''").all();
     if (missing.length) {

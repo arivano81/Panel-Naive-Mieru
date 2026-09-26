@@ -38,6 +38,9 @@ ok(names.has('bonus_links'), 'bonus_links survives nullable-email table rebuild'
 ok(names.has('vless_uuid'), 'VLESS UUID column is created');
 ok(names.has('vlessUploadBytes') && names.has('vlessLastUploadBytes'),
   'durable VLESS counters are created');
+const auditTable = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='admin_audit'").get();
+const auditIndex = db.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_admin_audit_ts'").get();
+ok(auditTable && auditIndex, 'administrator audit table and timestamp index are created');
 ok(user.username === 'alice', 'existing user preserved');
 ok(user.email === null, 'legacy empty email normalized to NULL');
 ok(user.sub_token === 'ab'.repeat(16), 'missing subscription token backfilled');

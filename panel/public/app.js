@@ -2701,7 +2701,7 @@ function renderTrafficTable(stats) {
 
 async function loadLogs(service) {
   currentLogService = service || currentLogService;
-  ['caddy', 'mieru', 'hy2', 'vless', 'panel'].forEach(s => {
+  ['caddy', 'mieru', 'hy2', 'vless', 'panel', 'audit'].forEach(s => {
     el(`log-btn-${s}`)?.classList.toggle('active', s === currentLogService);
   });
   const lines = el('log-lines')?.value || 100;

@@ -125,6 +125,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Added a bounded SQLite administrator audit log for authenticated mutations.
+  It records time, account, method, route, result, source address and duration,
+  never request bodies or query strings, and is available under **Logs → Audit**.
 - Added session-bound CSRF protection to every authenticated mutating API call.
   Successful login and administrator password change now regenerate the session
   ID and issue a fresh 256-bit token; the SPA sends it for shared and direct

@@ -107,6 +107,11 @@ const sessionCsrf = spawnSync(process.execPath, [path.join(__dirname, 'security-
 if (sessionCsrf.stdout) process.stdout.write(sessionCsrf.stdout);
 if (sessionCsrf.stderr) process.stderr.write(sessionCsrf.stderr);
 ok(sessionCsrf.status === 0, 'session rotation and CSRF regression suite passes');
+const adminAudit = spawnSync(process.execPath, [path.join(__dirname, 'admin-audit.test.js')],
+  { encoding: 'utf8' });
+if (adminAudit.stdout) process.stdout.write(adminAudit.stdout);
+if (adminAudit.stderr) process.stderr.write(adminAudit.stderr);
+ok(adminAudit.status === 0, 'administrator audit regression suite passes');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

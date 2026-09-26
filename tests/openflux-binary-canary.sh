@@ -55,7 +55,7 @@ NODE
 
 OPENFLUX_WORK="$WORK" node <<'NODE' > "$WORK/http.log" 2>&1 &
 const http = require('http');
-http.createServer((_req, res) => res.end('openflux-canary-ok')).listen(19090, '127.0.0.1');
+http.createServer((_req, res) => res.end('openflux-canary-ok')).listen(19090, '0.0.0.0');
 NODE
 PIDS+=("$!")
 "$WORK/openflux" --config="$WORK/exit.conf" --negotiate > "$WORK/exit.log" 2>&1 & PIDS+=("$!")
@@ -70,11 +70,18 @@ wait_for_port() {
   return 1
 }
 wait_for_port 19090
+TARGET_IP=$(node -e '
+  const os = require("os");
+  const ip = Object.values(os.networkInterfaces()).flat()
+    .find(item => item && item.family === "IPv4" && !item.internal)?.address;
+  if (!ip) process.exit(1);
+  process.stdout.write(ip);
+')
 
 RESULT=""
 for _ in $(seq 1 40); do
   RESULT=$(curl -fsS --max-time 1 --noproxy "" --socks5-hostname 127.0.0.1:11080 \
-    http://127.0.0.1:19090 2>/dev/null || true)
+    "http://$TARGET_IP:19090" 2>/dev/null || true)
   [[ "$RESULT" != "openflux-canary-ok" ]] || break
   sleep 0.25
 done
@@ -83,7 +90,7 @@ done
 "$WORK/openflux" --config="$WORK/wrong.conf" --negotiate > "$WORK/wrong.log" 2>&1 & PIDS+=("$!")
 sleep 1
 if curl -fsS --max-time 3 --noproxy "" --socks5-hostname 127.0.0.1:11081 \
-  http://127.0.0.1:19090 >/dev/null 2>&1; then
+  "http://$TARGET_IP:19090" >/dev/null 2>&1; then
   echo "wrong encryption key unexpectedly reached the target" >&2
   exit 1
 fi

@@ -59,6 +59,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Made Direct transport and authenticated negotiation explicit in generated
   OpenFlux configs, units, and the canary; the HTTP probe now disables
   environment `NO_PROXY` bypass.
+- Pointed the tunnel canary at the container's reachable IPv4 instead of
+  `127.0.0.1`, which correctly remains local to the client's virtual stack.
 - Updated REALITY key parsing for the current Xray `PrivateKey` and
   `Password (PublicKey)` output while retaining compatibility with legacy
   `Private key` and `Public key` labels.

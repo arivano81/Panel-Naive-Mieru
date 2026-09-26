@@ -13,6 +13,7 @@ const cascadePath = path.join(__dirname, '../panel/scripts/cascade_mieru.sh');
 const warpPath = path.join(__dirname, '../panel/scripts/warp_egress.sh');
 const cascade = fs.readFileSync(cascadePath, 'utf8');
 const warp = fs.readFileSync(warpPath, 'utf8');
+const server = fs.readFileSync(path.join(__dirname, '../panel/server/index.js'), 'utf8');
 
 console.log('VLESS egress routing regression test');
 for (const file of [cascadePath, warpPath]) {
@@ -36,6 +37,11 @@ ok(/-A OUTPUT -p tcp -j CONNMARK --restore-mark/.test(warp),
   'WARP restores the inbound mark on Xray replies');
 ok(/not fwmark "\$WG_FWMARK" lookup "\$RT_TABLE"/.test(warp),
   'unmarked Xray upstream traffic follows the WARP table');
+ok(/function probeXrayEgress\(\)/.test(server), 'panel defines a dedicated Xray egress probe');
+ok(/execFileSync\('runuser', \[\s*'-u', 'xray', '--', 'curl'/.test(server),
+  'probe runs curl as the Xray service user without shell interpolation');
+ok((server.match(/xrayEgress = probeXrayEgress\(\)/g) || []).length >= 2,
+  'cascade and WARP status both expose the measured Xray egress');
 
 console.log(`\nResult: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

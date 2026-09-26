@@ -1494,6 +1494,20 @@ function writeHysteriaConfig({ restart = true } = {}) {
     rolledBack: false, backup: transaction.backup, previous: transaction.previous };
 }
 
+function probeXrayEgress() {
+  if (!xrayInstalled()) return { available: false, ip: null, error: 'Xray is not installed' };
+  try {
+    const ip = execFileSync('runuser', [
+      '-u', 'xray', '--', 'curl', '-fsS', '--max-time', '8', 'https://api.ipify.org',
+    ], { timeout: 10000 }).toString().trim();
+    if (!/^\d{1,3}(?:\.\d{1,3}){3}$/.test(ip))
+      return { available: true, ip: null, error: 'probe returned no IPv4 address' };
+    return { available: true, ip, error: null };
+  } catch (error) {
+    return { available: true, ip: null, error: 'Xray egress probe failed' };
+  }
+}
+
 // Restart hysteria-server and verify it came up. Clears any lingering
 // systemd "failed" state first (mirrors restartMieru's Bug-96 handling).
 function reloadHysteria() {
@@ -3152,9 +3166,12 @@ app.get('/api/settings/cascade/status', requireAuth, (req, res) => {
 
   const m = runCascadeMieru('status');
   const mieruOut = '=== MIERU CASCADE (Variant B) ===\n' + (m.output || '(no output)');
+  const xrayEgress = probeXrayEgress();
+  const xrayOut = '=== XRAY/VLESS EGRESS ===\n' +
+    (xrayEgress.ip || (xrayEgress.available ? xrayEgress.error : 'not installed'));
 
-  const output = naiveOut + '\n\n' + mieruOut;
-  res.json({ ok: m.ok, output });
+  const output = naiveOut + '\n\n' + mieruOut + '\n\n' + xrayOut;
+  res.json({ ok: m.ok, output, xrayEgress });
 });
 
 app.post('/api/settings/cascade', requireAuth, (req, res) => {
@@ -3328,7 +3345,10 @@ app.get('/api/settings/warp', requireAuth, (req, res) => {
 // Live WARP status incl. the measured public egress IP (should be Cloudflare).
 app.get('/api/settings/warp/status', requireAuth, (req, res) => {
   const r = runWarpEgress('status');
-  res.json({ ok: r.ok, enabled: !!cfg.warpEnabled, output: r.output });
+  const xrayEgress = probeXrayEgress();
+  const output = (r.output || '') + '\n\n=== XRAY/VLESS EGRESS ===\n' +
+    (xrayEgress.ip || (xrayEgress.available ? xrayEgress.error : 'not installed'));
+  res.json({ ok: r.ok, enabled: !!cfg.warpEnabled, output, xrayEgress });
 });
 
 // Toggle WARP egress on/off.

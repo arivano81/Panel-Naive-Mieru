@@ -50,6 +50,12 @@ const { buildXrayRealityConfig, buildVlessRealityLink, buildVlessXhttpLink,
 const { parseXrayStats, accumulateXrayStats } = require('./xrayStats');
 const { createOpenFluxService } = require('./openfluxService');
 const { registerOpenFluxRoutes } = require('./openfluxRoutes');
+const { redactLogText, installConsoleRedaction } = require('./logRedaction');
+
+// Treat every runtime message as potentially tainted by a client URL or an
+// external command. This is installed before configuration/database startup so
+// even early failures cannot print credentials, subscription tokens or UUIDs.
+installConsoleRedaction();
 
 // ── Paths ─────────────────────────────────────────────────────────────────────
 const PANEL_CONFIG    = '/etc/rixxx-panel/config.json';
@@ -1857,7 +1863,7 @@ app.use(helmet({
 }));
 
 app.use(morgan('combined', {
-  stream: { write: m => { try { fs.appendFileSync(LOG_PANEL, m); } catch {} } }
+  stream: { write: m => { try { fs.appendFileSync(LOG_PANEL, redactLogText(m)); } catch {} } }
 }));
 // v1.6.0: backup import can be a large JSON (many users + full config), so lift
 // the default 100kb body cap to 25mb. All other endpoints send tiny bodies, so

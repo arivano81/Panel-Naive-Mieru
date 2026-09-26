@@ -90,10 +90,11 @@ trap 'rm -f "$COOKIE_JAR"' EXIT
 # ── Detect admin password from config if not supplied ─────────────────────────
 detect_admin_pass() {
   if [[ -z "$ADMIN_PASS" ]] && [[ -f "$PANEL_CONFIG" ]]; then
-    # Panel stores only bcrypt hash; try to read from install log
+    # Panel stores only bcrypt hash; the root-only installation report is the
+    # canonical recovery source. Persistent logs deliberately contain no secret.
     local from_log
-    from_log=$(grep -oP "(?<=Generated password: )[\w]+" \
-                 /var/log/rixxx-panel-install.log 2>/dev/null | tail -1 || true)
+    from_log=$(sed -n 's/^Panel password:[[:space:]]*//p' \
+                 /root/rixxx-panel-install-report.txt 2>/dev/null | tail -1 || true)
     ADMIN_PASS="${from_log:-}"
   fi
   if [[ -z "$ADMIN_PASS" ]]; then

@@ -425,6 +425,8 @@ sudo bash /opt/panel-naive-mieru/scripts/recover_access.sh
 Файловые журналы панели, установщика и cascade-watchdog ротируются ежедневно
 или при достижении 10 MiB; хранится 14 сжатых поколений. Caddy использует собственную
 ротацию access-лога, поэтому `logrotate` его не обрабатывает.
+Пароли, UUID, токены, приватные ключи и полные subscription URL маскируются до записи.
+Исходные учётные данные хранятся только в root-only отчёте `/root/rixxx-panel-install-report.txt`.
 
 > ⚠️ **Важно:** `/etc/mita/` — внутреннее хранилище Mieru в формате protobuf, **не редактируется вручную**.  
 > Панель использует `/var/lib/rixxx-panel/mita-state.json` и применяет его командой `mita apply config <file>`.

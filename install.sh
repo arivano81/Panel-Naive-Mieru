@@ -28,6 +28,7 @@ export PYTHONIOENCODING=utf-8
 INSTALL_LOG="/var/log/rixxx-panel-install.log"
 ADMIN_REPORT="/root/rixxx-panel-install-report.txt"
 mkdir -p "$(dirname "$INSTALL_LOG")"
+exec 3>&1
 exec > >(tee -a "$INSTALL_LOG") 2>&1
 echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] install.sh v1.2.6 started (PID $$)"
 
@@ -55,6 +56,9 @@ log_info()  { echo -e "${GREEN}[INFO]${NC}  $*"; }
 log_warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $*" >&2; }
 log_step()  { echo -e "\n${CYAN}${BOLD}▶ $*${NC}"; }
+# Secrets may be shown to the attached administrator terminal, but must never
+# enter the persistent installer log. The root-only report remains canonical.
+secret_info() { echo -e "${GREEN}[INFO]${NC}  $*" >&3; }
 die()       { log_error "$*"; exit 1; }
 
 # ── Constants ─────────────────────────────────────────────────────────────────
@@ -418,7 +422,7 @@ gather_config() {
     ADMIN_USER="${INPUT_ADMIN_USER:-admin}"
     if [[ -z "${INPUT_ADMIN_PASS:-}" ]]; then
       ADMIN_PASS=$(openssl rand -base64 18 | tr -d '/+=' | head -c 20)
-      log_info "$(t "Сгенерирован пароль: ${BOLD}$ADMIN_PASS${NC}" "Generated password: ${BOLD}$ADMIN_PASS${NC}")"
+      secret_info "$(t "Сгенерирован пароль: ${BOLD}$ADMIN_PASS${NC}" "Generated password: ${BOLD}$ADMIN_PASS${NC}")"
     else
       ADMIN_PASS="$INPUT_ADMIN_PASS"
     fi
@@ -490,7 +494,7 @@ gather_config() {
   read -rp "$(echo -e "${CYAN}$(t 'Секрет зондирования (пусто = авто)' 'Probe secret (blank = auto)')${NC}: ")" INPUT_PROBE_SECRET
   if [[ -z "${INPUT_PROBE_SECRET:-}" ]]; then
     PROBE_SECRET=$(openssl rand -hex 16)
-    log_info "$(t "Сгенерирован probe_secret: ${BOLD}${PROBE_SECRET}${NC}" "Generated probe_secret: ${BOLD}${PROBE_SECRET}${NC}")"
+    secret_info "$(t "Сгенерирован probe_secret: ${BOLD}${PROBE_SECRET}${NC}" "Generated probe_secret: ${BOLD}${PROBE_SECRET}${NC}")"
   else
     PROBE_SECRET="$INPUT_PROBE_SECRET"
   fi
@@ -506,7 +510,7 @@ gather_config() {
   echo ""
   if [[ -z "${INPUT_ADMIN_PASS:-}" ]]; then
     ADMIN_PASS=$(openssl rand -base64 18 | tr -d '/+=' | head -c 20)
-    log_info "$(t "Сгенерирован пароль: ${BOLD}$ADMIN_PASS${NC}" "Generated password: ${BOLD}$ADMIN_PASS${NC}")"
+    secret_info "$(t "Сгенерирован пароль: ${BOLD}$ADMIN_PASS${NC}" "Generated password: ${BOLD}$ADMIN_PASS${NC}")"
   else
     ADMIN_PASS="$INPUT_ADMIN_PASS"
   fi
@@ -549,7 +553,7 @@ resolve_panel_access_noninteractive() {
     PANEL_BASIC_AUTH_PASS="${INPUT_PANEL_BA_PASS:-$(openssl rand -base64 18 | tr -d '/+=' | head -c 20)}"
     if [[ -z "${INPUT_PANEL_BA_PASS:-}" ]]; then
       PANEL_BA_PASS_GENERATED=1
-      log_info "$(t "Сгенерирован пароль basic auth: ${BOLD}$PANEL_BASIC_AUTH_PASS${NC}" \
+      secret_info "$(t "Сгенерирован пароль basic auth: ${BOLD}$PANEL_BASIC_AUTH_PASS${NC}" \
                    "Generated basic-auth password: ${BOLD}$PANEL_BASIC_AUTH_PASS${NC}")"
     fi
     PANEL_BASIC_AUTH_HASH="$(panel_hash_password "$PANEL_BASIC_AUTH_PASS")"
@@ -576,7 +580,7 @@ resolve_panel_access_interactive() {
   if [[ -z "$_bp" ]]; then
     PANEL_BASIC_AUTH_PASS="$(openssl rand -base64 18 | tr -d '/+=' | head -c 20)"
     PANEL_BA_PASS_GENERATED=1
-    log_info "$(t "Сгенерирован пароль basic auth: ${BOLD}$PANEL_BASIC_AUTH_PASS${NC}" \
+    secret_info "$(t "Сгенерирован пароль basic auth: ${BOLD}$PANEL_BASIC_AUTH_PASS${NC}" \
                  "Generated basic-auth password: ${BOLD}$PANEL_BASIC_AUTH_PASS${NC}")"
   else
     PANEL_BASIC_AUTH_PASS="$_bp"
@@ -1850,7 +1854,8 @@ main() {
   smoke_test
   smoke_test_outbound      # Bug 103: verify real egress (curl -4 / -6)
   write_admin_report "installation completed"
-  print_banner
+  log_info "$(t 'Установка завершена; секреты сохранены только в root-отчёте' 'Installation complete; secrets are stored only in the root report')"
+  print_banner >&3
 }
 
 main "$@"

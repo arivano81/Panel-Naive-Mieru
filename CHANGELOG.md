@@ -125,6 +125,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Added centralized runtime and HTTP access-log redaction for passwords, UUIDs,
+  tokens, private keys and complete subscription URLs. Generated installation
+  credentials now bypass the persistent log and remain available only on the
+  attached terminal and in the mode-600 administrator report.
 - Added an idempotent logrotate policy for the panel, installer and cascade
   watchdog logs: daily or 10 MiB rotation, 14 compressed generations and
   copy-truncate operation. Clean installs and updates both enforce it while

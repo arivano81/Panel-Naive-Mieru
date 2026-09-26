@@ -122,6 +122,11 @@ const logrotate = spawnSync(process.execPath, [path.join(__dirname, 'logrotate.t
 if (logrotate.stdout) process.stdout.write(logrotate.stdout);
 if (logrotate.stderr) process.stderr.write(logrotate.stderr);
 ok(logrotate.status === 0, 'bounded file log rotation regression suite passes');
+const logRedaction = spawnSync(process.execPath, [path.join(__dirname, 'log-redaction.test.js')],
+  { encoding: 'utf8' });
+if (logRedaction.stdout) process.stdout.write(logRedaction.stdout);
+if (logRedaction.stderr) process.stderr.write(logRedaction.stderr);
+ok(logRedaction.status === 0, 'sensitive log redaction regression suite passes');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

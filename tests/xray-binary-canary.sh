@@ -39,7 +39,9 @@ const config = buildXrayRealityConfig({
   privateKey: process.env.XRAY_PRIVATE_KEY,
   publicKey: process.env.XRAY_PUBLIC_KEY,
   shortId: '0123456789abcdef',
-}, [{ id: '11111111-1111-4111-8111-111111111111', email: 'canary-user' }]);
+}, [{ id: '11111111-1111-4111-8111-111111111111', email: 'canary-user' }], {
+  enabled: true, port: 10443, host: 'vpn.example.com', path: '/xhttp_canary_0123456789',
+});
 fs.writeFileSync(process.env.XRAY_OUT, JSON.stringify(config, null, 2));
 NODE
 "$WORK/xray" run -test -config "$WORK/config.json"

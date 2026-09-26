@@ -11,6 +11,11 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Began VLESS XHTTP stage F with an opt-in config adapter: a loopback-only
+  XHTTP `mode=auto` inbound, TLS client link, and path-scoped unbuffered Caddy
+  h2c route. Disabled XHTTP leaves the existing REALITY config unchanged, and
+  the pinned Debian 13 Xray canary now validates both inbounds together.
+
 - Added the first OpenFlux Experimental isolation layer: a pure pinned-release
   L4/Direct adapter, matching client config, hardened unit template, validation
   tests, and a stage specification. It is not imported or activated by the panel.

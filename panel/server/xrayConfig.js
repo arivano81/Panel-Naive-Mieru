@@ -6,6 +6,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 const KEY_RE = /^[A-Za-z0-9_-]{43}$/;
 const SHORT_ID_RE = /^(?:[0-9a-f]{2}){1,8}$/i;
 const HOST_RE = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i;
+const XHTTP_PATH_RE = /^\/[a-zA-Z0-9_-]{16,96}$/;
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -41,10 +42,35 @@ function normalizeVlessUsers(users) {
   });
 }
 
-function buildXrayRealityConfig(settings, users) {
+function normalizeXhttpSettings(input) {
+  const port = Number(input.port);
+  const host = String(input.host || '').trim().toLowerCase();
+  const requestPath = String(input.path || '').trim();
+  assert(Number.isInteger(port) && port >= 1024 && port <= 65535 && port !== 10085,
+    'XHTTP loopback port must be 1024..65535 and not the Stats API port');
+  assert(HOST_RE.test(host) && net.isIP(host) === 0, 'XHTTP host must be a DNS hostname');
+  assert(XHTTP_PATH_RE.test(requestPath), 'XHTTP path must be / plus 16..96 letters, digits, underscores or hyphens');
+  return { port, host, path: requestPath, mode: 'auto' };
+}
+
+function buildXhttpInbound(settings, users) {
+  const xhttp = normalizeXhttpSettings(settings);
+  const clients = normalizeVlessUsers(users).map(({ id, email }) => ({ id, email }));
+  return {
+    tag: 'vless-xhttp-in', listen: '127.0.0.1', port: xhttp.port, protocol: 'vless',
+    settings: { clients, decryption: 'none' },
+    streamSettings: {
+      network: 'xhttp', security: 'none',
+      xhttpSettings: { path: xhttp.path, mode: xhttp.mode },
+    },
+    sniffing: { enabled: true, destOverride: ['http', 'tls', 'quic'], routeOnly: true },
+  };
+}
+
+function buildXrayRealityConfig(settings, users, xhttpSettings) {
   const reality = normalizeRealitySettings(settings);
   const clients = normalizeVlessUsers(users);
-  return {
+  const config = {
     log: { loglevel: 'warning' },
     api: { tag: 'api', listen: '127.0.0.1:10085', services: ['StatsService'] },
     stats: {},
@@ -70,6 +96,9 @@ function buildXrayRealityConfig(settings, users) {
       { tag: 'blocked', protocol: 'blackhole' },
     ],
   };
+  if (xhttpSettings && xhttpSettings.enabled === true)
+    config.inbounds.push(buildXhttpInbound(xhttpSettings, users));
+  return config;
 }
 
 function buildVlessRealityLink(settings, user, label = '') {
@@ -88,6 +117,23 @@ function buildVlessRealityLink(settings, user, label = '') {
   return `vless://${client.id}@${authorityHost}:${reality.port}?${query.toString()}#${encodeURIComponent(name)}`;
 }
 
+function buildVlessXhttpLink(settings, user, label = '') {
+  const xhttp = normalizeXhttpSettings(settings);
+  const [client] = normalizeVlessUsers([user]);
+  const query = new URLSearchParams({
+    encryption: 'none', security: 'tls', sni: xhttp.host,
+    type: 'xhttp', host: xhttp.host, path: xhttp.path, mode: 'auto',
+  });
+  return `vless://${client.id}@${xhttp.host}:443?${query.toString()}#${encodeURIComponent(label || client.email)}`;
+}
+
+function buildCaddyXhttpRoute(settings) {
+  const xhttp = normalizeXhttpSettings(settings);
+  return `  @vless_xhttp path ${xhttp.path}/*\n  handle @vless_xhttp {\n    reverse_proxy h2c://127.0.0.1:${xhttp.port} {\n      flush_interval -1\n    }\n  }\n`;
+}
+
 module.exports = {
-  normalizeRealitySettings, normalizeVlessUsers, buildXrayRealityConfig, buildVlessRealityLink,
+  normalizeRealitySettings, normalizeXhttpSettings, normalizeVlessUsers,
+  buildXhttpInbound, buildXrayRealityConfig, buildVlessRealityLink, buildVlessXhttpLink,
+  buildCaddyXhttpRoute,
 };

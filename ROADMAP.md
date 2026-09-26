@@ -189,6 +189,10 @@ API и предупреждает, что замена ключей отключ
 
 Добавляется после стабилизации REALITY:
 
+Текущий статус: чистый opt-in адаптер генерирует loopback Xray inbound, клиентскую ссылку
+и path-scoped Caddy h2c route; реальный pinned-binary canary проверяет объединённый конфиг.
+Production apply, UI и клиентская матрица ещё не включены.
+
 ```text
 VLESS-клиент
     │ XHTTP + TLS

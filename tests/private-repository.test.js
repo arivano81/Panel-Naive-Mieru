@@ -102,6 +102,11 @@ const openfluxSystemdCanary = spawnSync(process.execPath, [path.join(__dirname, 
 if (openfluxSystemdCanary.stdout) process.stdout.write(openfluxSystemdCanary.stdout);
 if (openfluxSystemdCanary.stderr) process.stderr.write(openfluxSystemdCanary.stderr);
 ok(openfluxSystemdCanary.status === 0, 'Debian 13 OpenFlux systemd canary contract passes');
+const sessionCsrf = spawnSync(process.execPath, [path.join(__dirname, 'security-session-csrf.test.js')],
+  { encoding: 'utf8' });
+if (sessionCsrf.stdout) process.stdout.write(sessionCsrf.stdout);
+if (sessionCsrf.stderr) process.stderr.write(sessionCsrf.stderr);
+ok(sessionCsrf.status === 0, 'session rotation and CSRF regression suite passes');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

@@ -176,6 +176,7 @@ function buildTitles() {
 const state = {
   authenticated: false,
   username: '',
+  csrfToken: '',
   config: {},
   users: [],
   currentPage: 'dashboard',
@@ -230,6 +231,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (data && data.authenticated) {
         state.authenticated = true;
         state.username = data.username;
+        state.csrfToken = data.csrfToken || '';
         enterApp();
       }
     })
@@ -436,8 +438,10 @@ async function syncVersionDisplay() {
 }
 
 async function logout() {
-  await fetch(apiUrl('/api/logout'), { method: 'POST' }).catch(() => {});
+  await fetch(apiUrl('/api/logout'), { method: 'POST', credentials: 'include',
+    headers: state.csrfToken ? { 'X-CSRF-Token': state.csrfToken } : {} }).catch(() => {});
   state.authenticated = false;
+  state.csrfToken = '';
   if (state.ws) state.ws.close();
   document.getElementById('app').classList.add('hidden');
   document.getElementById('page-login').classList.add('active');
@@ -2165,7 +2169,8 @@ async function downloadOpenFluxBundle(id) {
   try {
     const response = await fetch(apiUrl(`/api/openflux/profiles/${encodeURIComponent(id)}/bundle`), {
       method: 'POST', credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store',
+        'X-CSRF-Token': state.csrfToken },
       body: JSON.stringify({ password }),
     });
     if (!response.ok) {
@@ -2830,6 +2835,8 @@ async function api(method, path, body, apiOpts = {}) {
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
   };
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && state.csrfToken)
+    opts.headers['X-CSRF-Token'] = state.csrfToken;
   if (body) opts.body = JSON.stringify(body);
 
   // v1.9.7 (BUG user-edit race): after a user CRUD the server reloads Caddy in
@@ -2866,6 +2873,7 @@ async function api(method, path, body, apiOpts = {}) {
 
   const ct   = res.headers.get('Content-Type') || '';
   const data = ct.includes('json') ? await res.json() : await res.text();
+  if (data && typeof data === 'object' && data.csrfToken) state.csrfToken = data.csrfToken;
 
   if (!res.ok) {
     const msg = (typeof data === 'object' && data.error) ? data.error : String(data);

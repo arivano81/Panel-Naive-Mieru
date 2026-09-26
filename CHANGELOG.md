@@ -125,6 +125,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Added session-bound CSRF protection to every authenticated mutating API call.
+  Successful login and administrator password change now regenerate the session
+  ID and issue a fresh 256-bit token; the SPA sends it for shared and direct
+  mutation requests while public login and safe reads remain compatible.
 - Updated official checkout/setup-node CI actions to their Node 24 generations,
   removing the deprecated internal Node 20 action runtime while keeping the
   application compatibility suite on Node.js 20. The runner is pinned to

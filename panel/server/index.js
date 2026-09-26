@@ -27,6 +27,7 @@ const session        = require('express-session');
 const helmet         = require('helmet');
 const morgan         = require('morgan');
 const rateLimit      = require('express-rate-limit');
+const { newCsrfToken, csrfProtection } = require('./csrf');
 const bcrypt         = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const cron           = require('node-cron');
@@ -1890,6 +1891,7 @@ const apiLimiter   = rateLimit({ windowMs:      60 * 1000, max: 300, message: { 
 const openFluxSecretLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10,
   message: { error: 'Too many secret export attempts' } });
 app.use('/api/', apiLimiter);
+app.use('/api/', csrfProtection);
 
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));
@@ -1919,9 +1921,16 @@ app.post('/api/login', loginLimiter, (req, res) => {
     bcrypt.compareSync(password, cfg.adminPassHash);
 
   if (!isAdmin) return res.status(401).json({ error: 'Invalid credentials' });
-  req.session.authenticated = true;
-  req.session.username = username;
-  res.json({ ok: true, username });
+  req.session.regenerate(error => {
+    if (error) return res.status(500).json({ error: 'Could not establish session' });
+    req.session.authenticated = true;
+    req.session.username = username;
+    req.session.csrfToken = newCsrfToken();
+    req.session.save(saveError => {
+      if (saveError) return res.status(500).json({ error: 'Could not persist session' });
+      res.json({ ok: true, username, csrfToken: req.session.csrfToken });
+    });
+  });
 });
 
 app.post('/api/logout', (req, res) => {
@@ -1929,7 +1938,8 @@ app.post('/api/logout', (req, res) => {
 });
 
 app.get('/api/me', requireAuth, (req, res) => {
-  res.json({ username: req.session.username, authenticated: true });
+  if (!req.session.csrfToken) req.session.csrfToken = newCsrfToken();
+  res.json({ username: req.session.username, authenticated: true, csrfToken: req.session.csrfToken });
 });
 
 // ── Config API ────────────────────────────────────────────────────────────────
@@ -2126,7 +2136,17 @@ app.post('/api/config/password', requireAuth, (req, res) => {
   if (!valid) return res.status(401).json({ error: 'Current password incorrect' });
   cfg.adminPassHash = bcrypt.hashSync(newPass, 12);
   saveConfig();
-  res.json({ ok: true });
+  const username = req.session.username;
+  req.session.regenerate(error => {
+    if (error) return res.status(500).json({ error: 'Password changed but session rotation failed; sign in again' });
+    req.session.authenticated = true;
+    req.session.username = username;
+    req.session.csrfToken = newCsrfToken();
+    req.session.save(saveError => {
+      if (saveError) return res.status(500).json({ error: 'Password changed but session could not be persisted' });
+      res.json({ ok: true, csrfToken: req.session.csrfToken });
+    });
+  });
 });
 
 // ── v1.6.0: Backup (export) / Restore (import) ───────────────────────────────

@@ -2,7 +2,7 @@
 
 const crypto = require('crypto');
 
-const LATEST_DB_SCHEMA = 4;
+const LATEST_DB_SCHEMA = 5;
 
 function columns(db, table) {
   return db.prepare(`PRAGMA table_info(${table})`).all();
@@ -22,6 +22,7 @@ function migrateEmailNullable(db) {
   if (!email || email.notnull !== 1) return;
   const hasSubToken = hasColumn(db, 'users', 'sub_token');
   const hasBonusLinks = hasColumn(db, 'users', 'bonus_links');
+  const hasVlessUuid = hasColumn(db, 'users', 'vless_uuid');
   db.exec(`
     ALTER TABLE users RENAME TO users_legacy;
     CREATE TABLE users (
@@ -38,14 +39,16 @@ function migrateEmailNullable(db) {
       updatedAt TEXT NOT NULL,
       lastSeen TEXT,
       sub_token TEXT,
-      bonus_links TEXT
+      bonus_links TEXT,
+      vless_uuid TEXT
     );
     INSERT INTO users
       (id,email,username,passHash,password,expiry,protocols,quotaMB,usedMB,
-       createdAt,updatedAt,lastSeen,sub_token,bonus_links)
+       createdAt,updatedAt,lastSeen,sub_token,bonus_links,vless_uuid)
     SELECT id, CASE WHEN email='' THEN NULL ELSE email END, username, passHash,
       password, expiry, protocols, quotaMB, usedMB, createdAt, updatedAt, lastSeen,
-      ${hasSubToken ? 'sub_token' : 'NULL'}, ${hasBonusLinks ? 'bonus_links' : 'NULL'}
+      ${hasSubToken ? 'sub_token' : 'NULL'}, ${hasBonusLinks ? 'bonus_links' : 'NULL'},
+      ${hasVlessUuid ? 'vless_uuid' : 'NULL'}
     FROM users_legacy;
     DROP TABLE users_legacy;
   `);
@@ -72,9 +75,16 @@ const MIGRATIONS = [
     name: 'bonus links',
     up(db) { addColumn(db, 'users', 'bonus_links TEXT'); },
   },
+  {
+    version: 5,
+    name: 'per-user VLESS UUID',
+    up(db) { addColumn(db, 'users', 'vless_uuid TEXT'); },
+  },
 ];
 
-function runDatabaseMigrations(db, { randomBytes = crypto.randomBytes, logger = console } = {}) {
+function runDatabaseMigrations(db, {
+  randomBytes = crypto.randomBytes, randomUUID = crypto.randomUUID, logger = console,
+} = {}) {
   let current = db.pragma('user_version', { simple: true }) || 0;
   const from = current;
   if (current > LATEST_DB_SCHEMA) {
@@ -100,11 +110,17 @@ function runDatabaseMigrations(db, { randomBytes = crypto.randomBytes, logger = 
     migrateEmailNullable(db);
     addColumn(db, 'users', 'sub_token TEXT');
     addColumn(db, 'users', 'bonus_links TEXT');
+    addColumn(db, 'users', 'vless_uuid TEXT');
     db.prepare("UPDATE users SET email = NULL WHERE email = ''").run();
     missing = db.prepare("SELECT id FROM users WHERE sub_token IS NULL OR sub_token = ''").all();
     if (missing.length) {
       const update = db.prepare('UPDATE users SET sub_token = ? WHERE id = ?');
       for (const row of missing) update.run(randomBytes(16).toString('hex'), row.id);
+    }
+    const missingVless = db.prepare("SELECT id FROM users WHERE vless_uuid IS NULL OR vless_uuid = ''").all();
+    if (missingVless.length) {
+      const update = db.prepare('UPDATE users SET vless_uuid = ? WHERE id = ?');
+      for (const row of missingVless) update.run(randomUUID(), row.id);
     }
     db.pragma(`user_version = ${LATEST_DB_SCHEMA}`);
   })();

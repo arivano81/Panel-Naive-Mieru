@@ -190,7 +190,8 @@ try {
       updatedAt TEXT NOT NULL,
       lastSeen  TEXT,
       sub_token TEXT,
-      bonus_links TEXT
+      bonus_links TEXT,
+      vless_uuid TEXT
     );
     CREATE TABLE IF NOT EXISTS traffic_snapshots (
       id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -277,9 +278,9 @@ function upsertUser(u) {
     const email = (u.email && String(u.email).trim()) ? String(u.email).trim() : null;
     db.prepare(`
       INSERT INTO users
-        (id,email,username,passHash,password,expiry,protocols,quotaMB,usedMB,createdAt,updatedAt,lastSeen,sub_token,bonus_links)
+        (id,email,username,passHash,password,expiry,protocols,quotaMB,usedMB,createdAt,updatedAt,lastSeen,sub_token,bonus_links,vless_uuid)
       VALUES
-        (@id,@email,@username,@passHash,@password,@expiry,@protocols,@quotaMB,@usedMB,@createdAt,@updatedAt,@lastSeen,@sub_token,@bonus_links)
+        (@id,@email,@username,@passHash,@password,@expiry,@protocols,@quotaMB,@usedMB,@createdAt,@updatedAt,@lastSeen,@sub_token,@bonus_links,@vless_uuid)
       ON CONFLICT(id) DO UPDATE SET
         email=excluded.email, username=excluded.username,
         passHash=excluded.passHash, password=excluded.password,
@@ -287,9 +288,11 @@ function upsertUser(u) {
         quotaMB=excluded.quotaMB, usedMB=excluded.usedMB,
         updatedAt=excluded.updatedAt, lastSeen=excluded.lastSeen,
         sub_token=COALESCE(excluded.sub_token, users.sub_token),
-        bonus_links=excluded.bonus_links
+        bonus_links=excluded.bonus_links,
+        vless_uuid=COALESCE(excluded.vless_uuid, users.vless_uuid)
     `).run({ ...u, email, password: u.password || '', bonus_links: u.bonus_links || null,
-             sub_token: u.sub_token || crypto.randomBytes(16).toString('hex') });
+             sub_token: u.sub_token || crypto.randomBytes(16).toString('hex'),
+             vless_uuid: u.vless_uuid || uuidv4() });
   } else {
     memUsers.set(u.id, u);
   }
@@ -316,12 +319,13 @@ function createUserAtomic(u) {
   if (db) {
     const info = db.prepare(`
       INSERT INTO users
-        (id,email,username,passHash,password,expiry,protocols,quotaMB,usedMB,createdAt,updatedAt,lastSeen,sub_token,bonus_links)
+        (id,email,username,passHash,password,expiry,protocols,quotaMB,usedMB,createdAt,updatedAt,lastSeen,sub_token,bonus_links,vless_uuid)
       VALUES
-        (@id,@email,@username,@passHash,@password,@expiry,@protocols,@quotaMB,@usedMB,@createdAt,@updatedAt,@lastSeen,@sub_token,@bonus_links)
+        (@id,@email,@username,@passHash,@password,@expiry,@protocols,@quotaMB,@usedMB,@createdAt,@updatedAt,@lastSeen,@sub_token,@bonus_links,@vless_uuid)
       ON CONFLICT(username) DO NOTHING
     `).run({ ...u, email, password: u.password || '', bonus_links: u.bonus_links || null,
-             sub_token: u.sub_token || crypto.randomBytes(16).toString('hex') });
+             sub_token: u.sub_token || crypto.randomBytes(16).toString('hex'),
+             vless_uuid: u.vless_uuid || uuidv4() });
 
     if (info.changes === 1)
       return { created: true, user: getUserByUsername(u.username) };
@@ -1972,7 +1976,8 @@ app.get('/api/backup/export', requireAuth, (req, res) => {
       updatedAt: u.updatedAt,
       lastSeen:  u.lastSeen || null,
       sub_token: u.sub_token || null,
-      bonus_links: u.bonus_links || null
+      bonus_links: u.bonus_links || null,
+      vless_uuid: u.vless_uuid || null
     }));
 
     // Full config incl. admin credentials — this is a privileged, auth-gated
@@ -2307,7 +2312,7 @@ app.post('/api/panel/stub', requireAuth, (req, res) => {
 });
 
 // ── Validation helpers ────────────────────────────────────────────────────────
-const VALID_PROTOCOLS = ['naive', 'mieru', 'hy2'];
+const VALID_PROTOCOLS = ['naive', 'mieru', 'hy2', 'vless'];
 const USERNAME_RE     = /^[a-zA-Z0-9_.-]{1,64}$/;
 const EMAIL_RE        = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -2383,7 +2388,7 @@ function validateUserInput({ email, username, password, protocols, quotaMB, quot
     if (invalid.length)
       return { error: `unknown protocol(s): ${invalid.join(', ')}. Allowed: ${VALID_PROTOCOLS.join(', ')}` };
     if (!protocols.length)
-      return { error: 'at least one protocol is required (naive, mieru, hy2)' };
+      return { error: 'at least one protocol is required (naive, mieru, hy2, vless)' };
     resolvedProtocols = protocols;
   }
   return { quotaMB: resolvedQuotaMB, protocols: resolvedProtocols };
@@ -2538,6 +2543,7 @@ app.post('/api/users', requireAuth, async (req, res) => {
       // v1.8.7: mint a random subscription token (128-bit hex) up-front so the
       // /sub/:token link works the instant the user is created.
       sub_token: crypto.randomBytes(16).toString('hex'),
+      vless_uuid: uuidv4(),
       createdAt: now, updatedAt: now, lastSeen: null
     };
 

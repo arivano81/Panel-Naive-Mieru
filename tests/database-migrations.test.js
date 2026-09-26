@@ -23,7 +23,8 @@ db.exec(`
 `);
 
 const result = runDatabaseMigrations(db, {
-  randomBytes: () => Buffer.alloc(16, 0xab), logger: { log() {} },
+  randomBytes: () => Buffer.alloc(16, 0xab),
+  randomUUID: () => '11111111-1111-4111-8111-111111111111', logger: { log() {} },
 });
 const cols = db.prepare('PRAGMA table_info(users)').all();
 const names = new Set(cols.map(column => column.name));
@@ -34,9 +35,11 @@ ok(db.pragma('user_version', { simple: true }) === LATEST_DB_SCHEMA, 'PRAGMA use
 ok(names.has('password'), 'password column present');
 ok(names.has('sub_token'), 'sub_token survives nullable-email table rebuild');
 ok(names.has('bonus_links'), 'bonus_links survives nullable-email table rebuild');
+ok(names.has('vless_uuid'), 'VLESS UUID column is created');
 ok(user.username === 'alice', 'existing user preserved');
 ok(user.email === null, 'legacy empty email normalized to NULL');
 ok(user.sub_token === 'ab'.repeat(16), 'missing subscription token backfilled');
+ok(user.vless_uuid === '11111111-1111-4111-8111-111111111111', 'missing VLESS UUID backfilled');
 
 const second = runDatabaseMigrations(db, { logger: { log() {} } });
 ok(second.applied.length === 0, 'second run is idempotent');

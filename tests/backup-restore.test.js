@@ -16,24 +16,26 @@ db.exec(`CREATE TABLE users (
   id TEXT PRIMARY KEY, email TEXT UNIQUE, username TEXT NOT NULL UNIQUE,
   passHash TEXT NOT NULL, password TEXT NOT NULL DEFAULT '', expiry TEXT,
   protocols TEXT, quotaMB INTEGER, usedMB REAL, createdAt TEXT, updatedAt TEXT,
-  lastSeen TEXT, sub_token TEXT, bonus_links TEXT
+  lastSeen TEXT, sub_token TEXT, bonus_links TEXT, vless_uuid TEXT
 )`);
 const upsert = db.prepare(`INSERT INTO users VALUES
   (@id,@email,@username,@passHash,@password,@expiry,@protocols,@quotaMB,@usedMB,
-   @createdAt,@updatedAt,@lastSeen,@sub_token,@bonus_links)
+   @createdAt,@updatedAt,@lastSeen,@sub_token,@bonus_links,@vless_uuid)
   ON CONFLICT(id) DO UPDATE SET username=excluded.username, password=excluded.password,
-    sub_token=excluded.sub_token, bonus_links=excluded.bonus_links`);
+    sub_token=excluded.sub_token, bonus_links=excluded.bonus_links,
+    vless_uuid=excluded.vless_uuid`);
 
 let config = { domain: 'fresh.example', serverIp: '192.0.2.10', version: '1.12.0',
   dbPath: '/local/db.sqlite', schemaVersion: 6 };
 let persisted = JSON.stringify(config);
 const base = {
-  format: 'rixxx-panel-backup', schema: 2,
+  format: 'rixxx-panel-backup', schema: 3,
   config: { domain: 'old.example', serverIp: '198.51.100.4', version: '1.6.0' },
   users: [{
     id: 'u1', username: 'alice', passHash: 'hash', password: 'secret',
     protocols: '["naive","mieru"]', sub_token: 'stable-token',
     bonus_links: '[{"url":"vless://example","enabled":true}]',
+    vless_uuid: '22222222-2222-4222-8222-222222222222',
   }],
 };
 const adapter = applyAllConfigs => ({
@@ -52,6 +54,7 @@ ok(config.dbPath === '/local/db.sqlite', 'local runtime path preserved');
 ok(alice.password === 'secret', 'working client password preserved');
 ok(alice.sub_token === 'stable-token', 'existing subscription URL token preserved');
 ok(alice.bonus_links.includes('vless://example'), 'bonus links preserved');
+ok(alice.vless_uuid === '22222222-2222-4222-8222-222222222222', 'VLESS UUID preserved');
 
 const beforeConfig = persisted;
 const failingBackup = JSON.parse(JSON.stringify(base));

@@ -6,14 +6,18 @@
 
 # 🛡 Panel Naive + Mieru (+Hysteria2) by RIXXX
 
-**v1.11.1** — Веб-панель управления NaiveProxy + Mieru + Hysteria2 для Ubuntu/Debian VPS
+**v1.11.4** — веб-панель для управления личным VPN-сервером на Ubuntu или Debian
 
 [![Telegram](https://img.shields.io/badge/Telegram-@russian__paradice__vpn-2CA5E0?logo=telegram&logoColor=white)](https://t.me/russian_paradice_vpn)
-[![GitHub](https://img.shields.io/badge/GitHub-cwash797--cmd-181717?logo=github)](https://github.com/cwash797-cmd/Panel-Naive-Mieru-by-RIXXX)
+[![GitHub](https://img.shields.io/badge/GitHub-arivano81-181717?logo=github)](https://github.com/arivano81/Panel-Naive-Mieru)
 [![License](https://img.shields.io/badge/License-MIT-bronze?color=c08552)](LICENSE)
 
 > 💬 **Поддержка и обновления:** [t.me/russian_paradice_vpn](https://t.me/russian_paradice_vpn)  
 > ☕ **Поддержать проект:** [app.lava.top/2107724612](https://app.lava.top/2107724612?tabId=donate)
+
+Этот репозиторий — пользовательский форк проекта
+[cwash797-cmd/Panel-Naive-Mieru-by-RIXXX](https://github.com/cwash797-cmd/Panel-Naive-Mieru-by-RIXXX).
+Мы сохраняем указание первоначального автора и развиваем установку, надёжность и новые протоколы.
 
 </div>
 
@@ -40,7 +44,7 @@
 | Дистрибутив | Версии |
 |-------------|--------|
 | Ubuntu | 20.04, 22.04, 24.04 |
-| Debian | 11, 12 |
+| Debian | 11, 12, 13 |
 
 **Архитектуры:** `x86_64` (amd64) — **только** *(caddy-forwardproxy-naive поддерживает только amd64)*  
 > ⚠️ ARM64 и ARMv7 **не поддерживаются** в v1.2.3 — установщик завершится с понятной ошибкой.
@@ -51,8 +55,8 @@
 
 ```bash
 # 1. Клонировать репозиторий
-git clone https://github.com/cwash797-cmd/Panel-Naive-Mieru-by-RIXXX.git
-cd Panel-Naive-Mieru-by-RIXXX
+git clone https://github.com/arivano81/Panel-Naive-Mieru.git
+cd Panel-Naive-Mieru
 
 # 2. Запустить установщик от root
 sudo bash install.sh
@@ -69,6 +73,39 @@ sudo bash install.sh
 - Данные администратора панели
 - Настройка UFW (опционально)
 - Режим доступа к панели (SSH-only / публичный)
+
+### Какие DNS-записи понадобятся
+
+Для полной установки удобнее заранее создать три записи, направленные на IP сервера:
+
+| Пример | Для чего нужен |
+|--------|----------------|
+| `vpn.example.com` | Подключение VPN-клиентов |
+| `panel.example.com` | Вход администратора в веб-панель |
+| `sub.example.com` | Единая ссылка подписки для клиентов |
+
+Если домен обслуживается через Cloudflare, используйте режим **DNS only** (серое облако).
+Обычное проксирование Cloudflare не умеет пропускать все используемые здесь протоколы.
+
+### Где найти пароль после установки
+
+Установщик заранее сохраняет данные администратора в файл:
+
+```bash
+sudo cat /root/rixxx-panel-install-report.txt
+```
+
+Файл доступен только пользователю `root`. Он создаётся до запуска сетевых сервисов,
+поэтому пароль не потеряется, даже если установка прервётся на позднем этапе.
+
+Если пароль всё же нужно заменить:
+
+```bash
+sudo bash /opt/panel-naive-mieru/scripts/recover_access.sh
+```
+
+Команда попросит новые пароли панели и HTTP Basic Auth, сделает резервную копию
+конфигурации, применит изменения и заново сформирует отчёт.
 
 ---
 

@@ -7,6 +7,24 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- Debian 13 is accepted by the installer on amd64 systems.
+- The installer writes `/root/rixxx-panel-install-report.txt` before risky
+  service-configuration steps and refreshes it after a successful installation.
+- `panel/scripts/recover_access.sh` resets both the panel password and public
+  HTTP Basic Auth without requiring the old passwords, while backing up config.
+- Added a regression test for Debian 13, early credential reporting and recovery.
+
+### Documentation
+
+- Russian quick start now explains the three recommended DNS records, where to
+  find generated passwords and how to recover access.
+
+---
+
 ## [v1.11.4]
 
 ### Fixed — xhttp `xmux` / knobs must be snake_case for sing-box (issue #106 follow-up)

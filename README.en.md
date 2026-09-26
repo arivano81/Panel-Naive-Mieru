@@ -40,7 +40,7 @@
 | Distro | Versions |
 |--------|----------|
 | Ubuntu | 20.04, 22.04, 24.04 |
-| Debian | 11, 12 |
+| Debian | 11, 12, 13 |
 
 **Architecture:** `x86_64` (amd64) — **only** *(caddy-forwardproxy-naive supports amd64 only)*  
 > ⚠️ ARM64 and ARMv7 are **not supported** in v1.2.3 — the installer will exit with a clear error message.

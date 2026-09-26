@@ -25,6 +25,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   paths now use it; sensitive Mieru backups remain restricted to mode `0600`.
 - Transactional configs now retain two working generations: `.last-good` and
   `.previous-good`, with the same restrictive mode as the live config.
+- `/api/apply-status` now reports per-service rollback flags and exact
+  last-known-good backup paths, alongside Caddy, Mieru and Hysteria2 errors.
 - Added GitHub Actions coverage for Node.js 20 and Debian 12/13, including the
   complete regression suite, Bash syntax checks, ShellCheck and production
   dependency audit.

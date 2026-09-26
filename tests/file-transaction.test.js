@@ -95,6 +95,15 @@ ok(fs.readFileSync(retained, 'utf8') === 'v4', 'latest content is active');
 ok(fs.readFileSync(retained + '.last-good', 'utf8') === 'v3', 'last-good keeps generation v3');
 ok(fs.readFileSync(retained + '.previous-good', 'utf8') === 'v2', 'previous-good keeps generation v2');
 
+console.log('\n[7] administrator apply report exposes rollback and backup details');
+const serverSource = fs.readFileSync(path.join(__dirname, '../panel/server/index.js'), 'utf8');
+ok(/rolledBack:\s*\{[\s\S]{0,300}caddy:[\s\S]{0,300}mieru:[\s\S]{0,300}hysteria2:/.test(serverSource),
+  'apply result contains rollback state for all managed services');
+ok(/backups:\s*\{[\s\S]{0,300}caddy:[\s\S]{0,300}mieru:[\s\S]{0,300}hysteria2:/.test(serverSource),
+  'apply result contains known-good backup paths for all managed services');
+ok(/app\.get\('\/api\/apply-status'[\s\S]{0,120}res\.json\(_lastApplyResult\)/.test(serverSource),
+  'administrator can retrieve the completed apply report');
+
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(`\nResult: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

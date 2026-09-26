@@ -756,10 +756,12 @@ function applyCaddyTransaction(content) {
   if (!result.ok) {
     const rollback = result.rollbackError ? `; rollback failed: ${result.rollbackError}` : '';
     lastCaddyError = `Caddy config ${result.phase}: ${result.error}${rollback}`;
-    return { ok: false, error: lastCaddyError, rolledBack: result.rolledBack };
+    return { ok: false, error: lastCaddyError, rolledBack: result.rolledBack,
+             backup: result.backup, previous: result.previous };
   }
   lastCaddyError = '';
-  return { ok: true, error: '', rolledBack: false };
+  return { ok: true, error: '', rolledBack: false,
+           backup: result.backup, previous: result.previous };
 }
 
 // Pull the real reason a (re)start failed: prefer the most recent journal lines,
@@ -1074,8 +1076,10 @@ function activateMitaConfig(file) {
   }
 }
 
+let lastMitaTransaction = null;
 function applyMitaConfig() {
   lastMitaError = '';
+  lastMitaTransaction = null;
   const result = applyFileTransaction({
     targetPath: resolvedMitaFile,
     content: buildMitaStateContent(),
@@ -1090,6 +1094,7 @@ function applyMitaConfig() {
       return { ok, error: lastMitaError || 'mita rollback apply failed' };
     },
   });
+  lastMitaTransaction = result;
   if (!result.ok) {
     const rollback = result.rollbackError ? `; rollback failed: ${result.rollbackError}` : '';
     lastMitaError = `Mieru config ${result.phase}: ${result.error}${rollback}`;
@@ -1438,9 +1443,11 @@ function writeHysteriaConfig({ restart = true } = {}) {
   if (!transaction.ok) {
     const rollback = transaction.rollbackError ? `; rollback failed: ${transaction.rollbackError}` : '';
     return { ok: false, changed: transaction.phase !== 'validate', active: false,
-      error: `Hy2 config ${transaction.phase}: ${transaction.error}${rollback}` };
+      error: `Hy2 config ${transaction.phase}: ${transaction.error}${rollback}`,
+      rolledBack: transaction.rolledBack, backup: transaction.backup, previous: transaction.previous };
   }
-  return { ok: true, changed: true, active: serviceResult.active, error: null };
+  return { ok: true, changed: true, active: serviceResult.active, error: null,
+    rolledBack: false, backup: transaction.backup, previous: transaction.previous };
 }
 
 // Restart hysteria-server and verify it came up. Clears any lingering
@@ -1574,7 +1581,7 @@ function naiveCascadeStatusText() {
 // the heavy service apply in the BACKGROUND and let the request return as soon
 // as the DB write is durable. The last result is cached so the UI can poll it.
 let _lastApplyResult = { caddyOk: true, mitaOk: true, hy2Ok: true,
-                         caddyError: '', hy2Error: '', servicesReloaded: true,
+                         caddyError: '', mitaError: '', hy2Error: '', servicesReloaded: true,
                          at: null, running: false };
 let _applyQueued = false;
 
@@ -1589,7 +1596,8 @@ function applyAllConfigsAsync() {
     let r;
     try { r = applyAllConfigs(); }
     catch (e) { r = { caddyOk: false, mitaOk: false, hy2Ok: false,
-                      caddyError: e.message, hy2Error: e.message, servicesReloaded: false }; }
+                      caddyError: e.message, mitaError: e.message, hy2Error: e.message,
+                      rolledBack: {}, backups: {}, servicesReloaded: false }; }
     _lastApplyResult = { ...r, at: new Date().toISOString(), running: false };
   });
 }
@@ -1604,9 +1612,10 @@ function applyAllConfigsAsync() {
 // key now activates immediately. We also surface the real caddy error.
 function applyAllConfigs() {
   let caddyOk = false, mitaOk = false, hy2Ok = true, caddyError = '', mitaError = '', hy2Error = '';
+  let caddyResult = null, hy2Result = null;
   try {
     const content = buildCaddyfile(cfg, getAllUsers());
-    const r = applyCaddyTransaction(content);
+    const r = applyCaddyTransaction(content); caddyResult = r;
     caddyOk = r.ok;
     if (!r.ok) {
       caddyError = r.error;
@@ -1618,11 +1627,21 @@ function applyAllConfigs() {
   // Hy2: only acts when installed (config file present); otherwise it's a
   // no-op success so user CRUD never fails just because Hy2 isn't deployed.
   try {
-    const h = writeHysteriaConfig();
+    const h = writeHysteriaConfig(); hy2Result = h;
     hy2Ok = h.ok;
     if (!h.ok) { hy2Error = h.error || ''; console.error('[HY2] apply failed:', h.error); }
   } catch (e) { hy2Ok = false; hy2Error = e.message; console.error('[HY2]', e.message); }
   return { caddyOk, mitaOk, hy2Ok, caddyError, mitaError, hy2Error,
+           rolledBack: {
+             caddy: !!(caddyResult && caddyResult.rolledBack),
+             mieru: !!(lastMitaTransaction && lastMitaTransaction.rolledBack),
+             hysteria2: !!(hy2Result && hy2Result.rolledBack),
+           },
+           backups: {
+             caddy: caddyResult && caddyResult.backup,
+             mieru: lastMitaTransaction && lastMitaTransaction.backup,
+             hysteria2: hy2Result && hy2Result.backup,
+           },
            servicesReloaded: caddyOk && mitaOk && hy2Ok };
 }
 

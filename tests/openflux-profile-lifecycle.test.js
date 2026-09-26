@@ -109,6 +109,7 @@ echo "LISTEN 0 4096 0.0.0.0:$port 0.0.0.0:*"
   ok(betaCreated.status === 0 && fs.existsSync(betaSecretPath) &&
     fs.readFileSync(betaSecretPath, 'utf8') !== fs.readFileSync(secretPath, 'utf8'),
   'two profiles receive independent ports and different keys');
+  const betaKey = fs.existsSync(betaSecretPath) ? fs.readFileSync(betaSecretPath, 'utf8') : '';
   const listed = run(['list']);
   ok(listed.status === 0 && JSON.parse(listed.stdout)[0]?.id === 'alpha' &&
     !JSON.stringify(JSON.parse(listed.stdout)).includes('EncryptionKey'),
@@ -183,6 +184,10 @@ echo "LISTEN 0 4096 0.0.0.0:$port 0.0.0.0:*"
   const removed = run(['remove', 'alpha']);
   ok(removed.status === 0 && !fs.existsSync(path.join(fixture, 'etc/openflux/secrets/alpha.key')) &&
     !fs.existsSync(path.join(fixture, 'root/openflux-alpha-client')), 'fixture removes only the selected secret and bundle');
+  ok(fs.existsSync(betaSecretPath) && fs.readFileSync(betaSecretPath, 'utf8') === betaKey &&
+    fs.existsSync(path.join(state, 'openflux-exit@beta.service.active')) &&
+    fs.existsSync(path.join(state, 'listen.18446')),
+  'removing one profile preserves the other profile key, active unit and listening socket');
   const betaRemoved = run(['remove', 'beta']);
   ok(betaRemoved.status === 0 && !fs.existsSync(betaSecretPath), 'second isolated profile removes cleanly');
   fs.rmSync(fixture, { recursive: true, force: true });

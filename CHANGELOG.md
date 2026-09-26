@@ -125,6 +125,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Strengthened the Linux OpenFlux multi-profile fixture: removing one active
+  profile must leave the second profile's mode-600 key byte-identical, its
+  instance active and its assigned listening socket present.
 - Extended the Debian 13 pinned-Xray canary from config validation to a real
   local VLESS REALITY client/server tunnel, carrying an HTTP request through
   the pinned client's SOCKS5 inbound against a disposable TLS decoy.

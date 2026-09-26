@@ -136,8 +136,8 @@ echo "LISTEN 0 4096 0.0.0.0:$port 0.0.0.0:*"
     !fs.existsSync(path.join(state, 'openflux-exit@alpha.service.active')),
   `hung systemd start is terminated and rolled back in bounded time (${hungElapsed} ms)`);
   const firewallAfterHang = fs.readFileSync(path.join(state, 'ufw.log'), 'utf8');
-  ok((firewallAfterHang.match(/allow 18445\/tcp comment RIXXX OpenFlux alpha/g) || []).length ===
-    (firewallAfterHang.match(/delete allow 18445\/tcp comment RIXXX OpenFlux alpha/g) || []).length,
+  ok((firewallAfterHang.match(/^allow 18445\/tcp comment RIXXX OpenFlux alpha$/gm) || []).length ===
+    (firewallAfterHang.match(/^--force delete allow 18445\/tcp comment RIXXX OpenFlux alpha$/gm) || []).length,
   'hung start leaves no unmatched scoped firewall rule');
   const missingListener = run(['start', 'alpha'], { OPENFLUX_TEST_NO_LISTENER: '1' });
   ok(missingListener.status !== 0 &&

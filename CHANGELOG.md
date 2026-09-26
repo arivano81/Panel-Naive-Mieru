@@ -38,6 +38,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added an explicit client-bundle download protected by administrator password
   re-authentication and a dedicated rate limit. The no-store archive contains
   only the validated `client.conf` and `openflux.key` regular files.
+- Added transactional OpenFlux key rotation with administrator password
+  confirmation. Active profiles restart and health-check; a failed restart
+  restores both server and client keys and returns the service to the old key.
 
 - Began VLESS stage B with an isolated REALITY/Vision config adapter and a
   pinned Xray-core `v26.3.27` installer. The installer verifies the official

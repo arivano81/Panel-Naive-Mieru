@@ -17,7 +17,7 @@ function ok(value, message) {
 console.log('OpenFlux profile lifecycle regression test');
 const syntax = spawnSync('bash', ['-n', 'panel/scripts/openflux_profile.sh'], { cwd: root, encoding: 'utf8' });
 ok(syntax.status === 0, `profile CLI has valid Bash syntax${syntax.stderr ? `: ${syntax.stderr}` : ''}`);
-for (const action of ['list', 'create', 'start', 'stop', 'restart', 'status', 'remove']) {
+for (const action of ['list', 'create', 'start', 'stop', 'restart', 'rotate', 'status', 'remove']) {
   ok(new RegExp(`\\b${action}\\)`).test(script), `${action} command is explicitly dispatched`);
 }
 ok(script.includes('flock -n 9'), 'profile mutations are serialized');
@@ -62,7 +62,7 @@ case "$cmd" in
   is-enabled) [ "\${1:-}" != --quiet ] || shift; [ -f "$OPENFLUX_TEST_STATE/$1.enabled" ] ;;
   enable) shift; svc=$1; [ "\${OPENFLUX_TEST_FAIL_START:-0}" != 1 ] || exit 1; touch "$OPENFLUX_TEST_STATE/$svc.active" "$OPENFLUX_TEST_STATE/$svc.enabled" ;;
   disable) shift; svc=$1; rm -f "$OPENFLUX_TEST_STATE/$svc.active" "$OPENFLUX_TEST_STATE/$svc.enabled" ;;
-  restart) svc=$1; [ -f "$OPENFLUX_TEST_STATE/$svc.active" ] ;;
+  restart) svc=$1; [ "\${OPENFLUX_TEST_FAIL_RESTART:-0}" != 1 ] && [ -f "$OPENFLUX_TEST_STATE/$svc.active" ] ;;
   *) exit 0 ;;
 esac
 `, { mode: 0o755 });
@@ -101,6 +101,17 @@ esac
   try { startedJson = JSON.parse(started.stdout); } catch {}
   ok(started.status === 0 && startedJson?.active === true,
     `fixture starts and enables the instance${started.stderr ? `: ${started.stderr.trim()}` : ''}`);
+  const oldKey = fs.readFileSync(secretPath, 'utf8');
+  const rotated = run(['rotate', 'alpha']);
+  const rotatedKey = fs.readFileSync(secretPath, 'utf8');
+  ok(rotated.status === 0 && JSON.parse(rotated.stdout).oldClientRevoked === true && rotatedKey !== oldKey,
+    'active profile key rotation restarts successfully and revokes the old client');
+  ok(fs.readFileSync(path.join(fixture, 'root/openflux-alpha-client/openflux.key'), 'utf8') === rotatedKey,
+    'server key and client bundle rotate atomically');
+  const failedRotate = run(['rotate', 'alpha'], { OPENFLUX_TEST_FAIL_RESTART: '1' });
+  ok(failedRotate.status !== 0 && fs.readFileSync(secretPath, 'utf8') === rotatedKey &&
+    fs.readFileSync(path.join(fixture, 'root/openflux-alpha-client/openflux.key'), 'utf8') === rotatedKey,
+  'failed active restart restores both previous keys');
   const stopped = run(['stop', 'alpha']);
   ok(stopped.status === 0 && JSON.parse(stopped.stdout).active === false, 'fixture stops the instance idempotently');
   const removed = run(['remove', 'alpha']);

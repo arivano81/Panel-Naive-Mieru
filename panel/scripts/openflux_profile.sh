@@ -208,6 +208,48 @@ list_profiles() {
   done | jq -s 'sort_by(.id)'
 }
 
+rotate_profile() (
+  local id=$1 secret bundle service work active=false applied=0 committed=0
+  valid_id "$id" || die "invalid profile id"
+  require_installation; require_profile "$id"
+  secret=$(profile_secret "$id"); bundle="$REPORT_DIR/openflux-${id}-client"
+  service=$(service_name "$id")
+  [[ -f "$bundle/openflux.key" ]] || die "client bundle is incomplete"
+  systemctl is-active --quiet "$service" && active=true
+  work=$(mktemp -d)
+  cp -- "$secret" "$work/old-server.key"
+  cp -- "$bundle/openflux.key" "$work/old-client.key"
+  restore_old_keys() {
+    if [[ -n "$TEST_ROOT" ]]; then
+      install -m 0600 "$work/old-server.key" "$secret"
+      install -m 0600 "$work/old-client.key" "$bundle/openflux.key"
+    else
+      install -o openflux -g openflux -m 0600 "$work/old-server.key" "$secret"
+      install -o root -g root -m 0600 "$work/old-client.key" "$bundle/openflux.key"
+    fi
+  }
+  trap 'status=$?; trap - EXIT; if (( status != 0 || committed == 0 )); then if (( applied == 1 )); then restore_old_keys; [[ "$active" == true ]] && systemctl restart "$service" >/dev/null 2>&1 || true; fi; fi; rm -rf "$work"; exit "$status"' EXIT
+  openssl rand -base64 48 > "$work/new.key"
+  chmod 0600 "$work/new.key"
+  if [[ -n "$TEST_ROOT" ]]; then
+    install -m 0600 "$work/new.key" "${secret}.new"
+    install -m 0600 "$work/new.key" "$bundle/openflux.key.new"
+  else
+    install -o openflux -g openflux -m 0600 "$work/new.key" "${secret}.new"
+    install -o root -g root -m 0600 "$work/new.key" "$bundle/openflux.key.new"
+  fi
+  applied=1
+  mv "${secret}.new" "$secret"
+  mv "$bundle/openflux.key.new" "$bundle/openflux.key"
+  if [[ "$active" == true ]]; then
+    systemctl restart "$service"
+    systemctl is-active --quiet "$service" || die "profile failed after key rotation"
+  fi
+  committed=1
+  jq -n --arg id "$id" --arg service "$service" --argjson active "$active" \
+    '{rotated:true,id:$id,service:$service,active:$active,oldClientRevoked:true}'
+)
+
 remove_profile() {
   local id=$1 meta port bundle
   valid_id "$id" || die "invalid profile id"
@@ -226,7 +268,7 @@ remove_profile() {
 }
 
 usage() {
-  echo "Usage: $0 list | create <id> <port> <public-host> | start|stop|restart|status|remove <id>" >&2
+  echo "Usage: $0 list | create <id> <port> <public-host> | start|stop|restart|rotate|status|remove <id>" >&2
   exit 2
 }
 
@@ -237,6 +279,7 @@ case "$ACTION" in
   start)   [[ $# -eq 2 ]] || usage; start_profile "$ID" ;;
   stop)    [[ $# -eq 2 ]] || usage; stop_profile "$ID" ;;
   restart) [[ $# -eq 2 ]] || usage; restart_profile "$ID" ;;
+  rotate)  [[ $# -eq 2 ]] || usage; rotate_profile "$ID" ;;
   status)  [[ $# -eq 2 ]] || usage; status_profile "$ID" ;;
   remove)  [[ $# -eq 2 ]] || usage; remove_profile "$ID" ;;
   *) usage ;;

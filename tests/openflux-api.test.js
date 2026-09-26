@@ -39,6 +39,9 @@ ok(calls.some(call => call.join('|') === 'bash|/scripts/profile.sh|create|alpha|
 service.action('alpha', 'start');
 ok(calls.some(call => call.join('|') === 'bash|/scripts/profile.sh|start|alpha'),
   'actions can address only the isolated lifecycle CLI');
+service.rotate('alpha');
+ok(calls.some(call => call.join('|') === 'bash|/scripts/profile.sh|rotate|alpha'),
+  'key rotation delegates only to the transactional lifecycle CLI');
 const logs = service.logs('alpha', 9999);
 ok(logs.includes('normal line') && !logs.includes('forbidden') &&
   logs.match(/\[redacted sensitive line\]/g)?.length === 2, 'journal output is filtered before leaving the service');
@@ -53,6 +56,7 @@ for (const route of [
   "app.post('/api/openflux/install', requireAuth",
   "app.post('/api/openflux/profiles', requireAuth",
   "app.post('/api/openflux/profiles/:id/bundle', requireAuth",
+  "app.post('/api/openflux/profiles/:id/rotate', requireAuth",
   "app.post('/api/openflux/profiles/:id/:action', requireAuth",
   "app.get('/api/openflux/profiles/:id/logs', requireAuth",
   "app.delete('/api/openflux/profiles/:id', requireAuth",
@@ -74,6 +78,8 @@ ok(routes.includes('requireAuth, secretExportLimiter') && server.includes('openF
   'secret export password attempts have a dedicated rate limit');
 ok(ui.includes("case 'openflux-bundle'") && ui.includes("prompt('Повторно введите пароль администратора панели:'"),
   'UI requires an explicit warning and administrator password before bundle export');
+ok(routes.includes('service.rotate(req.params.id)') && ui.includes("case 'openflux-rotate'"),
+  'key rotation is exposed only through its confirmed experimental control');
 ok(!/protocols[^\n]*openflux/i.test(ui), 'UI never adds OpenFlux to shared user protocols');
 ok(!safeFailure({ stderr: 'one\ntwo\nthree\nfour' }).includes('one'), 'external failure output is length-bounded to its tail');
 

@@ -32,6 +32,12 @@ function registerOpenFluxRoutes(app, requireAuth, service, verifyAdminPassword, 
       res.send(archive);
     } catch (error) { replyError(res, error); }
   });
+  app.post('/api/openflux/profiles/:id/rotate', requireAuth, secretExportLimiter, (req, res) => {
+    if (!PROFILE_ID_RE.test(req.params.id)) return res.status(400).json({ error: 'Invalid OpenFlux profile id' });
+    if (!req.body || typeof req.body.password !== 'string' || !verifyAdminPassword(req.body.password))
+      return res.status(403).json({ error: 'Administrator password confirmation failed' });
+    try { res.json(service.rotate(req.params.id)); } catch (error) { replyError(res, error); }
+  });
   app.post('/api/openflux/profiles/:id/:action', requireAuth, (req, res) => {
     if (!PROFILE_ID_RE.test(req.params.id) || !ACTIONS.has(req.params.action))
       return res.status(400).json({ error: 'Invalid OpenFlux profile or action' });

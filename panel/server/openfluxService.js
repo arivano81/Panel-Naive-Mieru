@@ -47,6 +47,7 @@ function createOpenFluxService(options = {}) {
     create: ({ id, port, host }) => runLifecycle(['create', String(id || ''), String(port || ''), String(host || '')]),
     action: (id, action) => runLifecycle([action, String(id || '')]),
     remove: id => runLifecycle(['remove', String(id || '')]),
+    rotate: id => runLifecycle(['rotate', String(id || '')]),
     logs: (id, requestedLines) => {
       if (!installed()) throw Object.assign(new Error('OpenFlux is not installed'), { status: 409 });
       if (!PROFILE_ID_RE.test(String(id || '')))

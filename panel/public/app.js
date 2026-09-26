@@ -317,6 +317,7 @@ function handleDelegatedClick(e) {
     case 'openflux-remove':      removeOpenFluxProfile(btn.dataset.id); break;
     case 'openflux-logs':        loadOpenFluxLogs(btn.dataset.id); break;
     case 'openflux-bundle':      downloadOpenFluxBundle(btn.dataset.id); break;
+    case 'openflux-rotate':      rotateOpenFluxKey(btn.dataset.id); break;
     case 'change-traffic-pattern': changeTrafficPattern(); break;
     case 'change-udp-mode':      changeUdpMode(); break;
     case 'change-language':      changeLanguage(); break;
@@ -1999,6 +2000,7 @@ async function loadOpenFlux() {
           ${active ? `<button class="btn btn-xs btn-secondary" data-action="openflux-action" data-id="${esc(p.id)}" data-profile-action="restart">Перезапустить</button>` : ''}
           <button class="btn btn-xs btn-ghost" data-action="openflux-logs" data-id="${esc(p.id)}">Журнал</button>
           <button class="btn btn-xs btn-secondary" data-action="openflux-bundle" data-id="${esc(p.id)}">Скачать bundle</button>
+          <button class="btn btn-xs btn-warning" data-action="openflux-rotate" data-id="${esc(p.id)}">Сменить ключ</button>
           <button class="btn btn-xs btn-danger" data-action="openflux-remove" data-id="${esc(p.id)}">Удалить</button>
         </td></tr>`;
     }).join('');
@@ -2092,6 +2094,17 @@ async function downloadOpenFluxBundle(id) {
     link.href = href; link.download = `openflux-${id}-client.tar.gz`;
     document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(href);
     toast(`Секретный bundle ${id} загружен`, 'success');
+  } catch (error) { toast(error.message, 'error'); }
+}
+
+async function rotateOpenFluxKey(id) {
+  if (!confirm(`Сменить ключ профиля ${id}? Старый клиент немедленно потеряет доступ.`)) return;
+  const password = prompt('Повторно введите пароль администратора панели:');
+  if (password === null || password === '') return;
+  try {
+    await api('POST', `/api/openflux/profiles/${encodeURIComponent(id)}/rotate`, { password });
+    toast(`Ключ ${id} заменён. Скачайте новый bundle.`, 'success');
+    await loadOpenFlux();
   } catch (error) { toast(error.message, 'error'); }
 }
 

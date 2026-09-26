@@ -55,9 +55,9 @@ BACKUP_DIR="/etc/rixxx-panel/backups"
 DB_PATH="/var/lib/rixxx-panel/db.sqlite"
 MITA_STATE_FILE="/var/lib/rixxx-panel/mita-state.json"
 
-REPO_URL="https://github.com/cwash797-cmd/Panel-Naive-Mieru-by-RIXXX"
+REPO_URL="https://github.com/arivano81/Panel-Naive-Mieru"
 # Bug 99: raw base for fetching single files (VERSION, update.sh) without git.
-REPO_RAW="https://raw.githubusercontent.com/cwash797-cmd/Panel-Naive-Mieru-by-RIXXX/main"
+REPO_RAW="https://raw.githubusercontent.com/arivano81/Panel-Naive-Mieru/main"
 
 # Bug 99: single source of truth for the target version. Priority:
 #   1) the VERSION file shipped next to this script (set by install/update);
@@ -90,6 +90,24 @@ LEGACY_NAIVE_CONFIG_DIR="/etc/naive"
 CADDY_NAIVE_RELEASES="https://api.github.com/repos/klzgrad/forwardproxy/releases/latest"
 CADDY_NAIVE_FALLBACK_URL="https://github.com/klzgrad/forwardproxy/releases/download/v2.10.0-naive/caddy-forwardproxy-naive.tar.xz"
 MIERU_RELEASES="https://api.github.com/repos/enfein/mieru/releases/latest"
+
+# This fork is private. A locally configured Git credential helper may be
+# enough; unattended servers can provide a fine-grained read-only token through
+# PANEL_GITHUB_TOKEN (preferred), GH_TOKEN or GITHUB_TOKEN. Never print it.
+github_read_token() {
+  printf '%s' "${PANEL_GITHUB_TOKEN:-${GH_TOKEN:-${GITHUB_TOKEN:-}}}"
+}
+
+# Feed the Authorization header over stdin so the token is not exposed in the
+# curl process command line (`ps`). All ordinary curl flags/URLs are forwarded.
+github_curl() {
+  local token; token=$(github_read_token)
+  if [[ -n "$token" ]]; then
+    printf 'Authorization: Bearer %s\n' "$token" | curl -H @- "$@"
+  else
+    curl "$@"
+  fi
+}
 
 # ── Flags ─────────────────────────────────────────────────────────────────────
 DRY_RUN=false
@@ -580,7 +598,8 @@ version_gt() {
 # a curl-piped or older local update.sh still learns the real target version.
 fetch_remote_version() {
   local v
-  v=$(curl -fsSL --max-time 8 "$REPO_RAW/VERSION" 2>/dev/null | head -n1 | tr -d '[:space:]')
+  v=$(github_curl -fsSL --max-time 8 "$REPO_RAW/VERSION" 2>/dev/null \
+    | head -n1 | tr -d '[:space:]')
   [[ -n "$v" ]] && echo "$v" || echo ""
 }
 
@@ -1534,11 +1553,25 @@ update_panel() {
   $DRY_RUN && { log_dry "Would pull latest panel from $REPO_URL"; return; }
 
   local tmp; tmp=$(mktemp -d)
-  local src=""
+  local src="" token; token=$(github_read_token)
+  local fetched=false
   if git clone --depth 1 "${REPO_URL}.git" "$tmp" 2>/dev/null && [[ -d "$tmp/panel" ]]; then
+    fetched=true
+  elif [[ -n "$token" ]] && \
+       GIT_CONFIG_COUNT=1 \
+       GIT_CONFIG_KEY_0=http.extraHeader \
+       GIT_CONFIG_VALUE_0="Authorization: Bearer $token" \
+       git clone --depth 1 "${REPO_URL}.git" "$tmp" 2>/dev/null \
+       && [[ -d "$tmp/panel" ]]; then
+    fetched=true
+  fi
+  if $fetched; then
     src="$tmp/panel"
     log_info "Fetched latest panel from $REPO_URL (git)"
-  elif curl -fsSL --max-time 60 "${REPO_URL}/archive/refs/heads/main.tar.gz" -o "$tmp/main.tar.gz" 2>/dev/null \
+  elif [[ -n "$token" ]] \
+       && printf 'Authorization: Bearer %s\n' "$token" | curl -H @- -fsSL --max-time 60 \
+         "https://api.github.com/repos/arivano81/Panel-Naive-Mieru/tarball/main" \
+         -o "$tmp/main.tar.gz" 2>/dev/null \
        && tar -xzf "$tmp/main.tar.gz" -C "$tmp" 2>/dev/null \
        && [[ -n "$(find "$tmp" -maxdepth 2 -type d -name panel 2>/dev/null | head -1)" ]]; then
     # Bug 99: tarball fallback — works even if git clone is unavailable/rate-limited.
@@ -1549,7 +1582,8 @@ update_panel() {
     src="$(pwd)/panel"
     log_warn "git/tarball fetch failed — using local checkout at $src"
   else
-    log_warn "No panel source available (fetch failed, no local ./panel) — skipping"
+    log_warn "No panel source available (private fetch failed, no local ./panel)."
+    log_warn "Provide a read-only token in PANEL_GITHUB_TOKEN or run from an authenticated checkout."
     rm -rf "$tmp"; return
   fi
 

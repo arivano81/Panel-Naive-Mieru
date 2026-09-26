@@ -30,6 +30,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Fixed installer, updater and panel links that still targeted the parent
+  repository. Production installs now stay on this fork's `main` branch.
 - Fixed Mieru rollback snapshots: the old `.last` logic copied the newly-written
   state instead of the previous working state. A failed apply now restores and
   reapplies the actual last-known-good configuration.

@@ -476,20 +476,33 @@ Entry: hysteria-server ── iptables ──▶ redsocks ──▶ mieru-client
 
 ## 🔄 Обновление одной командой
 
-На сервере **не нужен** ни git, ни заранее скачанный `update.sh` — команда сама
-скачивает свежий установщик обновления из `main` и запускает его. БД с ключами
+Репозиторий приватный, поэтому серверу нужен fine-grained GitHub token только с
+правом **Contents: Read** для этого проекта. БД с ключами
 (`/var/lib/rixxx-panel/db.sqlite`) и конфиг (`/etc/rixxx-panel/config.json`) при
 обновлении **не трогаются**, плюс автоматически снимается бэкап (включая БД).
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/arivano81/Panel-Naive-Mieru/main/update.sh | sudo bash -s -- -y
+read -rsp "GitHub token: " PANEL_GITHUB_TOKEN; echo
+export PANEL_GITHUB_TOKEN
+printf 'Authorization: Bearer %s\n' "$PANEL_GITHUB_TOKEN" | curl -fsSL -H @- \
+  https://raw.githubusercontent.com/arivano81/Panel-Naive-Mieru/main/update.sh \
+  -o /tmp/rixxx-update.sh
+sudo --preserve-env=PANEL_GITHUB_TOKEN bash /tmp/rixxx-update.sh -y
+unset PANEL_GITHUB_TOKEN
 ```
+
+Скрипт не печатает и не записывает token в конфиги. Не выдавайте ему права на
+изменение репозитория. Если обновление запускается из уже авторизованного Git-клона,
+token можно не задавать.
 
 Начиная с v1.3.0 установщик кладёт `update.sh` и `VERSION` прямо в
 `/opt/panel-naive-mieru`, поэтому в дальнейшем можно обновляться и так:
 
 ```bash
-sudo bash /opt/panel-naive-mieru/update.sh -y
+read -rsp "GitHub token: " PANEL_GITHUB_TOKEN; echo
+export PANEL_GITHUB_TOKEN
+sudo --preserve-env=PANEL_GITHUB_TOKEN bash /opt/panel-naive-mieru/update.sh -y
+unset PANEL_GITHUB_TOKEN
 ```
 
 > **Как работает версия.** Источник истины — файл `VERSION` в корне репозитория.
@@ -500,9 +513,6 @@ sudo bash /opt/panel-naive-mieru/update.sh -y
 ## 🔄 Справочник update.sh
 
 ```bash
-# Обновиться одной командой (на проде, без git):
-curl -fsSL https://raw.githubusercontent.com/arivano81/Panel-Naive-Mieru/main/update.sh | sudo bash -s -- -y
-
 bash update.sh                    # Интерактивное обновление
 bash update.sh --dry-run          # Предпросмотр изменений (без записи)
 bash update.sh --force -y         # Принудительное обновление, без сверки версий

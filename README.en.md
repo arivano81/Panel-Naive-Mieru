@@ -27,6 +27,10 @@ This version is maintained independently. Changes are released and tested in thi
 Use [`arivano81/Panel-Naive-Mieru`](https://github.com/arivano81/Panel-Naive-Mieru) for installation
 and updates.
 
+Because this repository is private, unattended updates require a fine-grained
+GitHub token with **Contents: Read** permission only. Pass it as
+`PANEL_GITHUB_TOKEN`; the installer/updater never prints or stores the token.
+
 Project additions include:
 
 - **Debian 13** installation support;

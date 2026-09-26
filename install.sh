@@ -88,13 +88,17 @@ _read_version_file() {
 }
 CURRENT_VERSION="$(_read_version_file)"
 [[ -z "$CURRENT_VERSION" ]] && CURRENT_VERSION="1.3.3"   # fallback if VERSION missing
-REPO_URL="https://github.com/cwash797-cmd/Panel-Naive-Mieru-by-RIXXX"
+REPO_URL="https://github.com/arivano81/Panel-Naive-Mieru"
 # Bug 99: raw base for fetching single files (VERSION, update.sh) without git.
-REPO_RAW="https://raw.githubusercontent.com/cwash797-cmd/Panel-Naive-Mieru-by-RIXXX/main"
+REPO_RAW="https://raw.githubusercontent.com/arivano81/Panel-Naive-Mieru/main"
 # Bug 1: direct download URL for caddy-forwardproxy-naive (amd64 only)
 CADDY_NAIVE_RELEASES="https://api.github.com/repos/klzgrad/forwardproxy/releases/latest"
 CADDY_NAIVE_FALLBACK_URL="https://github.com/klzgrad/forwardproxy/releases/download/v2.10.0-naive/caddy-forwardproxy-naive.tar.xz"
 MIERU_RELEASES="https://api.github.com/repos/enfein/mieru/releases/latest"
+
+github_read_token() {
+  printf '%s' "${PANEL_GITHUB_TOKEN:-${GH_TOKEN:-${GITHUB_TOKEN:-}}}"
+}
 
 # ── Flags ─────────────────────────────────────────────────────────────────────
 NON_INTERACTIVE=false
@@ -1122,8 +1126,17 @@ install_panel() {
   else
     log_warn "$(t 'Локальные исходники не найдены — клонирование из репозитория...' \
                'Local panel source not found — cloning from repo...')"
-    git clone --depth 1 "$REPO_URL" /tmp/panel-src 2>/dev/null || \
-      die "$(t 'Не удалось клонировать репозиторий' 'Failed to clone panel source')"
+    local token; token=$(github_read_token)
+    if ! git clone --depth 1 "$REPO_URL" /tmp/panel-src 2>/dev/null; then
+      [[ -n "$token" ]] || die "$(t \
+        'Приватный репозиторий недоступен: запускайте из локального клона или задайте PANEL_GITHUB_TOKEN' \
+        'Private repository unavailable: run from a local clone or set PANEL_GITHUB_TOKEN')"
+      GIT_CONFIG_COUNT=1 \
+      GIT_CONFIG_KEY_0=http.extraHeader \
+      GIT_CONFIG_VALUE_0="Authorization: Bearer $token" \
+        git clone --depth 1 "$REPO_URL" /tmp/panel-src 2>/dev/null || \
+        die "$(t 'Не удалось клонировать приватный репозиторий' 'Failed to clone private repository')"
+    fi
     cp -r /tmp/panel-src/panel/* "$PANEL_DIR/"
     repo_root="/tmp/panel-src"
   fi

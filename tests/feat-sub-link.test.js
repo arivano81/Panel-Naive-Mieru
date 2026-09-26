@@ -58,6 +58,9 @@ const NAMES = ['buildMierusLink', 'buildHy2Link', 'buildNaiveLink',
                // v1.9.4: buildUserUris/buildSingboxConfig now label configs via
                // applyServerFlag() (reads cfg.serverFlag). Must be in the sandbox.
                'applyServerFlag',
+               // v1.13.0: buildProxyOutbounds uses this helper to suppress a
+               // duplicate bonus VLESS node that matches the local adapter.
+               'singboxOutboundIdentity',
                // v1.9.8: buildSingboxConfig now delegates its proxy-outbound
                // construction to the shared buildProxyOutbounds(). Must be present.
                'buildProxyOutbounds'];

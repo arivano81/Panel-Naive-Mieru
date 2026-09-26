@@ -30,6 +30,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Raising the quota restores the same credentials. Persisted usage never moves
   backwards after a runtime counter reset; unaffiliated Naive CONNECT bytes
   remain server-wide and are deliberately not invented per user.
+- Integrated managed Xray/VLESS egress with the existing routing modes: WARP's
+  connection-mark design already covers Xray safely, while cascade now adds and
+  removes a dedicated `xray` owner rule with the shared Exit anti-loop bypass.
 
 ---
 

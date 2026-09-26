@@ -101,6 +101,15 @@ hy2_uid() {
   fi
 }
 
+# ── xray uid (owner-match so managed VLESS egress uses the same cascade) ─────
+xray_uid() {
+  if [[ -x /usr/local/bin/xray && -f /etc/xray/config.json ]]; then
+    id -u xray 2>/dev/null || echo ""
+  else
+    echo ""
+  fi
+}
+
 # ── Resolve exit host → IPv4 (needed for the anti-loop RETURN rule) ────────────
 resolve_exit_ip() {
   local host="$1"
@@ -319,6 +328,15 @@ apply_iptables() {
     log "cascade: Hy2 egress relayed too (hysteria uid=$hyuid) ✓"
   fi
 
+  # Xray/VLESS is TCP in the managed REALITY profile. Its client replies are
+  # accepted before OUTPUT, while only Xray-owned upstream dials hit this owner
+  # rule. The shared exit_ip RETURN above prevents a relay loop.
+  local xuid; xuid=$(xray_uid)
+  if [[ -n "$xuid" ]]; then
+    iptables -t nat -A OUTPUT -p tcp -m owner --uid-owner "$xuid" -j REDSOCKS
+    log "cascade: VLESS egress relayed too (xray uid=$xuid) ✓"
+  fi
+
   # Persist if iptables-persistent is available; else install it.
   if ! command -v netfilter-persistent &>/dev/null; then
     DEBIAN_FRONTEND=noninteractive apt-get install -y -qq iptables-persistent 2>/dev/null || true
@@ -341,6 +359,13 @@ clear_iptables() {
   if [[ -n "$hyuid" ]]; then
     while iptables -t nat -C OUTPUT -p tcp -m owner --uid-owner "$hyuid" -j REDSOCKS 2>/dev/null; do
       iptables -t nat -D OUTPUT -p tcp -m owner --uid-owner "$hyuid" -j REDSOCKS 2>/dev/null || break
+    done
+  fi
+  # Remove the Xray/VLESS owner jump even after a partial uninstall.
+  local xuid; xuid=$(id -u xray 2>/dev/null || echo "")
+  if [[ -n "$xuid" ]]; then
+    while iptables -t nat -C OUTPUT -p tcp -m owner --uid-owner "$xuid" -j REDSOCKS 2>/dev/null; do
+      iptables -t nat -D OUTPUT -p tcp -m owner --uid-owner "$xuid" -j REDSOCKS 2>/dev/null || break
     done
   fi
   # Bug 150: also strip ANY remaining OUTPUT rule that jumps to REDSOCKS, even if

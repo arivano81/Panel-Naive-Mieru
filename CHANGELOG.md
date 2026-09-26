@@ -20,6 +20,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added a disposable Debian 13 OpenFlux binary canary that sends an HTTP request
   through a real encrypted L4/Direct-to-SOCKS5 tunnel and verifies that a client
   with the wrong key cannot fall back to plaintext.
+- Added an isolated, serialized OpenFlux profile CLI with validated
+  create/start/stop/restart/status/remove operations, per-profile mode-600 keys,
+  root-only client bundles, scoped UFW rules, reboot persistence, and failed-start rollback.
 
 - Began VLESS stage B with an isolated REALITY/Vision config adapter and a
   pinned Xray-core `v26.3.27` installer. The installer verifies the official

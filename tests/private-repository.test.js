@@ -80,6 +80,9 @@ ok(openfluxAdapter.status === 0, 'isolated OpenFlux adapter regression suite pas
 const openfluxInstaller = spawnSync(process.execPath, [path.join(__dirname, 'openflux-installer.test.js')],
   { stdio: 'inherit' });
 ok(openfluxInstaller.status === 0, 'opt-in OpenFlux installer regression suite passes');
+const openfluxLifecycle = spawnSync(process.execPath, [path.join(__dirname, 'openflux-profile-lifecycle.test.js')],
+  { stdio: 'inherit' });
+ok(openfluxLifecycle.status === 0, 'isolated OpenFlux profile lifecycle regression suite passes');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

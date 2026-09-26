@@ -247,7 +247,9 @@ OpenFlux — отдельная подсистема, а не четвёртый
    без установки и запуска бинарника; основной сервер его не импортирует.
 2. **Isolated canary** — opt-in установщик подготавливает проверенный бинарник без запуска
    и firewall; CI поднимает одноразовый encrypted L4/Direct туннель и отвергает неверный
-   ключ. Далее нужен ручной systemd/reboot/uninstall canary на отдельном Debian 13.
+   ключ. Изолированный CLI уже реализует create/start/stop/restart/status/remove с
+   per-profile key и firewall rollback. Далее нужны fault-тесты и ручной
+   systemd/reboot/uninstall canary на отдельном Debian 13.
 3. **Opt-in UI** — кнопка установки появляется только после прохождения regression и fault-тестов.
 
 До третьей стадии README не должен предлагать OpenFlux как стабильный пользовательский протокол.

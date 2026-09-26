@@ -137,6 +137,11 @@ const installerSourceCwd = spawnSync(process.execPath, [path.join(__dirname, 'in
 if (installerSourceCwd.stdout) process.stdout.write(installerSourceCwd.stdout);
 if (installerSourceCwd.stderr) process.stderr.write(installerSourceCwd.stderr);
 ok(installerSourceCwd.status === 0, 'bundled private source working-directory regression suite passes');
+const dependencySecurity = spawnSync(process.execPath, [path.join(__dirname, 'dependency-security.test.js')],
+  { encoding: 'utf8' });
+if (dependencySecurity.stdout) process.stdout.write(dependencySecurity.stdout);
+if (dependencySecurity.stderr) process.stderr.write(dependencySecurity.stderr);
+ok(dependencySecurity.status === 0, 'production dependency security regression suite passes');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

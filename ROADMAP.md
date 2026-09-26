@@ -383,7 +383,8 @@ L3 не включается, пока не будут готовы изолир
 - [x] маскирование паролей, UUID, tokens, private keys и subscription URL в runtime/access/install логах;
 - шифруемый backup;
 - [x] logrotate и лимиты файловых журналов панели, установщика и cascade-watchdog;
-- проверка npm и Go-зависимостей;
+- [x] npm audit для production-зависимостей с CI-блокировкой от moderate и выше;
+- проверка Go-зависимостей внешних Caddy/Mieru/Xray/OpenFlux компонентов;
 - SBOM для релиза;
 - подпись release artifacts;
 - [x] security contact через private GitHub Security Advisory и документированная процедура отзыва релиза.

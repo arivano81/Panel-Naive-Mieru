@@ -125,6 +125,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Updated direct `uuid` and `node-cron` dependencies to patched releases,
+  removing both moderate npm advisories found during the real Debian 13 VPS
+  acceptance run. CI now fails on moderate production advisories, not only high.
 - Fixed clean installation from a bundled/private checkout: Caddy archive
   extraction no longer changes the process working directory to `/`, so the
   following panel step cannot unexpectedly prompt for an interactive GitHub

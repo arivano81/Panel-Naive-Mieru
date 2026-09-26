@@ -49,6 +49,7 @@ function mkSandbox(flag) {
   for (const n of ['applyServerFlag','buildMierusLink','buildHy2Link','buildShadowrocketHttpsLink',
                    'normalizeBonusLinks','enabledBonusUrls',
                    'parseXhttpExtra','xmuxToSnake','buildV2rayTransport','bonusUrlToSingboxOutbound',
+                   'singboxOutboundIdentity',
                    'buildProxyOutbounds','buildUserUris','buildSingboxConfig'])
     vm.runInContext(extractFn(serverSrc, n), sb);
   return sb;

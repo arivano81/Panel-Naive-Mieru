@@ -15,22 +15,19 @@
 > 💬 **Support & updates:** [t.me/russian_paradice_vpn](https://t.me/russian_paradice_vpn)  
 > ☕ **Support the project:** [app.lava.top/2107724612](https://app.lava.top/2107724612?tabId=donate)
 
-This repository is a community fork of
-[cwash797-cmd/Panel-Naive-Mieru-by-RIXXX](https://github.com/cwash797-cmd/Panel-Naive-Mieru-by-RIXXX).
-We keep credit to the original authors while improving installation, reliability, and protocol support.
+This version focuses on installation, reliability, documentation, and protocol support.
 
 </div>
 
 ---
 
-## 🌿 About this fork
+## 🌿 About the project
 
-This is an independently maintained version based on the RIXXX parent project. We aim to remain
-compatible with the original panel, but changes in this repository are released and tested separately.
+This version is maintained independently. Changes are released and tested in this repository.
 Use [`arivano81/Panel-Naive-Mieru`](https://github.com/arivano81/Panel-Naive-Mieru) for installation
-and updates of this fork.
+and updates.
 
-Additions in this fork include:
+Project additions include:
 
 - **Debian 13** installation support;
 - a protected post-installation report containing the panel address and administrator details;
@@ -38,11 +35,7 @@ Additions in this fork include:
 - clear documentation for the main, panel, and subscription DNS names;
 - ongoing protocol and reliability improvements.
 
-Parent project:
-[`cwash797-cmd/Panel-Naive-Mieru-by-RIXXX`](https://github.com/cwash797-cmd/Panel-Naive-Mieru-by-RIXXX)
-
-> Parent-project updates are not imported automatically. Read the changelog and make a backup before
-> updating a production server.
+Read the changelog and make a backup before updating a production server.
 
 ---
 
@@ -56,8 +49,8 @@ Parent project:
 | 4 | Client configs: Naive link, Mieru sing-box JSON, universal auto-fallback config, QR codes |
 | 5 | Monitoring dashboard: WebSocket live metrics, traffic snapshots, quota alerts |
 | 6 | `update.sh`: `--dry-run`, `--force`, `--expose`, `--ssh-only`, `--status`, `--repair`, `--help` |
-| 7 | **Cascade / Relay** (v1.2.6): `client → Entry (RU) → Exit (EU) → internet` via upstream (Naive) + egress SOCKS5 (Mieru) |
-| 8 | **Hysteria2 out of the box** (v1.8.x): a third shared-pool protocol installed automatically alongside Naive + Mieru (`install_hysteria.sh`, `auth: userpass`, systemd, per-user traffic, cascade). Enabled via a checkbox in the user's shared pool. |
+| 7 | **Cascade / Relay** (v1.2.6): `client → Entry (RU) → Exit (EU) → internet`; Naive uses HTTPS upstream, while Mieru and Hy2 use the transparent Mieru relay. |
+| 8 | **Optional Hysteria2** (v1.8.x): installed by the administrator from Settings (`auth: userpass`, systemd, per-user traffic, cascade), then enabled for selected users. |
 | 9 | **One "smart" Sub-link** (v1.8.7–1.8.8): a single `/sub/:token` link with client auto-detection by User-Agent. **Shadowrocket** gets a base64 URI list (Naive → native HTTPS scheme, Mieru `mierus://`, Hy2 `hysteria2://`), **Karing** gets sing-box JSON. Passes expiry & traffic via the `Subscription-Userinfo` header. ✅ **Verified on Karing and Shadowrocket.** |
 
 ---
@@ -110,8 +103,9 @@ ssh -L 3000:127.0.0.1:3000 root@<your-server-ip>
 
 ### Public mode
 ```bash
-sudo bash update.sh --expose vpn.example.com
-# Panel available at: http://vpn.example.com:8080/
+sudo bash update.sh --expose panel.example.com
+# Panel available at: https://panel.example.com/<secret-webBasePath>/
+# TLS and HTTP Basic Auth are handled by caddy-naive.
 ```
 
 ---
@@ -229,31 +223,27 @@ Contains all enabled protocols (NaiveProxy + Mieru + Hysteria2) with `urltest` s
 ## 🏗 Architecture
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                         VPS                               │
-│                                                          │
-│  ┌──────────┐  port 443     ┌──────────────────────┐    │
-│  │  Client  │ ──HTTPS──────▶│    caddy-naive       │    │
-│  │ (Naive)  │               │  (NaiveProxy HTTPS   │    │
-│  └──────────┘               │   forward proxy)     │    │
-│                             └──────────────────────┘    │
-│                                                          │
-│  ┌──────────┐  ports        ┌──────────────────────┐    │
-│  │  Client  │  2012-2022    │        mita          │    │
-│  │ (Mieru)  │ ──TCP/UDP────▶│    (Mieru proxy)     │    │
-│  └──────────┘               └──────────────────────┘    │
-│                                                          │
-│  ┌────────────────────────────────────────────────────┐  │
-│  │          Control Panel (Node.js + PM2)              │  │
-│  │   127.0.0.1:3000  │  REST API  │  WebSocket  │  UI  │  │
-│  │              SQLite DB (/var/lib/rixxx-panel/)      │  │
-│  └────────────────────────────────────────────────────┘  │
-│                                                          │
-│  ┌─────────────────────┐   ┌────────────────────────┐   │
-│  │  /etc/caddy-naive/  │   │ /var/lib/rixxx-panel/  │   │
-│  │     Caddyfile       │   │   mita-state.json      │   │
-│  └─────────────────────┘   └────────────────────────┘   │
-└──────────────────────────────────────────────────────────┘
+Client connections                              VPS
+
+NaiveProxy ── TCP/TLS ────────────────────────▶ caddy-naive ───────▶ Internet
+Mieru      ── TCP/UDP, ports 2012–2022 ───────▶ mita ──────────────▶ Internet
+Hysteria2  ── UDP/QUIC, usually port 443 ─────▶ hysteria-server ──▶ Internet
+
+Administration
+
+panel.example.com/secret-path ── TLS + Basic Auth ──▶ caddy-naive
+                                                               │
+                                                               ▼
+                                                  Node.js + Express + PM2
+                                                  127.0.0.1:3000
+                                                  REST API + WebSocket
+                                                               │
+                                                               ▼
+                                                  SQLite + service configs
+
+Subscriptions
+
+sub.example.com/sub/TOKEN ── TLS ──▶ caddy-naive ──▶ panel ──▶ client config
 ```
 
 ---
@@ -263,18 +253,26 @@ Contains all enabled protocols (NaiveProxy + Mieru + Hysteria2) with `urltest` s
 Configure a two-hop chain directly from the panel (**Settings → Cascade**):
 
 ```
-┌──────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────┐
-│  Client  │──▶│ Entry (RU)   │──▶│ Exit (EU)    │──▶│ Internet │
-│          │   │ caddy-naive  │   │ SOCKS5/443   │   │          │
-│  Naive   │   │ upstream     │   │              │   │          │
-│  + Mieru │   │ mita + egress│   │              │   │          │
-└──────────┘   └──────────────┘   └──────────────┘   └──────────┘
+Naive client
+    │
+    ▼
+Entry: caddy-naive ── HTTPS upstream ──▶ Exit: caddy-naive ──▶ Internet
+
+Mieru client
+    │
+    ▼
+Entry: mita ── iptables ──▶ redsocks ──▶ mieru-client ── Mieru ──▶ Exit: mita ──▶ Internet
+
+Hysteria2 client
+    │
+    ▼
+Entry: hysteria-server ── iptables ──▶ redsocks ──▶ mieru-client ── Mieru ──▶ Exit: mita ──▶ Internet
 ```
 
 ### What happens under the hood
 
 - **NaiveProxy** — the `Caddyfile` gets an `upstream https://user:pass@exit-host:443` directive inside the `forward_proxy` block. Client traffic is forwarded to the Exit node before reaching the internet.
-- **Mieru** — the `mita-state.json` receives an `egress` object with a SOCKS5 proxy (`SOCKS5_PROXY_PROTOCOL`) pointing at the Exit node. The `action: DIRECT` rule means all traffic goes through that exit.
+- **Mieru and Hysteria2** — `iptables` selects traffic owned by the `mita` and `hysteria` service users. `redsocks` redirects it to a local SOCKS5 listener, and `mieru-client` carries it to the Exit node's `mita` service. The Exit address is excluded from redirection to prevent a loop.
 
 ### UI controls
 
@@ -283,9 +281,10 @@ Configure a two-hop chain directly from the panel (**Settings → Cascade**):
 3. Fill in:
    - **Naive upstream URL** — `https://user:password@exit.example.com:443`
    - **Mieru Exit host** — IP or domain of the Exit node
-   - **Mieru Exit port** — SOCKS5 port (usually `1080`)
-   - **User / Password** — if the Exit requires SOCKS5 authentication
-4. Press **Apply cascade**. The panel atomically rewrites `Caddyfile` and `mita-state.json`, reloads services, and shows a toast notification.
+   - **Mieru Exit port range** — the Exit node's Mieru range (usually `2012–2022`)
+   - **Mieru Exit user / password** — credentials of a user created on the Exit panel
+4. Press **Apply cascade**. The panel updates the Naive upstream and starts or stops the transparent Mieru relay.
+5. Use **Check status** to verify the relay units, iptables chain, and current egress IP.
 
 > 💡 You can toggle cascade on/off without erasing settings — just untick the checkbox and press **Apply**.
 
@@ -387,6 +386,7 @@ ufw status
 ## 📝 Credits
 
 - **Author:** RIXXX
+- **Parent project:** [cwash797-cmd/Panel-Naive-Mieru-by-RIXXX](https://github.com/cwash797-cmd/Panel-Naive-Mieru-by-RIXXX)
 - **Telegram:** [@russian_paradice_vpn](https://t.me/russian_paradice_vpn)
 - **Donate:** [app.lava.top/2107724612](https://app.lava.top/2107724612?tabId=donate)
 - **NaiveProxy:** [klzgrad/naiveproxy](https://github.com/klzgrad/naiveproxy)

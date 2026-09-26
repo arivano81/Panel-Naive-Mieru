@@ -1,6 +1,6 @@
 'use strict';
 
-const LATEST_CONFIG_SCHEMA = 7;
+const LATEST_CONFIG_SCHEMA = 8;
 
 const CONFIG_MIGRATIONS = [
   { version: 1, name: 'probe mode', up(config) {
@@ -42,6 +42,13 @@ const CONFIG_MIGRATIONS = [
     if (config.vlessPort == null) config.vlessPort = 8443;
     if (!config.vlessReality || typeof config.vlessReality !== 'object' || Array.isArray(config.vlessReality))
       config.vlessReality = { serverName: '', target: '', publicKey: '', shortId: '' };
+  } },
+  { version: 8, name: 'optional VLESS XHTTP', up(config) {
+    if (!config.stack || typeof config.stack !== 'object' || Array.isArray(config.stack)) config.stack = {};
+    if (config.stack.vlessXhttp == null) config.stack.vlessXhttp = false;
+    if (config.vlessXhttpPort == null) config.vlessXhttpPort = 10443;
+    if (!config.vlessXhttp || typeof config.vlessXhttp !== 'object' || Array.isArray(config.vlessXhttp))
+      config.vlessXhttp = { host: '', path: '' };
   } },
 ];
 

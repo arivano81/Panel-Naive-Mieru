@@ -39,10 +39,11 @@ const si             = require('systeminformation');
 const crypto         = require('crypto');   // Bug 100: module-level require so generateSafePassword() has a real Node crypto (not Web-Crypto globalThis.crypto, which lacks randomInt)
 const { readPanelVersion: resolvePanelVersion } = require('./version');
 const { applyFileTransaction } = require('./fileTransaction');
+const { applyMultiFileTransaction } = require('./multiFileTransaction');
 const { runDatabaseMigrations } = require('./databaseMigrations');
 const { runConfigMigrations } = require('./configMigrations');
 const { BACKUP_FORMAT, BACKUP_SCHEMA, validateBackup, restoreBackupState } = require('./backupRestore');
-const { buildXrayRealityConfig, buildVlessRealityLink } = require('./xrayConfig');
+const { buildXrayRealityConfig, buildVlessRealityLink, buildCaddyXhttpRoute } = require('./xrayConfig');
 const { parseXrayStats, accumulateXrayStats } = require('./xrayStats');
 const { createOpenFluxService } = require('./openfluxService');
 const { registerOpenFluxRoutes } = require('./openfluxRoutes');
@@ -514,6 +515,11 @@ function buildCaddyfile(config, users) {
       panelPort:          config.panelPort          || 3000,
       // v1.8.7: subscription sub-domain (public /sub/* → panel; TLS auto).
       subBaseUrl:         config.subBaseUrl          || '',
+      xhttpRoute: config.stack && config.stack.vlessXhttp
+        ? buildCaddyXhttpRoute({ port: config.vlessXhttpPort,
+            host: config.vlessXhttp && config.vlessXhttp.host,
+            path: config.vlessXhttp && config.vlessXhttp.path })
+        : '',
     }, naiveUsers);
   }
 
@@ -1664,7 +1670,29 @@ function getVlessRealitySettings() {
 }
 
 function buildManagedXrayConfig() {
-  return JSON.stringify(buildXrayRealityConfig(getVlessRealitySettings(), getVlessUsers()), null, 2) + '\n';
+  const xhttp = cfg.stack && cfg.stack.vlessXhttp ? {
+    enabled: true, port: cfg.vlessXhttpPort,
+    host: cfg.vlessXhttp && cfg.vlessXhttp.host,
+    path: cfg.vlessXhttp && cfg.vlessXhttp.path,
+  } : undefined;
+  return JSON.stringify(buildXrayRealityConfig(getVlessRealitySettings(), getVlessUsers(), xhttp), null, 2) + '\n';
+}
+
+function validateXrayConfig(file) {
+  try {
+    execFileSync(XRAY_BIN, ['run', '-test', '-config', file], { timeout: 15000 });
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: (error.stderr || error.stdout || error.message).toString().trim() };
+  }
+}
+
+function applyXrayService() {
+  try {
+    execFileSync('systemctl', ['restart', 'xray'], { timeout: 20000 });
+    execFileSync('systemctl', ['is-active', '--quiet', 'xray'], { timeout: 5000 });
+    return { ok: true };
+  } catch (error) { return { ok: false, error: error.message }; }
 }
 
 function applyXrayConfig() {
@@ -1676,29 +1704,37 @@ function applyXrayConfig() {
       targetPath: XRAY_CONFIG,
       content: buildManagedXrayConfig(),
       mode: 0o640,
-      validate: file => {
-        try {
-          execFileSync(XRAY_BIN, ['run', '-test', '-config', file], { timeout: 15000 });
-          return { ok: true };
-        } catch (error) {
-          return { ok: false, error: (error.stderr || error.stdout || error.message).toString().trim() };
-        }
-      },
+      validate: validateXrayConfig,
       afterWrite: file => {
         execFileSync('chown', ['root:xray', file], { timeout: 5000 });
       },
-      apply: () => {
-        try {
-          execFileSync('systemctl', ['restart', 'xray'], { timeout: 20000 });
-          execFileSync('systemctl', ['is-active', '--quiet', 'xray'], { timeout: 5000 });
-          return { ok: true };
-        } catch (error) { return { ok: false, error: error.message }; }
-      },
+      apply: applyXrayService,
     });
   } catch (error) {
     return { ok: false, changed: false, active: false, error: error.message };
   }
   return { ...result, changed: result.ok, active: result.ok };
+}
+
+function applyXhttpStackTransaction() {
+  if (!xrayInstalled() || !(cfg.stack && cfg.stack.vless && cfg.stack.vlessXhttp))
+    return { ok: true, changed: false, skipped: 'not-installed-or-disabled' };
+  const result = applyMultiFileTransaction({ items: [
+    {
+      targetPath: XRAY_CONFIG, content: buildManagedXrayConfig(), mode: 0o640,
+      validate: validateXrayConfig,
+      afterWrite: file => execFileSync('chown', ['root:xray', file], { timeout: 5000 }),
+      apply: applyXrayService, rollbackApply: applyXrayService,
+    },
+    {
+      targetPath: resolvedCaddyFile, content: buildCaddyfile(cfg, getAllUsers()), mode: 0o640,
+      validate: validateCaddyfile, afterWrite: fixCaddyPerms,
+      apply: applyCaddyConfig, rollbackApply: applyCaddyConfig,
+    },
+  ] });
+  const backups = result.backups || [];
+  return { ...result, changed: result.ok, active: result.ok, backups,
+    xrayBackup: backups[0] || null, caddyBackup: backups[1] || null };
 }
 
 let _lastApplyResult = { caddyOk: true, mitaOk: true, hy2Ok: true, xrayOk: true,
@@ -1735,15 +1771,27 @@ function applyAllConfigs() {
   let caddyOk = false, mitaOk = false, hy2Ok = true, xrayOk = true;
   let caddyError = '', mitaError = '', hy2Error = '', xrayError = '';
   let caddyResult = null, hy2Result = null, xrayResult = null;
-  try {
-    const content = buildCaddyfile(cfg, getAllUsers());
-    const r = applyCaddyTransaction(content); caddyResult = r;
-    caddyOk = r.ok;
-    if (!r.ok) {
-      caddyError = r.error;
-      console.error('[CADDY] apply failed:', r.error);
-    }
-  } catch (e) { caddyError = e.message; console.error('[CADDY]', e.message); }
+  const coupledXhttp = !!(cfg.stack && cfg.stack.vless && cfg.stack.vlessXhttp);
+  if (coupledXhttp) {
+    try {
+      const r = applyXhttpStackTransaction(); caddyResult = r; xrayResult = r;
+      caddyOk = xrayOk = r.ok;
+      if (!r.ok) {
+        const rollback = r.rollbackError ? `; rollback failed: ${r.rollbackError}` : '';
+        caddyError = xrayError = `${r.error}${rollback}`;
+      }
+    } catch (e) { caddyError = xrayError = e.message; caddyOk = xrayOk = false; }
+  } else {
+    try {
+      const content = buildCaddyfile(cfg, getAllUsers());
+      const r = applyCaddyTransaction(content); caddyResult = r;
+      caddyOk = r.ok;
+      if (!r.ok) {
+        caddyError = r.error;
+        console.error('[CADDY] apply failed:', r.error);
+      }
+    } catch (e) { caddyError = e.message; console.error('[CADDY]', e.message); }
+  }
   try { mitaOk = applyMitaConfig(); mitaError = mitaOk ? '' : getLastMitaError(); }
   catch (e) { mitaError = e.message; console.error('[MITA]', e.message); }
   // Hy2: only acts when installed (config file present); otherwise it's a
@@ -1753,11 +1801,13 @@ function applyAllConfigs() {
     hy2Ok = h.ok;
     if (!h.ok) { hy2Error = h.error || ''; console.error('[HY2] apply failed:', h.error); }
   } catch (e) { hy2Ok = false; hy2Error = e.message; console.error('[HY2]', e.message); }
-  try {
-    const x = applyXrayConfig(); xrayResult = x;
-    xrayOk = x.ok;
-    if (!x.ok) { xrayError = x.error || ''; console.error('[XRAY] apply failed:', x.error); }
-  } catch (e) { xrayOk = false; xrayError = e.message; console.error('[XRAY]', e.message); }
+  if (!coupledXhttp) {
+    try {
+      const x = applyXrayConfig(); xrayResult = x;
+      xrayOk = x.ok;
+      if (!x.ok) { xrayError = x.error || ''; console.error('[XRAY] apply failed:', x.error); }
+    } catch (e) { xrayOk = false; xrayError = e.message; console.error('[XRAY]', e.message); }
+  }
   return { caddyOk, mitaOk, hy2Ok, xrayOk, caddyError, mitaError, hy2Error, xrayError,
            rolledBack: {
              caddy: !!(caddyResult && caddyResult.rolledBack),
@@ -1766,10 +1816,10 @@ function applyAllConfigs() {
              xray: !!(xrayResult && xrayResult.rolledBack),
            },
            backups: {
-             caddy: caddyResult && caddyResult.backup,
+             caddy: caddyResult && (caddyResult.caddyBackup || caddyResult.backup),
              mieru: lastMitaTransaction && lastMitaTransaction.backup,
              hysteria2: hy2Result && hy2Result.backup,
-             xray: xrayResult && xrayResult.backup,
+             xray: xrayResult && (xrayResult.xrayBackup || xrayResult.backup),
            },
            servicesReloaded: caddyOk && mitaOk && hy2Ok && xrayOk };
 }

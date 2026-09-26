@@ -15,6 +15,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   XHTTP `mode=auto` inbound, TLS client link, and path-scoped unbuffered Caddy
   h2c route. Disabled XHTTP leaves the existing REALITY config unchanged, and
   the pinned Debian 13 Xray canary now validates both inbounds together.
+- Added an opt-in coupled XHTTP apply transaction. Xray and Caddy candidates
+  are both validated before activation; either service failure restores both
+  files and reapplies the previous services. Schema migration 8 keeps XHTTP
+  disabled and preserves the existing Caddyfile byte-for-byte on upgrades.
 
 - Added the first OpenFlux Experimental isolation layer: a pure pinned-release
   L4/Direct adapter, matching client config, hardened unit template, validation

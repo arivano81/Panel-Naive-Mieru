@@ -28,6 +28,10 @@ ok(source.includes("execFileSync('systemctl', ['is-active', '--quiet', 'xray']")
   'Xray restart has an active-service health check');
 ok(source.includes('xray: !!(xrayResult && xrayResult.rolledBack)'),
   'rollback state is exposed to apply-status');
+ok(source.includes('applyXhttpStackTransaction()') && source.includes('applyMultiFileTransaction({ items:'),
+  'XHTTP applies Xray and Caddy as one rollback unit');
+ok(source.includes('const coupledXhttp = !!') && source.includes('if (!coupledXhttp)'),
+  'disabled XHTTP preserves the established independent apply path');
 ok(source.includes("app.get('/api/settings/vless'") &&
    source.includes("app.post('/api/settings/vless/rebuild'"),
   'authenticated VLESS status and rebuild endpoints exist');

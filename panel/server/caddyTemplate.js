@@ -243,6 +243,10 @@ ${host} {
 `;
 }
 
+function renderXhttpRoute(cfg) {
+  return typeof cfg.xhttpRoute === 'string' ? cfg.xhttpRoute : '';
+}
+
 function render(cfg, naiveUsers) {
   const email      = (cfg.adminEmail  || '').trim();
   const domain     = (cfg.domain      || 'localhost').trim();
@@ -402,9 +406,9 @@ ${authLines}
     hide_via${probeLine}${upstreamLine}
   }
 
-${masqueradeBlock}
+${renderXhttpRoute(cfg)}${masqueradeBlock}
 }
 ${renderPanelBlock(cfg)}${renderSubBlock(cfg)}`;
 }
 
-module.exports = { render, renderPanelBlock, renderSubBlock, sanitizeWebBasePath };
+module.exports = { render, renderPanelBlock, renderSubBlock, renderXhttpRoute, sanitizeWebBasePath };

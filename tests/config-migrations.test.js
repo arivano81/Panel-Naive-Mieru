@@ -19,6 +19,8 @@ ok(legacy.customOperatorField.keep === true, 'unknown operator fields are preser
 ok(Array.isArray(legacy.federationNodes), 'new collection fields receive safe defaults');
 ok(legacy.warpPersist === false, 'dangerous boot persistence defaults off');
 ok(legacy.stack.vless === false && legacy.vlessPort === 8443, 'VLESS remains opt-in on upgrade');
+ok(legacy.stack.vlessXhttp === false && legacy.vlessXhttpPort === 10443,
+  'VLESS XHTTP remains opt-in on upgrade');
 
 const second = runConfigMigrations(legacy, { logger: { log() {} } });
 ok(!second.changed && second.applied.length === 0, 'migration is idempotent');

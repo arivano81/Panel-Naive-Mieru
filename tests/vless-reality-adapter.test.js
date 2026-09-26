@@ -5,6 +5,7 @@ const {
   normalizeRealitySettings, normalizeXhttpSettings, buildXrayRealityConfig,
   buildVlessRealityLink, buildVlessXhttpLink, buildCaddyXhttpRoute,
 } = require('../panel/server/xrayConfig');
+const caddyTemplate = require('../panel/server/caddyTemplate');
 let pass = 0, fail = 0;
 function ok(value, message) {
   if (value) { console.log('  ✓', message); pass++; }
@@ -56,6 +57,17 @@ const caddyRoute = buildCaddyXhttpRoute(xhttpSettings);
 ok(caddyRoute.includes(`path ${xhttpSettings.path}/*`) &&
   caddyRoute.includes('reverse_proxy h2c://127.0.0.1:10443') && caddyRoute.includes('flush_interval -1'),
   'Caddy route is path-scoped, loopback-only h2c, and unbuffered');
+const caddyCfg = { adminEmail: 'admin@example.com', domain: 'vpn.example.com', naivePort: 443,
+  fakeSiteDir: '/var/www/fake-site', probeMode: 'bare' };
+const caddyWithoutXhttp = caddyTemplate.render(caddyCfg, [{ username: 'alice', password: 'safe-pass' }]);
+const caddyWithEmptyXhttp = caddyTemplate.render({ ...caddyCfg, xhttpRoute: '' },
+  [{ username: 'alice', password: 'safe-pass' }]);
+ok(caddyWithoutXhttp === caddyWithEmptyXhttp,
+  'disabled XHTTP leaves the established Caddyfile byte-for-byte unchanged');
+const caddyWithXhttp = caddyTemplate.render({ ...caddyCfg, xhttpRoute: caddyRoute },
+  [{ username: 'alice', password: 'safe-pass' }]);
+ok(caddyWithXhttp.indexOf('@vless_xhttp') < caddyWithXhttp.indexOf('file_server {'),
+  'XHTTP route is rendered before the catch-all masquerade handler');
 
 rejects(() => normalizeRealitySettings({ ...settings, target: 'other.example:443' }), /must equal/,
   'mismatched target/SNI rejected');

@@ -29,6 +29,11 @@ for (const [name, source] of [['install.sh', install], ['update.sh', update]]) {
   ok(source.includes('vless:{installed:false},openflux:{installed:false}'),
     `${name} reserves disabled VLESS/OpenFlux registry entries`);
 }
+ok(update.includes('--doctor)    MODE="doctor"'), 'updater parses --doctor mode');
+ok(/function|do_doctor\(\)/.test(update) && update.includes('No configuration or service state was changed.'),
+  '--doctor explicitly reports its read-only contract');
+ok(update.includes("PRAGMA quick_check;"), '--doctor checks SQLite integrity');
+ok(update.includes('validate --config "$CADDY_FILE"'), '--doctor validates Caddy config');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

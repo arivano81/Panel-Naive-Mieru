@@ -13,6 +13,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Added `/etc/rixxx-panel/components.json`, an atomic machine-readable registry
   of installed component versions, binary paths and the source branch.
+- Added `update.sh --doctor`: read-only checks for configs, SQLite integrity,
+  service health, the local panel endpoint and minimum free disk space.
 - Added a reusable transactional configuration writer with pre-install
   validation, atomic known-good backups and automatic rollback when service
   apply or health checks fail. The unified Caddy, Mieru and Hysteria2 apply

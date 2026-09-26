@@ -517,6 +517,7 @@ bash update.sh                    # Интерактивное обновлен�
 bash update.sh --dry-run          # Предпросмотр изменений (без записи)
 bash update.sh --force -y         # Принудительное обновление, без сверки версий
 bash update.sh --status           # Полный отчёт о состоянии
+bash update.sh --doctor           # Диагностика без изменений; код возврата для мониторинга
 bash update.sh --repair           # Восстановление сломанных конфигов
 bash update.sh --expose <домен>   # Публичный режим панели
 bash update.sh --ssh-only         # Вернуться в SSH-only режим

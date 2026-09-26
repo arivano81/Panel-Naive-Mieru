@@ -131,6 +131,7 @@ parse_args() {
       --web-base-path) WEB_BASE_PATH_FLAG="${2:-}"; shift ;;
       --ssh-only)  MODE="ssh-only" ;;
       --status)    MODE="status" ;;
+      --doctor)    MODE="doctor" ;;
       --repair)    MODE="repair" ;;
       --enroll-hy2) MODE="enroll-hy2" ;;
       --help|-h)   print_help; exit 0 ;;
@@ -170,6 +171,7 @@ OPTIONS:
   --ssh-only              Switch panel back to SSH-tunnel-only (127.0.0.1:3000),
                           remove the panel block, close any legacy bare port
   --status               Print full health report
+  --doctor               Run read-only diagnostics; exit non-zero on failures
   --repair               Rebuild Caddyfile + mita config from SQLite DB; restart services
   --enroll-hy2           Add Hysteria2 to EVERY existing user + rewrite userpass +
                          restart Hy2 (one-off; existing clients start working over Hy2).
@@ -181,6 +183,7 @@ EXAMPLES:
   bash update.sh --dry-run         # Preview changes
   bash update.sh --force -y        # Force update, non-interactive
   bash update.sh --status          # Health check
+  bash update.sh --doctor          # Read-only diagnostics for automation
   bash update.sh --repair          # Fix broken installation
   bash update.sh --expose panel.example.com
   bash update.sh --ssh-only        # Revert to SSH-only
@@ -1884,6 +1887,65 @@ do_status() {
   echo ""
 }
 
+# Read-only, automation-friendly diagnostics. Unlike --repair and smoke_test,
+# this function never rewrites configs, restarts services or changes routing.
+do_doctor() {
+  log_step "Read-only installation diagnostics"
+  local pass=0 fail=0 warn=0
+  doctor_pass() { echo -e "  ${GREEN}✓${NC} $*"; (( pass+=1 )); }
+  doctor_fail() { echo -e "  ${RED}✗${NC} $*"; (( fail+=1 )); }
+  doctor_warn() { echo -e "  ${YELLOW}⚠${NC}  $*"; (( warn+=1 )); }
+
+  if jq empty "$PANEL_CONFIG" >/dev/null 2>&1; then doctor_pass "config.json is valid JSON"
+  else doctor_fail "config.json is missing or invalid"; fi
+
+  if [[ -s "$COMPONENT_REGISTRY" ]] && jq -e '.schema == 1 and .components.panel.installed == true' \
+      "$COMPONENT_REGISTRY" >/dev/null 2>&1; then
+    doctor_pass "component registry is valid"
+  else doctor_fail "component registry missing/invalid: $COMPONENT_REGISTRY"; fi
+
+  if [[ -f "$DB_PATH" ]] && command -v sqlite3 >/dev/null 2>&1; then
+    local db_check; db_check=$(sqlite3 "$DB_PATH" 'PRAGMA quick_check;' 2>/dev/null || true)
+    [[ "$db_check" == "ok" ]] && doctor_pass "SQLite quick_check: ok" \
+      || doctor_fail "SQLite quick_check failed"
+  elif [[ -f "$DB_PATH" ]]; then doctor_warn "sqlite3 CLI unavailable; DB check skipped"
+  else doctor_fail "user database missing: $DB_PATH"; fi
+
+  if [[ -f "$CADDY_FILE" ]] && "$CADDY_BIN" validate --config "$CADDY_FILE" \
+      --adapter caddyfile >/dev/null 2>&1; then doctor_pass "Caddyfile validates"
+  else doctor_fail "Caddyfile validation failed"; fi
+
+  if [[ -f "$MITA_STATE_FILE" ]] && jq empty "$MITA_STATE_FILE" >/dev/null 2>&1; then
+    doctor_pass "Mieru state is valid JSON"
+  else doctor_fail "Mieru state missing/invalid"; fi
+
+  systemctl is-active --quiet caddy-naive && doctor_pass "caddy-naive active" \
+    || doctor_fail "caddy-naive inactive"
+  if systemctl is-active --quiet mita; then doctor_pass "mita active"
+  elif mita status 2>/dev/null | grep -qi 'IDLE'; then doctor_warn "mita idle (normal with no Mieru users)"
+  else doctor_fail "mita inactive"; fi
+  if [[ -x /usr/local/bin/hysteria ]]; then
+    systemctl is-active --quiet hysteria-server && doctor_pass "hysteria-server active" \
+      || doctor_fail "hysteria-server installed but inactive"
+  fi
+
+  if pm2 describe panel-naive-mieru 2>/dev/null | grep -qi 'online'; then
+    doctor_pass "panel process online"
+  else doctor_fail "panel process is not online"; fi
+  curl -fsS --max-time 5 http://127.0.0.1:3000/ -o /dev/null 2>/dev/null \
+    && doctor_pass "panel HTTP responds on loopback" || doctor_fail "panel HTTP unavailable"
+
+  local free_kb; free_kb=$(df -Pk / 2>/dev/null | awk 'NR==2 {print $4}')
+  if [[ "${free_kb:-0}" =~ ^[0-9]+$ ]] && (( free_kb >= 524288 )); then
+    doctor_pass "free disk space is at least 512 MiB"
+  else doctor_warn "less than 512 MiB free on root filesystem"; fi
+
+  echo ""
+  echo "Doctor summary: $pass passed, $warn warnings, $fail failed"
+  echo "No configuration or service state was changed."
+  (( fail == 0 ))
+}
+
 # ── --expose mode (v1.4.0) ────────────────────────────────────────────────────
 # Switch the panel to EXTERNAL access via a dedicated TLS subdomain. The panel
 # itself keeps listening on loopback (127.0.0.1:3000); Caddy reverse_proxies to
@@ -2357,6 +2419,7 @@ main() {
 
   case "$MODE" in
     status)   check_install; load_config; do_status ;;
+    doctor)   check_install; load_config; do_doctor || exit $? ;;
     expose)   check_install; load_config; do_expose ;;
     ssh-only) check_install; load_config; do_ssh_only ;;
     repair)   check_install; load_config; do_repair ;;

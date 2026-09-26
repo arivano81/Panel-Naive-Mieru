@@ -23,6 +23,7 @@ const service = createOpenFluxService({
   existsSync: file => exists.has(file),
   execFileSync: (file, args) => {
     calls.push([file, ...args]);
+    if (file === 'journalctl') return 'normal line\nEncryptionKey = forbidden\npassword=forbidden\n';
     if (args[1] === 'list') return '[{"id":"alpha","active":false}]';
     return '{"ok":true}';
   },
@@ -36,12 +37,18 @@ ok(calls.some(call => call.join('|') === 'bash|/scripts/profile.sh|create|alpha|
 service.action('alpha', 'start');
 ok(calls.some(call => call.join('|') === 'bash|/scripts/profile.sh|start|alpha'),
   'actions can address only the isolated lifecycle CLI');
+const logs = service.logs('alpha', 9999);
+ok(logs.includes('normal line') && !logs.includes('forbidden') &&
+  logs.match(/\[redacted sensitive line\]/g)?.length === 2, 'journal output is filtered before leaving the service');
+ok(calls.some(call => call.join('|').includes('journalctl|-u|openflux-exit@alpha.service|-n|500|--no-pager')),
+  'logs are scoped to one validated unit and a bounded line count');
 ok(!routes.includes('execSync') && !routes.includes('child_process'), 'HTTP routes cannot execute shell commands directly');
 for (const route of [
   "app.get('/api/openflux', requireAuth",
   "app.post('/api/openflux/install', requireAuth",
   "app.post('/api/openflux/profiles', requireAuth",
   "app.post('/api/openflux/profiles/:id/:action', requireAuth",
+  "app.get('/api/openflux/profiles/:id/logs', requireAuth",
   "app.delete('/api/openflux/profiles/:id', requireAuth",
 ]) ok(routes.includes(route), `${route.split(',')[0]} is authenticated`);
 ok(routes.includes("new Set(['start', 'stop', 'restart'])"), 'action endpoint has an explicit allowlist');
@@ -54,6 +61,7 @@ ok(html.includes('/root/openflux-&lt;id&gt;-client') && html.includes('Секр�
 ok(ui.includes("case 'openflux':    loadOpenFlux()") && ui.includes("'/api/openflux/profiles'"),
   'page loads isolated profile state and creates profiles through its namespace');
 ok(ui.includes("['start', 'stop', 'restart'].includes(action)"), 'browser action dispatcher repeats the server allowlist');
+ok(ui.includes("case 'openflux-logs'") && html.includes('id="openflux-logs"'), 'UI exposes the filtered per-profile journal');
 ok(!/protocols[^\n]*openflux/i.test(ui), 'UI never adds OpenFlux to shared user protocols');
 ok(!safeFailure({ stderr: 'one\ntwo\nthree\nfour' }).includes('one'), 'external failure output is length-bounded to its tail');
 

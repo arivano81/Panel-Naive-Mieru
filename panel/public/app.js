@@ -315,6 +315,7 @@ function handleDelegatedClick(e) {
     case 'openflux-refresh':     loadOpenFlux(); break;
     case 'openflux-action':      openFluxProfileAction(btn.dataset.id, btn.dataset.profileAction); break;
     case 'openflux-remove':      removeOpenFluxProfile(btn.dataset.id); break;
+    case 'openflux-logs':        loadOpenFluxLogs(btn.dataset.id); break;
     case 'change-traffic-pattern': changeTrafficPattern(); break;
     case 'change-udp-mode':      changeUdpMode(); break;
     case 'change-language':      changeLanguage(); break;
@@ -1995,6 +1996,7 @@ async function loadOpenFlux() {
           <button class="btn btn-xs ${active ? 'btn-warning' : 'btn-success'}" data-action="openflux-action"
             data-id="${esc(p.id)}" data-profile-action="${active ? 'stop' : 'start'}">${active ? 'Остановить' : 'Запустить'}</button>
           ${active ? `<button class="btn btn-xs btn-secondary" data-action="openflux-action" data-id="${esc(p.id)}" data-profile-action="restart">Перезапустить</button>` : ''}
+          <button class="btn btn-xs btn-ghost" data-action="openflux-logs" data-id="${esc(p.id)}">Журнал</button>
           <button class="btn btn-xs btn-danger" data-action="openflux-remove" data-id="${esc(p.id)}">Удалить</button>
         </td></tr>`;
     }).join('');
@@ -2055,6 +2057,17 @@ async function removeOpenFluxProfile(id) {
     toast(`Профиль ${id} удалён`, 'success');
     await loadOpenFlux();
   } catch (error) { toast(error.message, 'error'); }
+}
+
+async function loadOpenFluxLogs(id) {
+  if (el('openflux-log-title')) el('openflux-log-title').textContent = `— ${id}`;
+  if (el('openflux-logs')) el('openflux-logs').textContent = 'Загрузка…';
+  try {
+    const result = await api('GET', `/api/openflux/profiles/${encodeURIComponent(id)}/logs?lines=100`);
+    if (el('openflux-logs')) el('openflux-logs').textContent = result.logs || '(журнал пуст)';
+  } catch (error) {
+    if (el('openflux-logs')) el('openflux-logs').textContent = error.message;
+  }
 }
 
 // ── Hy2 (Hysteria2) ──────────────────────────────────────────────────────────

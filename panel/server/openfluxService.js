@@ -10,6 +10,7 @@ const DEFAULTS = Object.freeze({
   lifecycleScript: path.join(__dirname, '../scripts/openflux_profile.sh'),
   installScript: path.join(__dirname, '../scripts/install_openflux.sh'),
 });
+const PROFILE_ID_RE = /^[a-z][a-z0-9-]{0,31}$/;
 
 function safeFailure(error) {
   const raw = String(error && (error.stderr || error.stdout || error.message) || 'operation failed');
@@ -45,6 +46,22 @@ function createOpenFluxService(options = {}) {
     create: ({ id, port, host }) => runLifecycle(['create', String(id || ''), String(port || ''), String(host || '')]),
     action: (id, action) => runLifecycle([action, String(id || '')]),
     remove: id => runLifecycle(['remove', String(id || '')]),
+    logs: (id, requestedLines) => {
+      if (!installed()) throw Object.assign(new Error('OpenFlux is not installed'), { status: 409 });
+      if (!PROFILE_ID_RE.test(String(id || '')))
+        throw Object.assign(new Error('Invalid OpenFlux profile id'), { status: 400 });
+      const lines = Math.max(1, Math.min(Number.parseInt(requestedLines, 10) || 100, 500));
+      let output = '';
+      try {
+        output = String(runFile('journalctl', ['-u', `openflux-exit@${id}.service`, '-n', String(lines),
+          '--no-pager', '--output=short-iso'], {
+          timeout: 6000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+        }));
+      } catch { return '(no logs available)'; }
+      return output.replace(/\x1b\[[0-9;]*m/g, '').split(/\r?\n/).map(line =>
+        /encryption.?key|password|secret|token/i.test(line) ? '[redacted sensitive line]' : line
+      ).join('\n').slice(0, 65536);
+    },
     install: () => {
       if (installed()) throw Object.assign(new Error('OpenFlux is already installed'), { status: 409 });
       try {

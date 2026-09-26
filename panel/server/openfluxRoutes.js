@@ -26,6 +26,11 @@ function registerOpenFluxRoutes(app, requireAuth, service) {
     try { res.json(service.action(req.params.id, req.params.action)); }
     catch (error) { replyError(res, error); }
   });
+  app.get('/api/openflux/profiles/:id/logs', requireAuth, (req, res) => {
+    if (!PROFILE_ID_RE.test(req.params.id)) return res.status(400).json({ error: 'Invalid OpenFlux profile id' });
+    try { res.json({ id: req.params.id, logs: service.logs(req.params.id, req.query.lines) }); }
+    catch (error) { replyError(res, error); }
+  });
   app.delete('/api/openflux/profiles/:id', requireAuth, (req, res) => {
     if (!PROFILE_ID_RE.test(req.params.id)) return res.status(400).json({ error: 'Invalid OpenFlux profile id' });
     try { res.json(service.remove(req.params.id)); } catch (error) { replyError(res, error); }

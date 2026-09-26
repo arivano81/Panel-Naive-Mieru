@@ -6,7 +6,7 @@
 
 # 🛡 Panel Naive + Mieru (+Hysteria2) by RIXXX
 
-**v1.11.4** — веб-панель для управления личным VPN-сервером на Ubuntu или Debian
+**v1.12.0** — веб-панель для управления личным VPN-сервером на Ubuntu или Debian
 
 [![Telegram](https://img.shields.io/badge/Telegram-@russian__paradice__vpn-2CA5E0?logo=telegram&logoColor=white)](https://t.me/russian_paradice_vpn)
 [![GitHub](https://img.shields.io/badge/GitHub-arivano81-181717?logo=github)](https://github.com/arivano81/Panel-Naive-Mieru)
@@ -32,6 +32,8 @@
 - установка на **Debian 13** наряду с Debian 11 и 12;
 - защищённый итоговый отчёт с адресом панели и данными администратора;
 - утилита восстановления доступа, если пароль был потерян;
+- безопасные обновления: `--doctor`, проверяемые бэкапы, `--rollback` и
+  автоматический возврат к рабочей конфигурации при ошибке;
 - понятное описание трёх DNS-имён: основного, панели и подписки;
 - дальнейшая разработка новых протоколов и улучшений панели.
 
@@ -51,7 +53,7 @@
 | 3 | Настройки сервера: смена портов, паттерны трафика, MTU, авто-обновление UFW |
 | 4 | Клиентские конфиги: Naive-ссылка, Mieru sing-box JSON, универсальный конфиг, QR-коды |
 | 5 | Мониторинг: WebSocket метрики в реальном времени, трафик, квоты, история снимков |
-| 6 | `update.sh`: `--dry-run`, `--force`, `--expose`, `--ssh-only`, `--status`, `--repair`, `--help` |
+| 6 | `update.sh`: `--dry-run`, `--force`, `--expose`, `--ssh-only`, `--status`, `--doctor`, `--rollback`, `--repair` |
 | 7 | **Каскад / Relay** (v1.2.6): `client → Entry (RU) → Exit (EU) → internet` — Naive `upstream` + Mieru вариант B (mieru-client + redsocks + iptables), управляется из UI |
 | 8 | **Hysteria2 как дополнительный протокол** (v1.8.x): устанавливается из Settings по запросу администратора (`auth: userpass`, systemd, per-user трафик, каскад), после чего включается отдельно для нужных пользователей. |
 | 9 | **Одна «умная» Sub-ссылка** (v1.8.7–1.8.8): единая ссылка `/sub/:token` с авто-определением клиента по User-Agent. **Shadowrocket** получает base64-список URI (Naive → нативная HTTPS-схема, Mieru `mierus://`, Hy2 `hysteria2://`), **Karing** — sing-box JSON. Передаёт срок действия и трафик через заголовок `Subscription-Userinfo`. ✅ **Проверено на Karing и Shadowrocket.** |

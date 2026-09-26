@@ -6,7 +6,7 @@
 
 # 🛡 Panel Naive + Mieru (+Hysteria2) by RIXXX
 
-**v1.11.4** — Web management panel for a personal VPN server on Ubuntu or Debian
+**v1.12.0** — Web management panel for a personal VPN server on Ubuntu or Debian
 
 [![Telegram](https://img.shields.io/badge/Telegram-@russian__paradice__vpn-2CA5E0?logo=telegram&logoColor=white)](https://t.me/russian_paradice_vpn)
 [![GitHub](https://img.shields.io/badge/GitHub-arivano81-181717?logo=github)](https://github.com/arivano81/Panel-Naive-Mieru)
@@ -36,6 +36,8 @@ Project additions include:
 - **Debian 13** installation support;
 - a protected post-installation report containing the panel address and administrator details;
 - an access recovery utility for lost panel credentials;
+- safe updates with `--doctor`, validated backups, `--rollback`, and automatic
+  recovery when a new configuration fails its health check;
 - clear documentation for the main, panel, and subscription DNS names;
 - ongoing protocol and reliability improvements.
 

@@ -89,6 +89,7 @@ async function run() {
     console,
     apiUrl: (p) => base + p,
     toast: (msg, kind) => toasts.push({ msg, kind }),
+    state: { csrfToken: 'test-csrf-token' },
     location: { href: '' },
     document: { cookie: '' },
   };

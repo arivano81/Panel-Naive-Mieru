@@ -412,10 +412,12 @@ console.log('\n[12] Hy2 config stays readable by the non-root service user');
      'server: hy2ChownConfig() helper defined');
   ok(/id -u hysteria 2>\/dev\/null/.test(serverSrc),
      'server: helper resolves the hysteria uid');
-  // It must be invoked after the atomic rename in writeHysteriaConfig() and in
-  // the masquerade/port rewrite path — count ≥ 3 (write + 2 rollbacks/port).
+  // The shared transaction calls it through afterWrite on both apply and
+  // rollback; the remaining direct rewrite path must call it explicitly.
+  ok(/afterWrite:\s*\(\)\s*=>\s*hy2ChownConfig\(HY2_CONFIG\)/.test(serverSrc),
+     'server: transactional Hy2 apply repairs ownership after write and rollback');
   const chownCalls = (serverSrc.match(/hy2ChownConfig\(HY2_CONFIG\)/g) || []).length;
-  ok(chownCalls >= 3,
+  ok(chownCalls >= 2,
      'server: hy2ChownConfig(HY2_CONFIG) called on every write path (found ' + chownCalls + ')');
   // Legacy safety: helper returns early when no hysteria user (uid null).
   ok(/if \(uid === null \|\| Number\.isNaN\(uid\)\) return;/.test(serverSrc),

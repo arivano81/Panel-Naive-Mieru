@@ -1345,11 +1345,11 @@ function hy2ChownConfig(file) {
     if (uid === null || Number.isNaN(uid)) return;
     const targets = [];
     if (file) targets.push(file);
-    // Also fix the dir + the .last backup so a later rollback stays readable.
+    // Also fix the dir + transaction backup so a later rollback stays readable.
     try {
       const dir = path.dirname(file || HY2_CONFIG);
       targets.push(dir);
-      if (file) targets.push(file + '.last');
+      if (file) targets.push(file + '.last-good');
     } catch {}
     for (const t of targets) {
       try {
@@ -1469,8 +1469,8 @@ function hy2ConfigLooksValid(text) {
 }
 
 // Rewrite /etc/hysteria/config.yaml's auth block from the DB and restart Hy2.
-// Atomic: write .new → validate structure → backup current to .last → rename →
-// restart → verify is-active; on failure roll back to .last. Returns
+// Atomic: validate candidate → backup known-good → rename → restart → verify;
+// on failure restore and restart the known-good file. Returns
 // { ok, changed, error, active }.
 function writeHysteriaConfig({ restart = true } = {}) {
   // If Hy2 was never installed there's no config to manage — no-op success so
@@ -1493,38 +1493,29 @@ function writeHysteriaConfig({ restart = true } = {}) {
     return { ok: true, changed: false, active, error: null };
   }
 
-  if (!hy2ConfigLooksValid(next)) {
-    return { ok: false, changed: false, active: false,
-             error: 'refusing to write Hy2 config: failed structural validation (missing listen/tls/auth)' };
+  let serviceResult = { ok: true, active: false, error: null };
+  const transaction = applyFileTransaction({
+    targetPath: HY2_CONFIG,
+    content: next,
+    mode: 0o640,
+    validate: file => {
+      const valid = hy2ConfigLooksValid(fs.readFileSync(file, 'utf8'));
+      return { ok: valid, error: valid ? '' :
+        'failed structural validation (missing listen/tls/auth)' };
+    },
+    afterWrite: () => hy2ChownConfig(HY2_CONFIG),
+    apply: () => {
+      serviceResult = restart ? reloadHysteria() : { ok: true, active: false, error: null };
+      return serviceResult;
+    },
+    rollbackApply: () => reloadHysteria(),
+  });
+  if (!transaction.ok) {
+    const rollback = transaction.rollbackError ? `; rollback failed: ${transaction.rollbackError}` : '';
+    return { ok: false, changed: transaction.phase !== 'validate', active: false,
+      error: `Hy2 config ${transaction.phase}: ${transaction.error}${rollback}` };
   }
-
-  const tmp  = HY2_CONFIG + '.new';
-  const last = HY2_CONFIG + '.last';
-  try {
-    fs.writeFileSync(tmp, next, { mode: 0o600 });
-    try { fs.copyFileSync(HY2_CONFIG, last); } catch {}   // backup for rollback
-    fs.renameSync(tmp, HY2_CONFIG);                        // atomic replace
-    hy2ChownConfig(HY2_CONFIG);   // hand back to service user (else perm-denied)
-  } catch (e) {
-    try { fs.unlinkSync(tmp); } catch {}
-    return { ok: false, changed: false, active: false, error: 'write failed: ' + e.message };
-  }
-
-  if (!restart) return { ok: true, changed: true, active: false, error: null };
-
-  const r = reloadHysteria();
-  if (!r.ok) {
-    // Roll back to the last-known-good config and restart again.
-    try {
-      if (fs.existsSync(last)) {
-        fs.copyFileSync(last, HY2_CONFIG);
-        hy2ChownConfig(HY2_CONFIG);   // keep rollback readable by the service user
-        reloadHysteria();
-      }
-    } catch {}
-    return { ok: false, changed: true, active: r.active, error: 'Hy2 failed to start with new users; rolled back. ' + (r.error || '') };
-  }
-  return { ok: true, changed: true, active: r.active, error: null };
+  return { ok: true, changed: true, active: serviceResult.active, error: null };
 }
 
 // Restart hysteria-server and verify it came up. Clears any lingering

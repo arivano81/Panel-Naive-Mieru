@@ -13,8 +13,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Added a reusable transactional configuration writer with pre-install
   validation, atomic known-good backups and automatic rollback when service
-  apply or health checks fail. The unified Caddy and Mieru apply paths now use
-  it; sensitive Mieru backups remain restricted to mode `0600`.
+  apply or health checks fail. The unified Caddy, Mieru and Hysteria2 apply
+  paths now use it; sensitive Mieru backups remain restricted to mode `0600`.
 - Added GitHub Actions coverage for Node.js 20 and Debian 12/13, including the
   complete regression suite, Bash syntax checks, ShellCheck and production
   dependency audit.

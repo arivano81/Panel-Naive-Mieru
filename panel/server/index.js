@@ -42,6 +42,7 @@ const { applyFileTransaction } = require('./fileTransaction');
 const { runDatabaseMigrations } = require('./databaseMigrations');
 const { runConfigMigrations } = require('./configMigrations');
 const { BACKUP_FORMAT, BACKUP_SCHEMA, validateBackup, restoreBackupState } = require('./backupRestore');
+const { buildXrayRealityConfig, buildVlessRealityLink } = require('./xrayConfig');
 
 // ── Paths ─────────────────────────────────────────────────────────────────────
 const PANEL_CONFIG    = '/etc/rixxx-panel/config.json';
@@ -60,6 +61,8 @@ const CADDY_FILE        = '/etc/caddy-naive/Caddyfile';
 const FAKE_SITE_DIR     = '/var/www/fake-site';
 const LOG_CADDY         = '/var/log/caddy-naive/access.log';
 const LOG_PANEL         = '/var/log/panel-naive-mieru.log';
+const XRAY_BIN          = '/usr/local/bin/xray';
+const XRAY_CONFIG       = '/etc/xray/config.json';
 
 // Legacy path kept for migration detection only
 const LEGACY_NAIVE_BIN = '/usr/local/bin/naive';
@@ -1584,8 +1587,67 @@ function naiveCascadeStatusText() {
 // the DB write had already succeeded (hence "reopen and it's there"). Fix: run
 // the heavy service apply in the BACKGROUND and let the request return as soon
 // as the DB write is durable. The last result is cached so the UI can poll it.
-let _lastApplyResult = { caddyOk: true, mitaOk: true, hy2Ok: true,
-                         caddyError: '', mitaError: '', hy2Error: '', servicesReloaded: true,
+function xrayInstalled() {
+  return fs.existsSync(XRAY_BIN) && fs.existsSync(XRAY_CONFIG);
+}
+
+function getVlessUsers() {
+  return getAllUsers().map(parseUserRow)
+    .filter(user => user.protocols.includes('vless'))
+    .map(user => ({ id: user.vless_uuid, email: user.username }));
+}
+
+function getVlessRealitySettings() {
+  const current = JSON.parse(fs.readFileSync(XRAY_CONFIG, 'utf8'));
+  const privateKey = current?.inbounds?.[0]?.streamSettings?.realitySettings?.privateKey;
+  const reality = cfg.vlessReality || {};
+  return {
+    port: cfg.vlessPort, host: cfg.domain || cfg.serverIp,
+    serverName: reality.serverName, target: reality.target,
+    privateKey, publicKey: reality.publicKey, shortId: reality.shortId,
+  };
+}
+
+function buildManagedXrayConfig() {
+  return JSON.stringify(buildXrayRealityConfig(getVlessRealitySettings(), getVlessUsers()), null, 2) + '\n';
+}
+
+function applyXrayConfig() {
+  if (!xrayInstalled() || !(cfg.stack && cfg.stack.vless))
+    return { ok: true, changed: false, active: false, skipped: 'not-installed-or-disabled' };
+  let result;
+  try {
+    result = applyFileTransaction({
+      targetPath: XRAY_CONFIG,
+      content: buildManagedXrayConfig(),
+      mode: 0o640,
+      validate: file => {
+        try {
+          execFileSync(XRAY_BIN, ['run', '-test', '-config', file], { timeout: 15000 });
+          return { ok: true };
+        } catch (error) {
+          return { ok: false, error: (error.stderr || error.stdout || error.message).toString().trim() };
+        }
+      },
+      afterWrite: file => {
+        execFileSync('chown', ['root:xray', file], { timeout: 5000 });
+      },
+      apply: () => {
+        try {
+          execFileSync('systemctl', ['restart', 'xray'], { timeout: 20000 });
+          execFileSync('systemctl', ['is-active', '--quiet', 'xray'], { timeout: 5000 });
+          return { ok: true };
+        } catch (error) { return { ok: false, error: error.message }; }
+      },
+    });
+  } catch (error) {
+    return { ok: false, changed: false, active: false, error: error.message };
+  }
+  return { ...result, changed: result.ok, active: result.ok };
+}
+
+let _lastApplyResult = { caddyOk: true, mitaOk: true, hy2Ok: true, xrayOk: true,
+                         caddyError: '', mitaError: '', hy2Error: '', xrayError: '', servicesReloaded: true,
                          at: null, running: false };
 let _applyQueued = false;
 
@@ -1599,8 +1661,8 @@ function applyAllConfigsAsync() {
     _applyQueued = false;
     let r;
     try { r = applyAllConfigs(); }
-    catch (e) { r = { caddyOk: false, mitaOk: false, hy2Ok: false,
-                      caddyError: e.message, mitaError: e.message, hy2Error: e.message,
+    catch (e) { r = { caddyOk: false, mitaOk: false, hy2Ok: false, xrayOk: false,
+                      caddyError: e.message, mitaError: e.message, hy2Error: e.message, xrayError: e.message,
                       rolledBack: {}, backups: {}, servicesReloaded: false }; }
     _lastApplyResult = { ...r, at: new Date().toISOString(), running: false };
   });
@@ -1615,8 +1677,9 @@ function applyAllConfigsAsync() {
 // writeCaddyfileAtomic and the full restart+verify in applyCaddyConfig, a new
 // key now activates immediately. We also surface the real caddy error.
 function applyAllConfigs() {
-  let caddyOk = false, mitaOk = false, hy2Ok = true, caddyError = '', mitaError = '', hy2Error = '';
-  let caddyResult = null, hy2Result = null;
+  let caddyOk = false, mitaOk = false, hy2Ok = true, xrayOk = true;
+  let caddyError = '', mitaError = '', hy2Error = '', xrayError = '';
+  let caddyResult = null, hy2Result = null, xrayResult = null;
   try {
     const content = buildCaddyfile(cfg, getAllUsers());
     const r = applyCaddyTransaction(content); caddyResult = r;
@@ -1635,18 +1698,25 @@ function applyAllConfigs() {
     hy2Ok = h.ok;
     if (!h.ok) { hy2Error = h.error || ''; console.error('[HY2] apply failed:', h.error); }
   } catch (e) { hy2Ok = false; hy2Error = e.message; console.error('[HY2]', e.message); }
-  return { caddyOk, mitaOk, hy2Ok, caddyError, mitaError, hy2Error,
+  try {
+    const x = applyXrayConfig(); xrayResult = x;
+    xrayOk = x.ok;
+    if (!x.ok) { xrayError = x.error || ''; console.error('[XRAY] apply failed:', x.error); }
+  } catch (e) { xrayOk = false; xrayError = e.message; console.error('[XRAY]', e.message); }
+  return { caddyOk, mitaOk, hy2Ok, xrayOk, caddyError, mitaError, hy2Error, xrayError,
            rolledBack: {
              caddy: !!(caddyResult && caddyResult.rolledBack),
              mieru: !!(lastMitaTransaction && lastMitaTransaction.rolledBack),
              hysteria2: !!(hy2Result && hy2Result.rolledBack),
+             xray: !!(xrayResult && xrayResult.rolledBack),
            },
            backups: {
              caddy: caddyResult && caddyResult.backup,
              mieru: lastMitaTransaction && lastMitaTransaction.backup,
              hysteria2: hy2Result && hy2Result.backup,
+             xray: xrayResult && xrayResult.backup,
            },
-           servicesReloaded: caddyOk && mitaOk && hy2Ok };
+           servicesReloaded: caddyOk && mitaOk && hy2Ok && xrayOk };
 }
 
 // ── Express app ───────────────────────────────────────────────────────────────
@@ -2391,6 +2461,8 @@ function validateUserInput({ email, username, password, protocols, quotaMB, quot
       return { error: 'at least one protocol is required (naive, mieru, hy2, vless)' };
     resolvedProtocols = protocols;
   }
+  if (resolvedProtocols.includes('vless') && (!xrayInstalled() || !(cfg.stack && cfg.stack.vless)))
+    return { error: 'VLESS REALITY must be installed and enabled before assigning it to users' };
   return { quotaMB: resolvedQuotaMB, protocols: resolvedProtocols };
 }
 
@@ -2712,6 +2784,28 @@ app.post('/api/settings/mieru-ports', requireAuth, (req, res) => {
 
 // Status: is Hy2 installed, on which port, and is the service active + how many
 // users in the shared pool have hy2 enabled.
+app.get('/api/settings/vless', requireAuth, (_req, res) => {
+  let active = false;
+  try {
+    active = execFileSync('systemctl', ['is-active', 'xray'], { timeout: 5000 })
+      .toString().trim() === 'active';
+  } catch {}
+  const reality = cfg.vlessReality || {};
+  res.json({
+    installed: xrayInstalled(), enabled: !!(cfg.stack && cfg.stack.vless), active,
+    port: Number(cfg.vlessPort) || 8443,
+    serverName: reality.serverName || '', target: reality.target || '',
+    publicKey: reality.publicKey || '', shortId: reality.shortId || '',
+    users: getVlessUsers().length,
+  });
+});
+
+app.post('/api/settings/vless/rebuild', requireAuth, (_req, res) => {
+  if (!xrayInstalled()) return res.status(409).json({ error: 'Xray is not installed' });
+  const result = applyXrayConfig();
+  res.status(result.ok ? 200 : 409).json(result);
+});
+
 app.get('/api/settings/hy2', requireAuth, (req, res) => {
   const installed = hy2Installed();
   let active = false;
@@ -2955,12 +3049,11 @@ app.post('/api/settings/probe-mode', requireAuth, (req, res) => {
 // Bug 15: /api/services/rebuild-all — used by update.sh --repair
 app.post('/api/services/rebuild-all', requireAuth, (req, res) => {
   try {
-    const content = buildCaddyfile(cfg, getAllUsers());
-    writeCaddyfileAtomic(content);
-    const caddyOk = reloadCaddy();
-    const mitaOk  = applyMitaConfig();
-    res.json({ ok: true, caddyOk, mitaOk,
-      message: 'Caddyfile and mita-state.json rebuilt from database.' });
+    const result = applyAllConfigs();
+    res.status(result.servicesReloaded ? 200 : 409).json({
+      ok: result.servicesReloaded, ...result,
+      message: 'Managed service configs rebuilt from database.'
+    });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -3545,6 +3638,15 @@ function buildUserUris(user, opts = {}) {
       name: applyServerFlag(user.username)   // v1.9.4: server flag in the label
     }));
   }
+  if (protos.includes('vless') && cfg.stack && cfg.stack.vless && xrayInstalled()) {
+    try {
+      uris.push(buildVlessRealityLink(getVlessRealitySettings(), {
+        id: user.vless_uuid, email: user.username,
+      }, applyServerFlag(user.username)));
+    } catch (error) {
+      console.error('[XRAY] could not build VLESS link for', user.username, error.message);
+    }
+  }
   return uris;
 }
 
@@ -3941,6 +4043,22 @@ app.get('/api/users/:id/config/hy2', requireAuth, (req, res) => {
     port
   });
   res.json({ link, username: user.username });
+});
+
+app.get('/api/users/:id/config/vless', requireAuth, (req, res) => {
+  const user = getUserById(req.params.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  if (!xrayInstalled() || !(cfg.stack && cfg.stack.vless))
+    return res.status(409).json({ error: 'VLESS REALITY is not installed or enabled' });
+  const protocols = parseUserRow(user).protocols || [];
+  if (!protocols.includes('vless'))
+    return res.status(409).json({ error: 'VLESS is not enabled for this user' });
+  try {
+    const link = buildVlessRealityLink(getVlessRealitySettings(), {
+      id: user.vless_uuid, email: user.username,
+    }, applyServerFlag(user.username));
+    res.json({ link });
+  } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
 app.get('/api/users/:id/config/universal', requireAuth, (req, res) => {
@@ -4862,6 +4980,12 @@ app.get('/api/status', requireAuth, async (req, res) => {
           version:   hy2Installed() ? exec_('/usr/local/bin/hysteria version 2>/dev/null | head -1') : '',
           port:      parseInt(cfg.hy2Port, 10) || 443
         },
+        vless: {
+          installed: xrayInstalled(),
+          active: xrayInstalled() && exec_('systemctl is-active xray') === 'active',
+          version: xrayInstalled() ? exec_('/usr/local/bin/xray version 2>/dev/null | head -1') : '',
+          port: parseInt(cfg.vlessPort, 10) || 8443
+        },
         panel: { active: true }
       },
       system: {
@@ -5299,10 +5423,11 @@ app.post('/api/service/:name/:action', requireAuth, (req, res) => {
   const { name, action } = req.params;
   // Map legacy 'naive' name to 'caddy-naive'; keep 'mita' as-is
   const svcMap = { 'naive': 'caddy-naive', 'caddy-naive': 'caddy-naive', 'mita': 'mita',
-                   'hy2': 'hysteria-server', 'hysteria-server': 'hysteria-server' };
+                   'hy2': 'hysteria-server', 'hysteria-server': 'hysteria-server',
+                   'vless': 'xray', 'xray': 'xray' };
   const svcName = svcMap[name];
   if (!svcName)
-    return res.status(400).json({ error: 'Unknown service (valid: naive/caddy-naive, mita, hy2/hysteria-server)' });
+    return res.status(400).json({ error: 'Unknown service (valid: naive/caddy-naive, mita, hy2/hysteria-server, vless/xray)' });
   if (!['start','stop','restart','reload'].includes(action))
     return res.status(400).json({ error: 'Unknown action' });
   try {
@@ -5344,7 +5469,8 @@ wss.on('connection', ws => {
         naive:      exec_('systemctl is-active caddy-naive') === 'active',
         mieru:      exec_('systemctl is-active mita')        === 'active',
         // Hy2: only meaningful when installed; false otherwise (UI hides card).
-        hy2:        hy2Installed() && exec_('systemctl is-active hysteria-server') === 'active'
+        hy2:        hy2Installed() && exec_('systemctl is-active hysteria-server') === 'active',
+        vless:      xrayInstalled() && exec_('systemctl is-active xray') === 'active'
       }));
     } catch {}
   };

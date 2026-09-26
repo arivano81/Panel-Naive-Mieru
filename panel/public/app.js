@@ -879,7 +879,8 @@ async function pollApplyStatus(res) {
     try { st = await api('GET', '/api/apply-status'); } catch { continue; }
     if (st && st.running === false) {
       if (st.servicesReloaded === false) {
-        const why = st.hy2Error ? ('Hy2: ' + st.hy2Error)
+        const why = st.xrayError ? ('Xray: ' + st.xrayError)
+                  : st.hy2Error ? ('Hy2: ' + st.hy2Error)
                   : st.caddyError ? ('Caddy: ' + st.caddyError)
                   : (t('users.serviceReloadWarning') || 'Service reload failed — check logs');
         toast(why, 'error');

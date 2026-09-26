@@ -59,6 +59,9 @@ ok(vlessAdapter.status === 0, 'VLESS REALITY adapter regression suite passes');
 const xrayInstaller = spawnSync(process.execPath, [path.join(__dirname, 'xray-installer.test.js')],
   { stdio: 'inherit' });
 ok(xrayInstaller.status === 0, 'pinned Xray installer regression suite passes');
+const vlessIntegration = spawnSync(process.execPath, [path.join(__dirname, 'vless-panel-integration.test.js')],
+  { stdio: 'inherit' });
+ok(vlessIntegration.status === 0, 'VLESS panel integration regression suite passes');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

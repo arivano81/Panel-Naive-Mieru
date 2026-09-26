@@ -74,6 +74,9 @@ ok(vlessEgress.status === 0, 'VLESS egress routing regression suite passes');
 const vlessFederation = spawnSync(process.execPath, [path.join(__dirname, 'vless-federation.test.js')],
   { stdio: 'inherit' });
 ok(vlessFederation.status === 0, 'VLESS federation regression suite passes');
+const openfluxAdapter = spawnSync(process.execPath, [path.join(__dirname, 'openflux-adapter.test.js')],
+  { stdio: 'inherit' });
+ok(openfluxAdapter.status === 0, 'isolated OpenFlux adapter regression suite passes');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

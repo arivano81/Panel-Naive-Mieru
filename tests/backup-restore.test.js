@@ -16,11 +16,14 @@ db.exec(`CREATE TABLE users (
   id TEXT PRIMARY KEY, email TEXT UNIQUE, username TEXT NOT NULL UNIQUE,
   passHash TEXT NOT NULL, password TEXT NOT NULL DEFAULT '', expiry TEXT,
   protocols TEXT, quotaMB INTEGER, usedMB REAL, createdAt TEXT, updatedAt TEXT,
-  lastSeen TEXT, sub_token TEXT, bonus_links TEXT, vless_uuid TEXT
+  lastSeen TEXT, sub_token TEXT, bonus_links TEXT, vless_uuid TEXT,
+  vlessUploadBytes INTEGER, vlessDownloadBytes INTEGER,
+  vlessLastUploadBytes INTEGER, vlessLastDownloadBytes INTEGER
 )`);
 const upsert = db.prepare(`INSERT INTO users VALUES
   (@id,@email,@username,@passHash,@password,@expiry,@protocols,@quotaMB,@usedMB,
-   @createdAt,@updatedAt,@lastSeen,@sub_token,@bonus_links,@vless_uuid)
+   @createdAt,@updatedAt,@lastSeen,@sub_token,@bonus_links,@vless_uuid,
+   @vlessUploadBytes,@vlessDownloadBytes,@vlessLastUploadBytes,@vlessLastDownloadBytes)
   ON CONFLICT(id) DO UPDATE SET username=excluded.username, password=excluded.password,
     sub_token=excluded.sub_token, bonus_links=excluded.bonus_links,
     vless_uuid=excluded.vless_uuid`);
@@ -36,6 +39,8 @@ const base = {
     protocols: '["naive","mieru"]', sub_token: 'stable-token',
     bonus_links: '[{"url":"vless://example","enabled":true}]',
     vless_uuid: '22222222-2222-4222-8222-222222222222',
+    vlessUploadBytes: 1048576, vlessDownloadBytes: 2097152,
+    vlessLastUploadBytes: 262144, vlessLastDownloadBytes: 524288,
   }],
 };
 const adapter = applyAllConfigs => ({
@@ -55,6 +60,8 @@ ok(alice.password === 'secret', 'working client password preserved');
 ok(alice.sub_token === 'stable-token', 'existing subscription URL token preserved');
 ok(alice.bonus_links.includes('vless://example'), 'bonus links preserved');
 ok(alice.vless_uuid === '22222222-2222-4222-8222-222222222222', 'VLESS UUID preserved');
+ok(alice.vlessUploadBytes === 1048576 && alice.vlessLastDownloadBytes === 524288,
+  'durable VLESS traffic state preserved');
 
 const beforeConfig = persisted;
 const failingBackup = JSON.parse(JSON.stringify(base));

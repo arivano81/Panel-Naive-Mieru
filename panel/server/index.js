@@ -43,7 +43,7 @@ const { runDatabaseMigrations } = require('./databaseMigrations');
 const { runConfigMigrations } = require('./configMigrations');
 const { BACKUP_FORMAT, BACKUP_SCHEMA, validateBackup, restoreBackupState } = require('./backupRestore');
 const { buildXrayRealityConfig, buildVlessRealityLink } = require('./xrayConfig');
-const { parseXrayStats } = require('./xrayStats');
+const { parseXrayStats, accumulateXrayStats } = require('./xrayStats');
 
 // ── Paths ─────────────────────────────────────────────────────────────────────
 const PANEL_CONFIG    = '/etc/rixxx-panel/config.json';
@@ -196,7 +196,11 @@ try {
       lastSeen  TEXT,
       sub_token TEXT,
       bonus_links TEXT,
-      vless_uuid TEXT
+      vless_uuid TEXT,
+      vlessUploadBytes INTEGER DEFAULT 0,
+      vlessDownloadBytes INTEGER DEFAULT 0,
+      vlessLastUploadBytes INTEGER DEFAULT 0,
+      vlessLastDownloadBytes INTEGER DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS traffic_snapshots (
       id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -283,9 +287,9 @@ function upsertUser(u) {
     const email = (u.email && String(u.email).trim()) ? String(u.email).trim() : null;
     db.prepare(`
       INSERT INTO users
-        (id,email,username,passHash,password,expiry,protocols,quotaMB,usedMB,createdAt,updatedAt,lastSeen,sub_token,bonus_links,vless_uuid)
+        (id,email,username,passHash,password,expiry,protocols,quotaMB,usedMB,createdAt,updatedAt,lastSeen,sub_token,bonus_links,vless_uuid,vlessUploadBytes,vlessDownloadBytes,vlessLastUploadBytes,vlessLastDownloadBytes)
       VALUES
-        (@id,@email,@username,@passHash,@password,@expiry,@protocols,@quotaMB,@usedMB,@createdAt,@updatedAt,@lastSeen,@sub_token,@bonus_links,@vless_uuid)
+        (@id,@email,@username,@passHash,@password,@expiry,@protocols,@quotaMB,@usedMB,@createdAt,@updatedAt,@lastSeen,@sub_token,@bonus_links,@vless_uuid,@vlessUploadBytes,@vlessDownloadBytes,@vlessLastUploadBytes,@vlessLastDownloadBytes)
       ON CONFLICT(id) DO UPDATE SET
         email=excluded.email, username=excluded.username,
         passHash=excluded.passHash, password=excluded.password,
@@ -294,8 +298,13 @@ function upsertUser(u) {
         updatedAt=excluded.updatedAt, lastSeen=excluded.lastSeen,
         sub_token=COALESCE(excluded.sub_token, users.sub_token),
         bonus_links=excluded.bonus_links,
-        vless_uuid=COALESCE(excluded.vless_uuid, users.vless_uuid)
-    `).run({ ...u, email, password: u.password || '', bonus_links: u.bonus_links || null,
+        vless_uuid=COALESCE(excluded.vless_uuid, users.vless_uuid),
+        vlessUploadBytes=excluded.vlessUploadBytes,
+        vlessDownloadBytes=excluded.vlessDownloadBytes,
+        vlessLastUploadBytes=excluded.vlessLastUploadBytes,
+        vlessLastDownloadBytes=excluded.vlessLastDownloadBytes
+    `).run({ vlessUploadBytes: 0, vlessDownloadBytes: 0, vlessLastUploadBytes: 0,
+             vlessLastDownloadBytes: 0, ...u, email, password: u.password || '', bonus_links: u.bonus_links || null,
              sub_token: u.sub_token || crypto.randomBytes(16).toString('hex'),
              vless_uuid: u.vless_uuid || uuidv4() });
   } else {
@@ -324,11 +333,12 @@ function createUserAtomic(u) {
   if (db) {
     const info = db.prepare(`
       INSERT INTO users
-        (id,email,username,passHash,password,expiry,protocols,quotaMB,usedMB,createdAt,updatedAt,lastSeen,sub_token,bonus_links,vless_uuid)
+        (id,email,username,passHash,password,expiry,protocols,quotaMB,usedMB,createdAt,updatedAt,lastSeen,sub_token,bonus_links,vless_uuid,vlessUploadBytes,vlessDownloadBytes,vlessLastUploadBytes,vlessLastDownloadBytes)
       VALUES
-        (@id,@email,@username,@passHash,@password,@expiry,@protocols,@quotaMB,@usedMB,@createdAt,@updatedAt,@lastSeen,@sub_token,@bonus_links,@vless_uuid)
+        (@id,@email,@username,@passHash,@password,@expiry,@protocols,@quotaMB,@usedMB,@createdAt,@updatedAt,@lastSeen,@sub_token,@bonus_links,@vless_uuid,@vlessUploadBytes,@vlessDownloadBytes,@vlessLastUploadBytes,@vlessLastDownloadBytes)
       ON CONFLICT(username) DO NOTHING
-    `).run({ ...u, email, password: u.password || '', bonus_links: u.bonus_links || null,
+    `).run({ vlessUploadBytes: 0, vlessDownloadBytes: 0, vlessLastUploadBytes: 0,
+             vlessLastDownloadBytes: 0, ...u, email, password: u.password || '', bonus_links: u.bonus_links || null,
              sub_token: u.sub_token || crypto.randomBytes(16).toString('hex'),
              vless_uuid: u.vless_uuid || uuidv4() });
 
@@ -2049,7 +2059,11 @@ app.get('/api/backup/export', requireAuth, (req, res) => {
       lastSeen:  u.lastSeen || null,
       sub_token: u.sub_token || null,
       bonus_links: u.bonus_links || null,
-      vless_uuid: u.vless_uuid || null
+      vless_uuid: u.vless_uuid || null,
+      vlessUploadBytes: u.vlessUploadBytes || 0,
+      vlessDownloadBytes: u.vlessDownloadBytes || 0,
+      vlessLastUploadBytes: u.vlessLastUploadBytes || 0,
+      vlessLastDownloadBytes: u.vlessLastDownloadBytes || 0
     }));
 
     // Full config incl. admin credentials — this is a privileged, auth-gated
@@ -5063,7 +5077,8 @@ function readXrayTraffic() {
     const raw = execFileSync(XRAY_BIN, [
       'api', 'statsquery', '--server=127.0.0.1:10085', '-pattern', 'user>>>',
     ], { timeout: 7000 }).toString();
-    return parseXrayStats(raw);
+    const live = parseXrayStats(raw);
+    return db ? accumulateXrayStats(db, live, getAllUsers()) : live;
   } catch { return {}; }
 }
 
@@ -5583,6 +5598,9 @@ cron.schedule('*/5 * * * *', () => {
 cron.schedule('* * * * *', () => {
   if (!db) return;
   try {
+    // Snapshot Xray independently of dashboard visits. accumulateXrayStats()
+    // detects service restarts and carries the completed generation forward.
+    try { readXrayTraffic(); } catch {}
     // Bug 78: use `mita get users` (the real command); `mita describe users`
     //   does not exist and always produced empty output.
     let raw = '';

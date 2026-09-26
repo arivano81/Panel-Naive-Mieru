@@ -36,6 +36,8 @@ ok(names.has('password'), 'password column present');
 ok(names.has('sub_token'), 'sub_token survives nullable-email table rebuild');
 ok(names.has('bonus_links'), 'bonus_links survives nullable-email table rebuild');
 ok(names.has('vless_uuid'), 'VLESS UUID column is created');
+ok(names.has('vlessUploadBytes') && names.has('vlessLastUploadBytes'),
+  'durable VLESS counters are created');
 ok(user.username === 'alice', 'existing user preserved');
 ok(user.email === null, 'legacy empty email normalized to NULL');
 ok(user.sub_token === 'ab'.repeat(16), 'missing subscription token backfilled');

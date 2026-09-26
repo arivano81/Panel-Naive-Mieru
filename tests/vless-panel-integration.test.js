@@ -37,8 +37,10 @@ ok(source.includes("app.get('/api/users/:id/config/vless'"),
   'authenticated per-user VLESS link endpoint exists');
 ok(source.includes("protos.includes('vless')") && source.includes('buildVlessRealityLink'),
   'subscriptions include VLESS only for explicitly enabled users');
-ok(backup.includes('const BACKUP_SCHEMA = 3') && backup.includes('vless_uuid: user.vless_uuid || null'),
-  'backup schema preserves VLESS identities');
+ok(backup.includes('const BACKUP_SCHEMA = 4') &&
+   backup.includes('vless_uuid: user.vless_uuid || null') &&
+   backup.includes('vlessUploadBytes: user.vlessUploadBytes || 0'),
+  'backup schema preserves VLESS identities and durable traffic');
 ok(html.includes('id="p-vless"') && html.includes('id="card-vless"') &&
    html.includes('id="btn-dl-vless-link"'), 'panel exposes opt-in VLESS controls');
 ok(app.includes("protocols.push('vless')") && app.includes('function applyVlessGate()'),

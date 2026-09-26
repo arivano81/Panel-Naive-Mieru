@@ -23,4 +23,49 @@ function parseXrayStats(raw) {
   return out;
 }
 
-module.exports = { parseXrayStats };
+function advanceCounter(total, previous, current) {
+  const safeTotal = Number.isFinite(Number(total)) && Number(total) >= 0 ? Number(total) : 0;
+  const safePrevious = Number.isFinite(Number(previous)) && Number(previous) >= 0 ? Number(previous) : 0;
+  const safeCurrent = Number.isFinite(Number(current)) && Number(current) >= 0 ? Number(current) : 0;
+  // Xray counters start again at zero after a service restart. A lower sample
+  // therefore begins a new generation instead of subtracting old traffic.
+  return safeTotal + (safeCurrent >= safePrevious ? safeCurrent - safePrevious : safeCurrent);
+}
+
+function accumulateXrayStats(db, live, users) {
+  if (!db) return live || {};
+  const byName = new Map((users || []).map(user => [user.username, user]));
+  const update = db.prepare(`UPDATE users SET
+    vlessUploadBytes=@uploadTotal, vlessDownloadBytes=@downloadTotal,
+    vlessLastUploadBytes=@uploadCurrent, vlessLastDownloadBytes=@downloadCurrent
+    WHERE id=@id`);
+  const accumulated = {};
+  for (const user of users || []) {
+    const uploadTotal = Math.max(0, Number(user.vlessUploadBytes) || 0);
+    const downloadTotal = Math.max(0, Number(user.vlessDownloadBytes) || 0);
+    accumulated[user.username] = {
+      uploadMB: uploadTotal / 1048576,
+      downloadMB: downloadTotal / 1048576,
+      usedMB: (uploadTotal + downloadTotal) / 1048576,
+    };
+  }
+  db.transaction(() => {
+    for (const [username, sample] of Object.entries(live || {})) {
+      const user = byName.get(username);
+      if (!user) continue;
+      const uploadCurrent = Math.max(0, Math.round((Number(sample.uploadMB) || 0) * 1048576));
+      const downloadCurrent = Math.max(0, Math.round((Number(sample.downloadMB) || 0) * 1048576));
+      const uploadTotal = advanceCounter(user.vlessUploadBytes, user.vlessLastUploadBytes, uploadCurrent);
+      const downloadTotal = advanceCounter(user.vlessDownloadBytes, user.vlessLastDownloadBytes, downloadCurrent);
+      update.run({ id: user.id, uploadTotal, downloadTotal, uploadCurrent, downloadCurrent });
+      accumulated[username] = {
+        uploadMB: uploadTotal / 1048576,
+        downloadMB: downloadTotal / 1048576,
+        usedMB: (uploadTotal + downloadTotal) / 1048576,
+      };
+    }
+  })();
+  return accumulated;
+}
+
+module.exports = { parseXrayStats, advanceCounter, accumulateXrayStats };

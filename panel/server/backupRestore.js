@@ -3,7 +3,7 @@
 const { runConfigMigrations } = require('./configMigrations');
 
 const BACKUP_FORMAT = 'rixxx-panel-backup';
-const BACKUP_SCHEMA = 3;
+const BACKUP_SCHEMA = 4;
 const NETWORK_KEYS = ['domain', 'serverIp', 'naivePort', 'mieruPortStart', 'mieruPortEnd', 'hy2Port'];
 const PATH_KEYS = ['dbPath', 'caddyBin', 'caddyFile', 'caddyConfigDir', 'fakeSiteDir', 'mitaStateFile'];
 
@@ -40,6 +40,10 @@ function normalizeBackupUser(user, now = new Date().toISOString()) {
     createdAt: user.createdAt || now, updatedAt: now, lastSeen: user.lastSeen || null,
     sub_token: user.sub_token || null, bonus_links: user.bonus_links || null,
     vless_uuid: user.vless_uuid || null,
+    vlessUploadBytes: user.vlessUploadBytes || 0,
+    vlessDownloadBytes: user.vlessDownloadBytes || 0,
+    vlessLastUploadBytes: user.vlessLastUploadBytes || 0,
+    vlessLastDownloadBytes: user.vlessLastDownloadBytes || 0,
   };
 }
 

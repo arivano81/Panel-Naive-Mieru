@@ -2,7 +2,7 @@
 
 const crypto = require('crypto');
 
-const LATEST_DB_SCHEMA = 5;
+const LATEST_DB_SCHEMA = 6;
 
 function columns(db, table) {
   return db.prepare(`PRAGMA table_info(${table})`).all();
@@ -23,6 +23,10 @@ function migrateEmailNullable(db) {
   const hasSubToken = hasColumn(db, 'users', 'sub_token');
   const hasBonusLinks = hasColumn(db, 'users', 'bonus_links');
   const hasVlessUuid = hasColumn(db, 'users', 'vless_uuid');
+  const hasVlessUpload = hasColumn(db, 'users', 'vlessUploadBytes');
+  const hasVlessDownload = hasColumn(db, 'users', 'vlessDownloadBytes');
+  const hasVlessLastUpload = hasColumn(db, 'users', 'vlessLastUploadBytes');
+  const hasVlessLastDownload = hasColumn(db, 'users', 'vlessLastDownloadBytes');
   db.exec(`
     ALTER TABLE users RENAME TO users_legacy;
     CREATE TABLE users (
@@ -40,15 +44,24 @@ function migrateEmailNullable(db) {
       lastSeen TEXT,
       sub_token TEXT,
       bonus_links TEXT,
-      vless_uuid TEXT
+      vless_uuid TEXT,
+      vlessUploadBytes INTEGER DEFAULT 0,
+      vlessDownloadBytes INTEGER DEFAULT 0,
+      vlessLastUploadBytes INTEGER DEFAULT 0,
+      vlessLastDownloadBytes INTEGER DEFAULT 0
     );
     INSERT INTO users
       (id,email,username,passHash,password,expiry,protocols,quotaMB,usedMB,
-       createdAt,updatedAt,lastSeen,sub_token,bonus_links,vless_uuid)
+       createdAt,updatedAt,lastSeen,sub_token,bonus_links,vless_uuid,
+       vlessUploadBytes,vlessDownloadBytes,vlessLastUploadBytes,vlessLastDownloadBytes)
     SELECT id, CASE WHEN email='' THEN NULL ELSE email END, username, passHash,
       password, expiry, protocols, quotaMB, usedMB, createdAt, updatedAt, lastSeen,
       ${hasSubToken ? 'sub_token' : 'NULL'}, ${hasBonusLinks ? 'bonus_links' : 'NULL'},
-      ${hasVlessUuid ? 'vless_uuid' : 'NULL'}
+      ${hasVlessUuid ? 'vless_uuid' : 'NULL'},
+      ${hasVlessUpload ? 'vlessUploadBytes' : '0'},
+      ${hasVlessDownload ? 'vlessDownloadBytes' : '0'},
+      ${hasVlessLastUpload ? 'vlessLastUploadBytes' : '0'},
+      ${hasVlessLastDownload ? 'vlessLastDownloadBytes' : '0'}
     FROM users_legacy;
     DROP TABLE users_legacy;
   `);
@@ -79,6 +92,16 @@ const MIGRATIONS = [
     version: 5,
     name: 'per-user VLESS UUID',
     up(db) { addColumn(db, 'users', 'vless_uuid TEXT'); },
+  },
+  {
+    version: 6,
+    name: 'durable VLESS traffic counters',
+    up(db) {
+      addColumn(db, 'users', 'vlessUploadBytes INTEGER DEFAULT 0');
+      addColumn(db, 'users', 'vlessDownloadBytes INTEGER DEFAULT 0');
+      addColumn(db, 'users', 'vlessLastUploadBytes INTEGER DEFAULT 0');
+      addColumn(db, 'users', 'vlessLastDownloadBytes INTEGER DEFAULT 0');
+    },
   },
 ];
 
@@ -111,6 +134,10 @@ function runDatabaseMigrations(db, {
     addColumn(db, 'users', 'sub_token TEXT');
     addColumn(db, 'users', 'bonus_links TEXT');
     addColumn(db, 'users', 'vless_uuid TEXT');
+    addColumn(db, 'users', 'vlessUploadBytes INTEGER DEFAULT 0');
+    addColumn(db, 'users', 'vlessDownloadBytes INTEGER DEFAULT 0');
+    addColumn(db, 'users', 'vlessLastUploadBytes INTEGER DEFAULT 0');
+    addColumn(db, 'users', 'vlessLastDownloadBytes INTEGER DEFAULT 0');
     db.prepare("UPDATE users SET email = NULL WHERE email = ''").run();
     missing = db.prepare("SELECT id FROM users WHERE sub_token IS NULL OR sub_token = ''").all();
     if (missing.length) {

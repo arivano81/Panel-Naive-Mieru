@@ -35,10 +35,20 @@ ok(source.includes('const coupledXhttp = !!') && source.includes('if (!coupledXh
 ok(source.includes("app.get('/api/settings/vless'") &&
    source.includes("app.post('/api/settings/vless/rebuild'"),
   'authenticated VLESS status and rebuild endpoints exist');
+ok(source.includes("app.post('/api/settings/vless/xhttp'") &&
+   source.includes('applyXhttpStackTransaction({ allowDisabled: true })'),
+  'authenticated XHTTP toggle uses the coupled transaction for enable and disable');
+ok(source.includes('cfg = previous') && source.includes('rollbackError: result.rollbackError'),
+  'failed XHTTP activation restores the panel config and reports rollback state');
 ok(source.includes("app.post('/api/settings/vless/install'") && source.includes('XRAY_INSTALL_SCRIPT'),
   'authenticated opt-in Xray installation endpoint exists');
 ok(source.includes("app.get('/api/users/:id/config/vless'"),
   'authenticated per-user VLESS link endpoint exists');
+ok(source.includes("app.get('/api/users/:id/config/vless-xhttp'") &&
+   source.includes('buildVlessXhttpLink'),
+  'authenticated per-user XHTTP link endpoint exists');
+ok(source.includes('if (cfg.stack.vlessXhttp)') && source.includes('XHTTP`));'),
+  'base64 subscriptions append XHTTP only while the profile is enabled');
 ok(source.includes("protos.includes('vless')") && source.includes('buildVlessRealityLink'),
   'subscriptions include VLESS only for explicitly enabled users');
 ok(backup.includes('const BACKUP_SCHEMA = 4') &&
@@ -51,8 +61,13 @@ ok(app.includes("protocols.push('vless')") && app.includes('function applyVlessG
   'user editor gates VLESS on component installation');
 ok(app.includes('function installVless()') && app.includes('function rebuildVless()') &&
    app.includes('function downloadVlessLink()'), 'panel supports install, rebuild, and client link actions');
+ok(html.includes('id="s-vless-xhttp-enabled"') && html.includes('id="btn-dl-vless-xhttp-link"') &&
+   app.includes('function saveVlessXhttp()') && app.includes('function downloadVlessXhttpLink()'),
+  'panel exposes explicit XHTTP opt-in and per-user client link controls');
 ok(source.includes("tagFor('vless-out')") && source.includes('bonusUrlToSingboxOutbound(link, tag)'),
   'universal sing-box config includes the managed local VLESS REALITY outbound');
+ok(source.includes("tagFor('vless-xhttp-out')") && source.includes('bonusUrlToSingboxOutbound(xhttpLink, xhttpTag)'),
+  'universal sing-box config includes managed XHTTP only through the validated link parser');
 ok(source.includes('const identities = new Set(proxyOutbounds.map(singboxOutboundIdentity)') &&
    source.includes('identities.has(identity)'), 'matching bonus VLESS nodes are de-duplicated');
 const identitySource = source.match(/function singboxOutboundIdentity\(outbound\) \{[\s\S]*?\n\}/);

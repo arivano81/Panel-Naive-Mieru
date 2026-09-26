@@ -43,7 +43,8 @@ const { applyMultiFileTransaction } = require('./multiFileTransaction');
 const { runDatabaseMigrations } = require('./databaseMigrations');
 const { runConfigMigrations } = require('./configMigrations');
 const { BACKUP_FORMAT, BACKUP_SCHEMA, validateBackup, restoreBackupState } = require('./backupRestore');
-const { buildXrayRealityConfig, buildVlessRealityLink, buildCaddyXhttpRoute } = require('./xrayConfig');
+const { buildXrayRealityConfig, buildVlessRealityLink, buildVlessXhttpLink,
+  buildCaddyXhttpRoute, normalizeXhttpSettings } = require('./xrayConfig');
 const { parseXrayStats, accumulateXrayStats } = require('./xrayStats');
 const { createOpenFluxService } = require('./openfluxService');
 const { registerOpenFluxRoutes } = require('./openfluxRoutes');
@@ -1716,8 +1717,9 @@ function applyXrayConfig() {
   return { ...result, changed: result.ok, active: result.ok };
 }
 
-function applyXhttpStackTransaction() {
-  if (!xrayInstalled() || !(cfg.stack && cfg.stack.vless && cfg.stack.vlessXhttp))
+function applyXhttpStackTransaction({ allowDisabled = false } = {}) {
+  if (!xrayInstalled() || !(cfg.stack && cfg.stack.vless) ||
+      (!allowDisabled && !cfg.stack.vlessXhttp))
     return { ok: true, changed: false, skipped: 'not-installed-or-disabled' };
   const result = applyMultiFileTransaction({ items: [
     {
@@ -2914,7 +2916,48 @@ app.get('/api/settings/vless', requireAuth, (_req, res) => {
     serverName: reality.serverName || '', target: reality.target || '',
     publicKey: reality.publicKey || '', shortId: reality.shortId || '',
     users: getVlessUsers().length,
+    xhttp: {
+      enabled: !!(cfg.stack && cfg.stack.vlessXhttp),
+      port: Number(cfg.vlessXhttpPort) || 10443,
+      host: String(cfg.vlessXhttp && cfg.vlessXhttp.host || ''),
+      path: String(cfg.vlessXhttp && cfg.vlessXhttp.path || ''),
+    },
   });
+});
+
+app.post('/api/settings/vless/xhttp', requireAuth, (req, res) => {
+  if (!xrayInstalled() || !(cfg.stack && cfg.stack.vless))
+    return res.status(409).json({ error: 'VLESS REALITY must be installed before XHTTP' });
+  const enabled = req.body && req.body.enabled === true;
+  const previous = JSON.parse(JSON.stringify(cfg));
+  try {
+    let settings = cfg.vlessXhttp || {};
+    if (enabled) {
+      const host = String(req.body.host || cfg.domain || '').trim().toLowerCase();
+      const requestPath = String(req.body.path || '').trim() || `/xhttp_${crypto.randomBytes(18).toString('hex')}`;
+      const port = Number(req.body.port || cfg.vlessXhttpPort || 10443);
+      settings = normalizeXhttpSettings({ host, path: requestPath, port });
+      if (port === Number(cfg.vlessPort) || port === Number(cfg.panelPort))
+        return res.status(400).json({ error: 'XHTTP loopback port conflicts with VLESS or panel port' });
+    }
+    cfg.stack.vlessXhttp = enabled;
+    cfg.vlessXhttpPort = Number(settings.port || cfg.vlessXhttpPort || 10443);
+    cfg.vlessXhttp = { host: String(settings.host || ''), path: String(settings.path || '') };
+    saveConfig();
+    const result = applyXhttpStackTransaction({ allowDisabled: true });
+    if (!result.ok) {
+      cfg = previous;
+      saveConfig();
+      return res.status(409).json({ error: result.error, rollbackError: result.rollbackError || '',
+        rolledBack: result.rolledBack });
+    }
+    return res.json({ ok: true, enabled, port: cfg.vlessXhttpPort,
+      host: cfg.vlessXhttp.host, path: cfg.vlessXhttp.path });
+  } catch (error) {
+    cfg = previous;
+    try { saveConfig(); } catch {}
+    return res.status(400).json({ error: error.message });
+  }
 });
 
 app.post('/api/settings/vless/rebuild', requireAuth, (_req, res) => {
@@ -3790,6 +3833,13 @@ function buildUserUris(user, opts = {}) {
       uris.push(buildVlessRealityLink(getVlessRealitySettings(), {
         id: user.vless_uuid, email: user.username,
       }, applyServerFlag(user.username)));
+      if (cfg.stack.vlessXhttp) {
+        uris.push(buildVlessXhttpLink({ port: cfg.vlessXhttpPort,
+          host: cfg.vlessXhttp && cfg.vlessXhttp.host,
+          path: cfg.vlessXhttp && cfg.vlessXhttp.path }, {
+          id: user.vless_uuid, email: user.username,
+        }, `${applyServerFlag(user.username)} XHTTP`));
+      }
     } catch (error) {
       console.error('[XRAY] could not build VLESS link for', user.username, error.message);
     }
@@ -4130,6 +4180,16 @@ function buildProxyOutbounds(user, opts = {}) {
       }, tag);
       const outbound = bonusUrlToSingboxOutbound(link, tag);
       if (outbound) { proxyOutbounds.push(outbound); selectTags.push(tag); }
+      if (cfg.stack.vlessXhttp) {
+        const xhttpTag = tagFor('vless-xhttp-out');
+        const xhttpLink = buildVlessXhttpLink({ port: cfg.vlessXhttpPort,
+          host: cfg.vlessXhttp && cfg.vlessXhttp.host,
+          path: cfg.vlessXhttp && cfg.vlessXhttp.path }, {
+          id: user.vless_uuid, email: user.username,
+        }, xhttpTag);
+        const xhttpOutbound = bonusUrlToSingboxOutbound(xhttpLink, xhttpTag);
+        if (xhttpOutbound) { proxyOutbounds.push(xhttpOutbound); selectTags.push(xhttpTag); }
+      }
     } catch (error) {
       console.error('[XRAY] could not build sing-box VLESS outbound for', user.username, error.message);
     }
@@ -4228,6 +4288,23 @@ app.get('/api/users/:id/config/vless', requireAuth, (req, res) => {
     const link = buildVlessRealityLink(getVlessRealitySettings(), {
       id: user.vless_uuid, email: user.username,
     }, applyServerFlag(user.username));
+    res.json({ link });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.get('/api/users/:id/config/vless-xhttp', requireAuth, (req, res) => {
+  const user = getUserById(req.params.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  if (!xrayInstalled() || !(cfg.stack && cfg.stack.vless && cfg.stack.vlessXhttp))
+    return res.status(409).json({ error: 'VLESS XHTTP is not enabled' });
+  if (!(parseUserRow(user).protocols || []).includes('vless'))
+    return res.status(409).json({ error: 'VLESS is not enabled for this user' });
+  try {
+    const link = buildVlessXhttpLink({ port: cfg.vlessXhttpPort,
+      host: cfg.vlessXhttp && cfg.vlessXhttp.host,
+      path: cfg.vlessXhttp && cfg.vlessXhttp.path }, {
+      id: user.vless_uuid, email: user.username,
+    }, `${applyServerFlag(user.username)} XHTTP`);
     res.json({ link });
   } catch (error) { res.status(500).json({ error: error.message }); }
 });

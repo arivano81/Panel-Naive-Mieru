@@ -19,6 +19,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   are both validated before activation; either service failure restores both
   files and reapplies the previous services. Schema migration 8 keeps XHTTP
   disabled and preserves the existing Caddyfile byte-for-byte on upgrades.
+- Added authenticated XHTTP enable/disable controls, safe path generation,
+  panel-config rollback, per-user link/QR, and conditional base64 and universal
+  JSON subscription entries. The loopback listener never adds a firewall port.
 
 - Added the first OpenFlux Experimental isolation layer: a pure pinned-release
   L4/Direct adapter, matching client config, hardened unit template, validation

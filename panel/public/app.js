@@ -276,6 +276,7 @@ function handleDelegatedClick(e) {
     case 'dl-mieru-link':    downloadMieruLink(); break;
     case 'dl-hy2-link':      downloadHy2Link(); break;
     case 'dl-vless-link':    downloadVlessLink(); break;
+    case 'dl-vless-xhttp-link': downloadVlessXhttpLink(); break;
     case 'dl-mieru-config':  downloadMieruConfig(); break;
     case 'dl-universal-config': downloadUniversalConfig(); break;
     case 'dl-sub-link':      downloadSubLink(); break;
@@ -310,6 +311,7 @@ function handleDelegatedClick(e) {
     case 'change-hy2-port':      changeHy2Port(); break;
     case 'install-vless':        installVless(); break;
     case 'rebuild-vless':        rebuildVless(); break;
+    case 'save-vless-xhttp':     saveVlessXhttp(); break;
     case 'openflux-install':     installOpenFlux(); break;
     case 'openflux-create':      createOpenFluxProfile(); break;
     case 'openflux-refresh':     loadOpenFlux(); break;
@@ -1054,6 +1056,9 @@ function openConfigDownload(id) {
   if (hy2Btn) hy2Btn.classList.toggle('hidden', !(state.hy2Installed && uProtos.includes('hy2')));
   const vlessBtn = el('btn-dl-vless-link');
   if (vlessBtn) vlessBtn.classList.toggle('hidden', !(state.vlessInstalled && uProtos.includes('vless')));
+  const xhttpBtn = el('btn-dl-vless-xhttp-link');
+  if (xhttpBtn) xhttpBtn.classList.toggle('hidden',
+    !(state.vlessInstalled && state.vlessXhttpEnabled && uProtos.includes('vless')));
   // P3: no password prompt — the server uses the user's stored password.
   // Auto-load the naive link + QR right away.
   loadNaiveLink();
@@ -1218,6 +1223,17 @@ async function downloadVlessLink() {
     el('naive-link-box').classList.remove('hidden');
     copyToClipboard(data.link);
     toast('VLESS REALITY link copied', 'success');
+    generateQR(data.link);
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+async function downloadVlessXhttpLink() {
+  try {
+    const data = await api('GET', `/api/users/${state.selectedUserId}/config/vless-xhttp`);
+    el('naive-link-box').textContent = data.link;
+    el('naive-link-box').classList.remove('hidden');
+    copyToClipboard(data.link);
+    toast('VLESS XHTTP link copied', 'success');
     generateQR(data.link);
   } catch (err) { toast(err.message, 'error'); }
 }
@@ -1940,6 +1956,12 @@ function renderVlessCard(v) {
     const target = v.serverName || '—';
     if (el('vless-status-txt'))
       el('vless-status-txt').textContent = `${status} · ${v.port}/tcp · SNI ${target} · ${v.users || 0} users`;
+    const xhttp = v.xhttp || {};
+    state.vlessXhttpEnabled = !!xhttp.enabled;
+    if (el('s-vless-xhttp-enabled')) el('s-vless-xhttp-enabled').checked = !!xhttp.enabled;
+    if (el('s-vless-xhttp-host')) el('s-vless-xhttp-host').value = xhttp.host || state.config?.domain || '';
+    if (el('s-vless-xhttp-port')) el('s-vless-xhttp-port').value = xhttp.port || 10443;
+    if (el('s-vless-xhttp-path')) el('s-vless-xhttp-path').value = xhttp.path || '';
   }
 }
 
@@ -1972,6 +1994,28 @@ async function rebuildVless() {
     renderVlessCard(v);
     showMsg('vless-rebuild-msg', 'Конфигурация проверена и применена', true);
   } catch (error) { showMsg('vless-rebuild-msg', error.message, false); }
+}
+
+async function saveVlessXhttp() {
+  const enabled = !!el('s-vless-xhttp-enabled')?.checked;
+  const host = el('s-vless-xhttp-host')?.value.trim();
+  const path = el('s-vless-xhttp-path')?.value.trim();
+  const port = parseInt(el('s-vless-xhttp-port')?.value, 10);
+  if (enabled && (!host || !Number.isInteger(port) || port < 1024 || port > 65535))
+    return showMsg('vless-xhttp-msg', 'Проверьте домен и loopback-порт', false);
+  if (!confirm(enabled ? 'Включить VLESS XHTTP и применить конфигурации Xray+Caddy?'
+    : 'Выключить VLESS XHTTP и удалить его маршрут из Xray+Caddy?')) return;
+  const btn = el('btn-save-vless-xhttp');
+  setBtnBusy(btn, true);
+  showMsg('vless-xhttp-msg', 'Проверка и транзакционное применение…', true);
+  try {
+    const result = await api('POST', '/api/settings/vless/xhttp', { enabled, host, path, port });
+    const v = await api('GET', '/api/settings/vless');
+    renderVlessCard(v);
+    showMsg('vless-xhttp-msg', result.enabled ? 'XHTTP включён' : 'XHTTP выключен', true);
+    toast(result.enabled ? 'VLESS XHTTP включён' : 'VLESS XHTTP выключен', 'success');
+  } catch (error) { showMsg('vless-xhttp-msg', error.message, false); }
+  finally { setBtnBusy(btn, false); }
 }
 
 // ── OpenFlux Experimental ────────────────────────────────────────────────────

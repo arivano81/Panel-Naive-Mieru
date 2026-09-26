@@ -449,6 +449,9 @@
             <button class="btn btn-secondary hidden" id="btn-dl-vless-link" data-action="dl-vless-link">
               <span>VLESS REALITY Link</span>
             </button>
+            <button class="btn btn-secondary hidden" id="btn-dl-vless-xhttp-link" data-action="dl-vless-xhttp-link">
+              <span>VLESS XHTTP Link</span>
+            </button>
             <button class="btn btn-secondary"  data-action="dl-mieru-config">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               <span data-i18n="config.mieruJson">Mieru JSON</span>
@@ -669,6 +672,17 @@
               <div class="alert alert-success"><strong>✅</strong> Xray установлен. <span id="vless-status-txt"></span></div>
               <button class="btn btn-secondary mt-2" data-action="rebuild-vless">Проверить и пересобрать конфигурацию</button>
               <div id="vless-rebuild-msg" class="msg-inline hidden"></div>
+              <hr />
+              <h3>VLESS XHTTP через Caddy</h3>
+              <p class="card-desc">Экспериментальный транспорт использует TLS основного домена и секретный URL. При ошибке Xray и Caddy откатываются вместе.</p>
+              <div class="form-row">
+                <div class="form-group"><label>Домен TLS</label><input type="text" id="s-vless-xhttp-host" placeholder="vpn.example.com" /></div>
+                <div class="form-group"><label>Loopback-порт</label><input type="number" id="s-vless-xhttp-port" min="1024" max="65535" value="10443" /></div>
+              </div>
+              <div class="form-group"><label>Секретный path</label><input type="text" id="s-vless-xhttp-path" placeholder="Оставьте пустым для безопасной генерации" /></div>
+              <label class="checkbox"><input type="checkbox" id="s-vless-xhttp-enabled" /> <span>Включить XHTTP</span></label>
+              <button class="btn btn-primary mt-2" data-action="save-vless-xhttp" id="btn-save-vless-xhttp">Применить XHTTP</button>
+              <div id="vless-xhttp-msg" class="msg-inline hidden"></div>
             </div>
           </div>
         </div>

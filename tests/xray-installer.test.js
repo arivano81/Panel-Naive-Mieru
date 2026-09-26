@@ -30,6 +30,9 @@ ok(/RIXXX VLESS REALITY/.test(script), 'firewall rule has a component-specific m
 ok(/chmod 600 "\$REPORT"/.test(script), 'installation report is root-only');
 ok(/config\.stack\.vless == null\) config\.stack\.vless = false/.test(configMigrations),
   'existing installs keep VLESS disabled by default');
+ok(update.includes('/usr/local/bin/xray run -test -config /etc/xray/config.json'),
+  'doctor validates installed Xray config read-only');
+ok(update.includes('systemctl is-active --quiet xray'), 'doctor checks Xray service health');
 for (const [name, source] of [['installer', install], ['updater', update]]) {
   ok(source.includes('xray_installed=true') && source.includes('installed:$xrayInstalled'),
     `${name} preserves installed Xray state in the component registry`);

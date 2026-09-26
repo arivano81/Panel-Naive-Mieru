@@ -15,6 +15,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   pinned Xray-core `v26.3.27` installer. The installer verifies the official
   amd64 SHA-256, validates config before activation, uses a hardened dedicated
   service, and rolls back without touching the existing proxy stack.
+- Added opt-in VLESS management to the panel: per-user UUID migration, protocol
+  gate, transactional Xray rebuild, install/status APIs, user link/QR, base64
+  subscription output, backup preservation, UI controls, and doctor checks.
 
 ---
 

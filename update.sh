@@ -1806,6 +1806,7 @@ do_status() {
   echo "  caddy-naive:    $("$CADDY_BIN" version 2>/dev/null | head -1 || echo 'not installed')"
   echo "  mita:           $(mita version 2>/dev/null | head -1 || echo 'not installed')"
   echo "  hysteria (Hy2): $([[ -x /usr/local/bin/hysteria ]] && /usr/local/bin/hysteria version 2>/dev/null | head -1 || echo 'not installed')"
+  echo "  xray (VLESS):   $([[ -x /usr/local/bin/xray ]] && /usr/local/bin/xray version 2>/dev/null | head -1 || echo 'not installed')"
   echo "  Node.js:        $(node --version 2>/dev/null || echo 'not installed')"
   echo "  PM2:            $(pm2 --version 2>/dev/null || echo 'not installed')"
   echo ""
@@ -1838,6 +1839,16 @@ do_status() {
     fi
   else
     echo -e "  ${YELLOW}○${NC} hysteria-server — not installed (add from Settings → «Доустановить Hy2»)"
+  fi
+  if [[ -f /etc/xray/config.json && -x /usr/local/bin/xray ]]; then
+    local xrays; xrays=$(systemctl is-active xray 2>/dev/null || echo "unknown")
+    if [[ "$xrays" == "active" ]]; then
+      echo -e "  ${GREEN}●${NC} xray — active (VLESS REALITY)"
+    else
+      echo -e "  ${RED}●${NC} xray — $xrays (VLESS REALITY)"
+    fi
+  else
+    echo -e "  ${YELLOW}○${NC} xray — not installed (optional VLESS REALITY)"
   fi
   # Legacy naive check
   if systemctl is-active naive &>/dev/null 2>&1; then
@@ -1963,6 +1974,16 @@ do_doctor() {
   if [[ -x /usr/local/bin/hysteria ]]; then
     systemctl is-active --quiet hysteria-server && doctor_pass "hysteria-server active" \
       || doctor_fail "hysteria-server installed but inactive"
+  fi
+  if [[ -x /usr/local/bin/xray || -f /etc/xray/config.json ]]; then
+    if [[ -x /usr/local/bin/xray && -f /etc/xray/config.json ]] && \
+       /usr/local/bin/xray run -test -config /etc/xray/config.json >/dev/null 2>&1; then
+      doctor_pass "Xray VLESS config validates"
+    else doctor_fail "Xray is partially installed or its config is invalid"; fi
+    systemctl is-active --quiet xray && doctor_pass "xray active" \
+      || doctor_fail "xray installed but inactive"
+  else
+    doctor_warn "xray not installed (optional VLESS REALITY component)"
   fi
 
   if pm2 describe panel-naive-mieru 2>/dev/null | grep -qi 'online'; then

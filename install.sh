@@ -1604,10 +1604,14 @@ maybe_ufw() {
 
 write_component_registry() {
   local tmp="${COMPONENT_REGISTRY}.new"
-  local hy2_v="" hy2_installed=false
+  local hy2_v="" hy2_installed=false xray_v="" xray_installed=false
   if [[ -x /usr/local/bin/hysteria ]]; then
     hy2_installed=true
     hy2_v=$(/usr/local/bin/hysteria version 2>/dev/null | head -n1 || true)
+  fi
+  if [[ -x /usr/local/bin/xray && -f /etc/xray/config.json ]]; then
+    xray_installed=true
+    xray_v=$(/usr/local/bin/xray version 2>/dev/null | head -n1 || true)
   fi
   jq -n \
     --arg generated "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
@@ -1616,12 +1620,14 @@ write_component_registry() {
     --arg caddy "${CADDY_VERSION:-unknown}" \
     --arg mieru "${MIERU_VERSION:-unknown}" \
     --arg hy2 "$hy2_v" --argjson hy2Installed "$hy2_installed" \
+    --arg xray "$xray_v" --argjson xrayInstalled "$xray_installed" \
     '{schema:1,generatedAt:$generated,source:{repository:$source,branch:$branch},components:{
       panel:{installed:true,version:$panel,path:"/opt/panel-naive-mieru"},
       caddyNaive:{installed:true,version:$caddy,path:"/usr/local/bin/caddy-naive"},
       mieru:{installed:true,version:$mieru,path:"/usr/local/bin/mita"},
       hysteria2:{installed:$hy2Installed,version:$hy2,path:"/usr/local/bin/hysteria"},
-      vless:{installed:false},openflux:{installed:false}
+      vless:{installed:$xrayInstalled,version:$xray,path:"/usr/local/bin/xray",service:"xray.service"},
+      openflux:{installed:false}
     }}' > "$tmp"
   chmod 644 "$tmp"
   mv "$tmp" "$COMPONENT_REGISTRY"

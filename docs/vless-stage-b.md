@@ -36,3 +36,18 @@
 
 До подключения UI должны пройти unit-тесты генератора, отрицательные тесты полей REALITY,
 тест checksum installer и тест неизменности существующих конфигов.
+
+## Ручной canary-install (только тестовый Debian 13)
+
+Пока этап B не завершён, скрипт предназначен для отдельного тестового сервера без
+production-пользователей. Запуск является явным согласием на установку компонента:
+
+```bash
+sudo XRAY_PORT=8443 \
+  XRAY_SERVER_NAME=www.microsoft.com \
+  bash panel/scripts/install_xray.sh
+```
+
+Скрипт создаёт `/root/rixxx-xray-install-report.txt`. Private key туда не выводится.
+Повторный запуск, который способен заменить ключи REALITY, блокируется; для canary-ротации
+требуется явно задать `XRAY_FORCE=1`.

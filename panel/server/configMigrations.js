@@ -1,6 +1,6 @@
 'use strict';
 
-const LATEST_CONFIG_SCHEMA = 6;
+const LATEST_CONFIG_SCHEMA = 7;
 
 const CONFIG_MIGRATIONS = [
   { version: 1, name: 'probe mode', up(config) {
@@ -35,6 +35,13 @@ const CONFIG_MIGRATIONS = [
     if (config.warpEnabled == null) config.warpEnabled = false;
     if (config.warpPersist == null) config.warpPersist = false;
     if (config.cascadeEnabled == null) config.cascadeEnabled = false;
+  } },
+  { version: 7, name: 'optional VLESS REALITY', up(config) {
+    if (!config.stack || typeof config.stack !== 'object' || Array.isArray(config.stack)) config.stack = {};
+    if (config.stack.vless == null) config.stack.vless = false;
+    if (config.vlessPort == null) config.vlessPort = 8443;
+    if (!config.vlessReality || typeof config.vlessReality !== 'object' || Array.isArray(config.vlessReality))
+      config.vlessReality = { serverName: '', target: '', publicKey: '', shortId: '' };
   } },
 ];
 

@@ -10,11 +10,23 @@ OPENFLUX_DIR="/etc/openflux"
 OPENFLUX_UNIT="/etc/systemd/system/openflux-exit@.service"
 COMPONENT_REGISTRY="/etc/rixxx-panel/components.json"
 REPORT="/root/rixxx-openflux-install-report.txt"
+TEST_ROOT="${OPENFLUX_TEST_ROOT:-}"
+
+if [[ -n "$TEST_ROOT" ]]; then
+  [[ "$TEST_ROOT" == /tmp/* && "$TEST_ROOT" != /tmp/ ]] || {
+    echo "[OPENFLUX] ERROR: OPENFLUX_TEST_ROOT must be a dedicated /tmp subdirectory" >&2; exit 1;
+  }
+  OPENFLUX_BIN="$TEST_ROOT/usr/local/bin/openflux"
+  OPENFLUX_DIR="$TEST_ROOT/etc/openflux"
+  OPENFLUX_UNIT="$TEST_ROOT/etc/systemd/system/openflux-exit@.service"
+  COMPONENT_REGISTRY="$TEST_ROOT/etc/rixxx-panel/components.json"
+  REPORT="$TEST_ROOT/root/rixxx-openflux-install-report.txt"
+fi
 
 log() { printf '[OPENFLUX] %s\n' "$*"; }
 die() { printf '[OPENFLUX] ERROR: %s\n' "$*" >&2; exit 1; }
 
-[[ $EUID -eq 0 ]] || die "run as root"
+[[ -n "$TEST_ROOT" || $EUID -eq 0 ]] || die "run as root"
 [[ "$(uname -m)" == "x86_64" || "$(uname -m)" == "amd64" ]] || die "only amd64 is supported"
 for command in curl sha256sum node systemctl jq cmp; do
   command -v "$command" >/dev/null 2>&1 || die "missing dependency: $command"
@@ -71,7 +83,9 @@ HAD_BIN=0; HAD_UNIT=0; HAD_REGISTRY=0
 [[ ! -e "$COMPONENT_REGISTRY" ]] || HAD_REGISTRY=1
 
 log "downloading pinned OpenFlux ${OPENFLUX_VERSION}"
-curl -fL --retry 3 --connect-timeout 15 "$OPENFLUX_URL" -o "$WORK/$OPENFLUX_ASSET"
+curl -fL --retry 3 --connect-timeout 15 --max-time 120 \
+  "$OPENFLUX_URL" -o "$WORK/$OPENFLUX_ASSET" \
+  || die "download failed; nothing was installed"
 printf '%s  %s\n' "$OPENFLUX_SHA256" "$WORK/$OPENFLUX_ASSET" | sha256sum -c - >/dev/null \
   || die "SHA-256 mismatch; nothing was installed"
 chmod 0755 "$WORK/$OPENFLUX_ASSET"

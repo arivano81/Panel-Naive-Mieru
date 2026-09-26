@@ -2,8 +2,12 @@
 'use strict';
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
-const script = fs.readFileSync(path.join(__dirname, '../panel/scripts/install_openflux.sh'), 'utf8');
+const { spawnSync } = require('child_process');
+const root = path.resolve(__dirname, '..');
+const scriptPath = path.join(root, 'panel/scripts/install_openflux.sh');
+const script = fs.readFileSync(scriptPath, 'utf8');
 const install = fs.readFileSync(path.join(__dirname, '../install.sh'), 'utf8');
 const update = fs.readFileSync(path.join(__dirname, '../update.sh'), 'utf8');
 const workflow = fs.readFileSync(path.join(__dirname, '../.github/workflows/ci.yml'), 'utf8');
@@ -39,6 +43,8 @@ ok(!/ufw allow|iptables|nft /.test(script), 'installer cannot change firewall');
 ok(!/enable --now|systemctl start|systemctl restart/.test(script), 'installer cannot start a profile or service');
 ok(/rollback\(\)/.test(script) && script.includes('restoring previous OpenFlux files') &&
    script.includes('COMMITTED=1'), 'partial system writes roll back before commit');
+ok(script.includes('OPENFLUX_TEST_ROOT must be a dedicated /tmp subdirectory'),
+  'installer fault root is constrained to a dedicated /tmp directory');
 ok(script.includes('OPENFLUX_RESULT_JSON=') && script.includes('"changed":true'),
   'successful repair/update exposes a machine-readable changed result');
 ok(workflow.includes("if: matrix.release == '13'") && workflow.includes('bash tests/openflux-binary-canary.sh'),
@@ -48,6 +54,48 @@ ok(canary.includes('--socks5-hostname 127.0.0.1:11080') && canary.includes('wron
 for (const [name, source] of [['main installer', install], ['updater', update]]) {
   ok(source.includes('openflux_installed=false') && source.includes('openfluxInstalled'),
     `${name} detects an already installed OpenFlux binary`);
+}
+
+if (process.platform !== 'win32') {
+  const runFault = mode => {
+    const fixture = fs.mkdtempSync(path.join(os.tmpdir(), `openflux-install-${mode}-`));
+    const bin = path.join(fixture, 'mock-bin');
+    fs.mkdirSync(bin, { recursive: true });
+    fs.writeFileSync(path.join(bin, 'curl'), `#!/bin/sh
+set -eu
+out=''
+while [ "$#" -gt 0 ]; do
+  if [ "$1" = -o ]; then shift; out=$1; fi
+  shift
+done
+[ -n "$out" ]
+printf 'partial-or-corrupt-download' > "$out"
+[ "${mode}" != interrupted ] || exit 28
+`, { mode: 0o755 });
+    fs.writeFileSync(path.join(bin, 'systemctl'), `#!/bin/sh
+printf '%s\n' "$*" >> "$OPENFLUX_TEST_ROOT/systemctl.log"
+`, { mode: 0o755 });
+    const result = spawnSync('bash', [scriptPath], { cwd: root, encoding: 'utf8', env: {
+      ...process.env, OPENFLUX_TEST_ROOT: fixture, PATH: `${bin}:${process.env.PATH}`
+    }});
+    return { fixture, result };
+  };
+  for (const [mode, error] of [['interrupted', 'download failed; nothing was installed'], ['checksum', 'SHA-256 mismatch']]) {
+    const { fixture, result } = runFault(mode);
+    ok(result.status !== 0 && (result.stderr + result.stdout).includes(error),
+      `${mode} download is rejected with an explicit error`);
+    ok(!fs.existsSync(path.join(fixture, 'usr/local/bin/openflux')) &&
+      !fs.existsSync(path.join(fixture, 'etc/systemd/system/openflux-exit@.service')) &&
+      !fs.existsSync(path.join(fixture, 'etc/rixxx-panel/components.json')) &&
+      !fs.existsSync(path.join(fixture, 'systemctl.log')),
+    `${mode} download leaves no binary, unit, registry, or systemd side effect`);
+    fs.rmSync(fixture, { recursive: true, force: true });
+  }
+} else {
+  ok(true, 'interrupted download fault fixture runs in Linux CI');
+  ok(true, 'interrupted download side effects are verified in Linux CI');
+  ok(true, 'checksum mismatch fault fixture runs in Linux CI');
+  ok(true, 'checksum mismatch side effects are verified in Linux CI');
 }
 
 console.log(`\nResult: ${pass} passed, ${fail} failed`);

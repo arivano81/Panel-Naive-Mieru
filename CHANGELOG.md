@@ -29,6 +29,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added an internal opt-in OpenFlux `0.0.5` installer that verifies the release
   SHA-256 and binary identity, installs no profile, opens no port, starts no
   service, and records the disabled component without losing it on panel updates.
+- Added executable installer fault fixtures for interrupted downloads and
+  checksum mismatches. Downloads now have a total timeout and explicit failure;
+  neither fault can leave a binary, unit, registry change, or systemd side effect.
 - Added a disposable Debian 13 OpenFlux binary canary that sends an HTTP request
   through a real encrypted L4/Direct-to-SOCKS5 tunnel and verifies that a client
   with the wrong key cannot fall back to plaintext.

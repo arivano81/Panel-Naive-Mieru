@@ -41,6 +41,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added transactional OpenFlux key rotation with administrator password
   confirmation. Active profiles restart and health-check; a failed restart
   restores both server and client keys and returns the service to the old key.
+- Documented the OpenFlux share-link compatibility gate: pinned release `0.0.5`
+  has no `--share` or `openflux://` implementation, so the panel deliberately
+  keeps the verified client bundle instead of inventing an incompatible QR URI.
 
 - Began VLESS stage B with an isolated REALITY/Vision config adapter and a
   pinned Xray-core `v26.3.27` installer. The installer verifies the official

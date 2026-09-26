@@ -10,6 +10,7 @@ OPENFLUX_DIR="/etc/openflux"
 OPENFLUX_UNIT="/etc/systemd/system/openflux-exit@.service"
 COMPONENT_REGISTRY="/etc/rixxx-panel/components.json"
 REPORT="/root/rixxx-openflux-install-report.txt"
+STATE_DIR="/var/lib/openflux"
 TEST_ROOT="${OPENFLUX_TEST_ROOT:-}"
 
 if [[ -n "$TEST_ROOT" ]]; then
@@ -21,6 +22,7 @@ if [[ -n "$TEST_ROOT" ]]; then
   OPENFLUX_UNIT="$TEST_ROOT/etc/systemd/system/openflux-exit@.service"
   COMPONENT_REGISTRY="$TEST_ROOT/etc/rixxx-panel/components.json"
   REPORT="$TEST_ROOT/root/rixxx-openflux-install-report.txt"
+  STATE_DIR="$TEST_ROOT/var/lib/openflux"
 fi
 
 log() { printf '[OPENFLUX] %s\n' "$*"; }
@@ -77,10 +79,12 @@ done
 shopt -u nullglob
 
 COMMITTED=0
-HAD_BIN=0; HAD_UNIT=0; HAD_REGISTRY=0
+HAD_BIN=0; HAD_UNIT=0; HAD_REGISTRY=0; HAD_OPENFLUX_DIR=0; HAD_STATE_DIR=0
 [[ ! -e "$OPENFLUX_BIN" ]] || HAD_BIN=1
 [[ ! -e "$OPENFLUX_UNIT" ]] || HAD_UNIT=1
 [[ ! -e "$COMPONENT_REGISTRY" ]] || HAD_REGISTRY=1
+[[ ! -d "$OPENFLUX_DIR" ]] || HAD_OPENFLUX_DIR=1
+[[ ! -d "$STATE_DIR" ]] || HAD_STATE_DIR=1
 
 log "downloading pinned OpenFlux ${OPENFLUX_VERSION}"
 curl -fL --retry 3 --connect-timeout 15 --max-time 120 \
@@ -115,6 +119,10 @@ rollback() {
   (( HAD_UNIT == 1 )) || rm -f "$OPENFLUX_UNIT"
   (( HAD_REGISTRY == 1 )) || rm -f "$COMPONENT_REGISTRY"
   rm -f "${OPENFLUX_BIN}.new" "${OPENFLUX_UNIT}.new" "${COMPONENT_REGISTRY}.openflux-new"
+  if (( HAD_OPENFLUX_DIR == 0 )); then
+    rmdir "$OPENFLUX_DIR/secrets" "$OPENFLUX_DIR/profiles" "$OPENFLUX_DIR" 2>/dev/null || true
+  fi
+  (( HAD_STATE_DIR == 1 )) || rmdir "$STATE_DIR" 2>/dev/null || true
   systemctl daemon-reload >/dev/null 2>&1 || true
 }
 
@@ -127,10 +135,16 @@ cleanup() {
 }
 trap cleanup EXIT
 
-id openflux >/dev/null 2>&1 || useradd --system --home-dir /var/lib/openflux --shell /usr/sbin/nologin openflux
-install -d -o root -g openflux -m 0750 "$OPENFLUX_DIR" "$OPENFLUX_DIR/profiles"
-install -d -o openflux -g openflux -m 0700 "$OPENFLUX_DIR/secrets"
-install -d -o openflux -g openflux -m 0750 /var/lib/openflux
+if [[ -n "$TEST_ROOT" ]]; then
+  install -d -m 0750 "$OPENFLUX_DIR" "$OPENFLUX_DIR/profiles" "$STATE_DIR"
+  install -d -m 0700 "$OPENFLUX_DIR/secrets"
+  install -d -m 0700 "$(dirname "$REPORT")"
+else
+  id openflux >/dev/null 2>&1 || useradd --system --home-dir "$STATE_DIR" --shell /usr/sbin/nologin openflux
+  install -d -o root -g openflux -m 0750 "$OPENFLUX_DIR" "$OPENFLUX_DIR/profiles"
+  install -d -o openflux -g openflux -m 0700 "$OPENFLUX_DIR/secrets"
+  install -d -o openflux -g openflux -m 0750 "$STATE_DIR"
+fi
 install -m 0755 "$WORK/$OPENFLUX_ASSET" "${OPENFLUX_BIN}.new"
 mv "${OPENFLUX_BIN}.new" "$OPENFLUX_BIN"
 install -m 0644 "$WORK/openflux-exit@.service" "${OPENFLUX_UNIT}.new"

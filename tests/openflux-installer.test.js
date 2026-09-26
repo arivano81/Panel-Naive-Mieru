@@ -91,11 +91,43 @@ printf '%s\n' "$*" >> "$OPENFLUX_TEST_ROOT/systemctl.log"
     `${mode} download leaves no binary, unit, registry, or systemd side effect`);
     fs.rmSync(fixture, { recursive: true, force: true });
   }
+  const activationFixture = fs.mkdtempSync(path.join(os.tmpdir(), 'openflux-install-activation-'));
+  const activationBin = path.join(activationFixture, 'mock-bin');
+  fs.mkdirSync(activationBin, { recursive: true });
+  fs.writeFileSync(path.join(activationBin, 'curl'), `#!/bin/sh
+set -eu
+out=''
+while [ "$#" -gt 0 ]; do
+  if [ "$1" = -o ]; then shift; out=$1; fi
+  shift
+done
+printf '#!/bin/sh\necho OpenFlux test binary\n' > "$out"
+`, { mode: 0o755 });
+  fs.writeFileSync(path.join(activationBin, 'sha256sum'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+  fs.writeFileSync(path.join(activationBin, 'systemctl'), `#!/bin/sh
+printf '%s\n' "$*" >> "$OPENFLUX_TEST_ROOT/systemctl.log"
+exit 1
+`, { mode: 0o755 });
+  const activation = spawnSync('bash', [scriptPath], { cwd: root, encoding: 'utf8', env: {
+    ...process.env, OPENFLUX_TEST_ROOT: activationFixture,
+    PATH: `${activationBin}:${process.env.PATH}`
+  }});
+  ok(activation.status !== 0 && fs.existsSync(path.join(activationFixture, 'systemctl.log')),
+    'post-write systemd failure reaches transactional rollback');
+  ok(!fs.existsSync(path.join(activationFixture, 'usr/local/bin/openflux')) &&
+    !fs.existsSync(path.join(activationFixture, 'etc/systemd/system/openflux-exit@.service')) &&
+    !fs.existsSync(path.join(activationFixture, 'etc/rixxx-panel/components.json')) &&
+    !fs.existsSync(path.join(activationFixture, 'etc/openflux')) &&
+    !fs.existsSync(path.join(activationFixture, 'var/lib/openflux')),
+  'post-write failure removes every newly installed system artifact');
+  fs.rmSync(activationFixture, { recursive: true, force: true });
 } else {
   ok(true, 'interrupted download fault fixture runs in Linux CI');
   ok(true, 'interrupted download side effects are verified in Linux CI');
   ok(true, 'checksum mismatch fault fixture runs in Linux CI');
   ok(true, 'checksum mismatch side effects are verified in Linux CI');
+  ok(true, 'post-write systemd failure fixture runs in Linux CI');
+  ok(true, 'post-write rollback artifacts are verified in Linux CI');
 }
 
 console.log(`\nResult: ${pass} passed, ${fail} failed`);

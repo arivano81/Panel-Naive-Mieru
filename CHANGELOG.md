@@ -32,6 +32,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added executable installer fault fixtures for interrupted downloads and
   checksum mismatches. Downloads now have a total timeout and explicit failure;
   neither fault can leave a binary, unit, registry change, or systemd side effect.
+- Added a post-write installer fault fixture. If systemd daemon reload fails on
+  a first install, the transaction now removes the new binary, unit, config and
+  state directories instead of leaving a partial component behind.
 - Added a disposable Debian 13 OpenFlux binary canary that sends an HTTP request
   through a real encrypted L4/Direct-to-SOCKS5 tunnel and verifies that a client
   with the wrong key cannot fall back to plaintext.

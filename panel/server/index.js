@@ -43,6 +43,7 @@ const { runDatabaseMigrations } = require('./databaseMigrations');
 const { runConfigMigrations } = require('./configMigrations');
 const { BACKUP_FORMAT, BACKUP_SCHEMA, validateBackup, restoreBackupState } = require('./backupRestore');
 const { buildXrayRealityConfig, buildVlessRealityLink } = require('./xrayConfig');
+const { parseXrayStats } = require('./xrayStats');
 
 // ── Paths ─────────────────────────────────────────────────────────────────────
 const PANEL_CONFIG    = '/etc/rixxx-panel/config.json';
@@ -5056,6 +5057,16 @@ app.get('/api/status', requireAuth, async (req, res) => {
 });
 
 // User traffic stats
+function readXrayTraffic() {
+  if (!xrayInstalled() || !(cfg.stack && cfg.stack.vless)) return {};
+  try {
+    const raw = execFileSync(XRAY_BIN, [
+      'api', 'statsquery', '--server=127.0.0.1:10085', '-pattern', 'user>>>',
+    ], { timeout: 7000 }).toString();
+    return parseXrayStats(raw);
+  } catch { return {}; }
+}
+
 app.get('/api/stats/users', requireAuth, (req, res) => {
   const exec_ = cmd => { try { return execSync(cmd, { timeout: 8000 }).toString(); } catch { return ''; } };
   // BUG-160 (regression, v1.5.1): in v1.5.0 BOTH the «Naive (МБ)» and
@@ -5116,27 +5127,40 @@ app.get('/api/stats/users', requireAuth, (req, res) => {
     try { console.error('[stats/users] hy2 source failed:', e && e.message); } catch {}
   }
 
+  // ── VLESS source (Xray StatsService on loopback) — fully isolated ──────────
+  let vless = {};
+  try {
+    vless = readXrayTraffic() || {};
+  } catch (e) {
+    vless = {};
+    try { console.error('[stats/users] xray source failed:', e && e.message); } catch {}
+  }
+
   const allUsers = getAllUsers();
 
   const users = allUsers.map(u => {
     const s = live.find(x => x.username === u.username) || {};
     const n = naive[u.username] || {};
     const hy = hy2[u.username] || {};
+    const xv = vless[u.username] || {};
     const mieruUp   = s.uploadMB   || 0;
     const mieruDown = s.downloadMB || 0;
     const hy2Up     = hy.uploadMB   || 0;
     const hy2Down   = hy.downloadMB || 0;
+    const vlessUp   = xv.uploadMB || 0;
+    const vlessDown = xv.downloadMB || 0;
     // Per-user Naive = only what the access log actually attributed (rare plain
     //   HTTP requests). CONNECT tunnels are never logged → this is usually 0.
     //   The real Naive figure is server-wide (naiveServerTotalMB), shown apart.
     const naiveUp   = n.uploadMB   || 0;
     const naiveDown = n.downloadMB || 0;
-    const uploadMB   = mieruUp   + naiveUp   + hy2Up;
-    const downloadMB = mieruDown + naiveDown + hy2Down;
+    const uploadMB   = mieruUp   + naiveUp   + hy2Up   + vlessUp;
+    const downloadMB = mieruDown + naiveDown + hy2Down + vlessDown;
     // Combined used: prefer live mita "usedMB" when present, plus naive + hy2
     //   bytes; fall back to the stored cumulative value when no source reports.
-    const liveUsed = (s.usedMB != null ? s.usedMB : 0) + (n.usedMB || 0) + (hy.usedMB || 0);
-    const usedMB   = (s.usedMB != null || n.usedMB != null || hy.usedMB != null)
+    const liveUsed = (s.usedMB != null ? s.usedMB : 0) + (n.usedMB || 0) +
+      (hy.usedMB || 0) + (xv.usedMB || 0);
+    const usedMB   = (s.usedMB != null || n.usedMB != null || hy.usedMB != null || xv.usedMB != null)
       ? liveUsed
       : (u.usedMB || 0);
     // Most recent activity across all protocols.
@@ -5160,6 +5184,7 @@ app.get('/api/stats/users', requireAuth, (req, res) => {
       naiveMB:    naiveUp + naiveDown,
       mieruMB:    mieruUp + mieruDown,
       hy2MB:      hy2Up + hy2Down,
+      vlessMB:    vlessUp + vlessDown,
       lastSeen
     };
   });

@@ -25,6 +25,8 @@ ok(verifyAt < script.indexOf('install -m 0755'), 'checksum is verified before bi
 ok(script.includes('run -test -config "$WORK/config.json"'), 'candidate config is tested by Xray');
 ok(/User=xray/.test(script) && /NoNewPrivileges=true/.test(script), 'service uses dedicated user and hardening');
 ok(/systemctl is-active --quiet xray/.test(script), 'service health is verified');
+ok(script.includes('loopback Stats API port 10085 is already in use'),
+  'installer refuses a Stats API port collision');
 ok(/activation failed; restoring previous Xray state/.test(script), 'failed activation rolls back');
 ok(/RIXXX VLESS REALITY/.test(script), 'firewall rule has a component-specific marker');
 ok(/chmod 600 "\$REPORT"/.test(script), 'installation report is root-only');

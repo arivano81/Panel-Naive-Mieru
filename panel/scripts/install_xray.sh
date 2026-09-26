@@ -29,6 +29,9 @@ for command in curl unzip sha256sum node openssl systemctl jq; do
 done
 [[ "$PORT" =~ ^[0-9]+$ ]] && (( PORT >= 1024 && PORT <= 65535 )) || die "XRAY_PORT must be 1024..65535"
 if ss -H -ltn "sport = :$PORT" 2>/dev/null | grep -q .; then die "TCP port $PORT is already in use"; fi
+if [[ "$PORT" != "10085" ]] && ss -H -ltn "sport = :10085" 2>/dev/null | grep -q .; then
+  die "loopback Stats API port 10085 is already in use"
+fi
 if [[ -e "$XRAY_CONFIG" && "$FORCE" != "1" ]]; then
   die "Xray config already exists; refusing to rotate REALITY keys (set XRAY_FORCE=1 explicitly)"
 fi

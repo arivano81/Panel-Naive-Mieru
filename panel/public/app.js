@@ -581,7 +581,7 @@ async function loadUsers(opts = {}) {
   const tbody = el('users-tbody');
   const apiOpts = { retry: opts.retry, silent: !!opts.retry };
   if (!opts.retry) {
-    tbody.innerHTML = `<tr><td colspan="12" class="table-empty">${t('users.loading')}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="15" class="table-empty">${t('users.loading')}</td></tr>`;
   }
   try {
     // BUG-163/165: the Users table showed 0 in «Naive (МБ)»/«Mieru (МБ)» because
@@ -601,6 +601,7 @@ async function loadUsers(opts = {}) {
         naiveMB: s.naiveMB != null ? s.naiveMB : 0,
         mieruMB: s.mieruMB != null ? s.mieruMB : 0,
         hy2MB:   s.hy2MB   != null ? s.hy2MB   : 0,
+        vlessMB: s.vlessMB != null ? s.vlessMB : 0,
       });
     });
     removeNaiveServerBanner();   // BUG-165: drop any stale server-wide banner
@@ -613,7 +614,7 @@ async function loadUsers(opts = {}) {
     // error over the (already-saved) table — re-throw so saveUser() can show a
     // gentle "refresh shortly" hint instead of a false "save failed".
     if (opts.retry) throw err;
-    tbody.innerHTML = `<tr><td colspan="12" class="table-empty" style="color:var(--red)">${esc(err.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="15" class="table-empty" style="color:var(--red)">${esc(err.message)}</td></tr>`;
   }
 }
 
@@ -682,7 +683,7 @@ async function applyFoolproofGates(count) {
 function renderUsersTable(users) {
   const tbody = el('users-tbody');
   if (!users.length) {
-    tbody.innerHTML = `<tr><td colspan="12" class="table-empty">${t('users.noUsers')}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="15" class="table-empty">${t('users.noUsers')}</td></tr>`;
     return;
   }
   tbody.innerHTML = users.map(u => {
@@ -691,6 +692,7 @@ function renderUsersTable(users) {
     const hasNaive  = protocols.includes('naive');
     const hasMieru  = protocols.includes('mieru');
     const hasHy2    = protocols.includes('hy2');
+    const hasVless  = protocols.includes('vless');
     const expBadge  = u.expiry
       ? (new Date(u.expiry) < new Date()
           ? `<span class="badge badge-red">${t('users.expired')}</span>`
@@ -726,9 +728,11 @@ function renderUsersTable(users) {
       <td>${hasNaive ? '<span class="badge badge-blue">✓</span>' : '<span class="badge badge-gray">—</span>'}</td>
       <td>${hasMieru ? '<span class="badge badge-blue">✓</span>' : '<span class="badge badge-gray">—</span>'}</td>
       <td>${hasHy2 ? '<span class="badge badge-blue">✓</span>' : '<span class="badge badge-gray">—</span>'}</td>
+      <td>${hasVless ? '<span class="badge badge-blue">✓</span>' : '<span class="badge badge-gray">—</span>'}</td>
       <td>${fmtNum(u.naiveMB != null ? u.naiveMB : 0)}</td>
       <td>${fmtNum(u.mieruMB != null ? u.mieruMB : 0)}</td>
       <td>${fmtNum(u.hy2MB != null ? u.hy2MB : 0)}</td>
+      <td>${fmtNum(u.vlessMB != null ? u.vlessMB : 0)}</td>
       <td>${u.quotaMB > 0 ? fmtNum(u.quotaMB) : '∞'}</td>
       <td>${quotaStr}</td>
       <td>${fmtLastSeen(u.lastSeen)}</td>

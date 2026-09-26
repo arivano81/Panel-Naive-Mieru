@@ -20,6 +20,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   subscription output, backup preservation, UI controls, and doctor checks.
 - Added the managed VLESS REALITY outbound to universal Karing/sing-box
   configs, de-duplicated matching bonus VLESS nodes, and exposed Xray logs.
+- Added a loopback-only Xray StatsService and isolated per-user VLESS traffic
+  counters in the Users table (runtime counters; durable quota accounting follows).
 
 ---
 

@@ -23,6 +23,8 @@ const user = { id: '550e8400-e29b-41d4-a716-446655440000', email: 'alice@example
 const config = buildXrayRealityConfig(settings, [user]);
 const inbound = config.inbounds[0];
 ok(inbound.port === 8443 && inbound.protocol === 'vless', 'dedicated VLESS TCP inbound generated');
+ok(config.api && config.api.listen === '127.0.0.1:10085', 'Stats API listens only on loopback');
+ok(config.api.services.includes('StatsService'), 'StatsService is explicitly enabled');
 ok(inbound.settings.clients[0].flow === 'xtls-rprx-vision', 'Vision flow enforced');
 ok(inbound.streamSettings.security === 'reality', 'REALITY transport enforced');
 ok(inbound.streamSettings.realitySettings.privateKey === settings.privateKey, 'private key stays server-side');

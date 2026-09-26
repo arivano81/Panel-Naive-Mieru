@@ -62,6 +62,9 @@ ok(xrayInstaller.status === 0, 'pinned Xray installer regression suite passes');
 const vlessIntegration = spawnSync(process.execPath, [path.join(__dirname, 'vless-panel-integration.test.js')],
   { stdio: 'inherit' });
 ok(vlessIntegration.status === 0, 'VLESS panel integration regression suite passes');
+const xrayStats = spawnSync(process.execPath, [path.join(__dirname, 'xray-stats.test.js')],
+  { stdio: 'inherit' });
+ok(xrayStats.status === 0, 'Xray per-user traffic regression suite passes');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

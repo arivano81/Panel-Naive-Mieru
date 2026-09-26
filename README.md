@@ -223,6 +223,10 @@ VLESS пока относится к этапу B и включается тол
 параметры находятся в `/etc/xray/reality-public.json`, а root-only отчёт установки — в
 `/root/rixxx-xray-install-report.txt`. Для диагностики:
 
+В таблице пользователей есть отдельная колонка VLESS (MB). Сейчас она показывает счётчики
+локального Xray с момента последнего запуска службы; долговременное накопление и применение
+общей квоты к VLESS остаются следующим этапом.
+
 ```bash
 sudo bash /opt/panel-naive-mieru/update.sh --doctor
 sudo systemctl status xray --no-pager

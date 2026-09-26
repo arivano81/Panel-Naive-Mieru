@@ -518,6 +518,8 @@ bash update.sh --dry-run          # Предпросмотр изменений 
 bash update.sh --force -y         # Принудительное обновление, без сверки версий
 bash update.sh --status           # Полный отчёт о состоянии
 bash update.sh --doctor           # Диагностика без изменений; код возврата для мониторинга
+bash update.sh --rollback         # Откат к последнему проверенному бэкапу
+bash update.sh --rollback <ID>    # Откат к выбранному ID из --status
 bash update.sh --repair           # Восстановление сломанных конфигов
 bash update.sh --expose <домен>   # Публичный режим панели
 bash update.sh --ssh-only         # Вернуться в SSH-only режим

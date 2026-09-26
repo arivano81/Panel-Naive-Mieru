@@ -118,6 +118,7 @@ MODE=""
 EXPOSE_DOMAIN=""
 PANEL_BA_PASS_FLAG=""
 WEB_BASE_PATH_FLAG=""
+ROLLBACK_TARGET="latest"
 
 # ── Parse args ────────────────────────────────────────────────────────────────
 parse_args() {
@@ -132,6 +133,10 @@ parse_args() {
       --ssh-only)  MODE="ssh-only" ;;
       --status)    MODE="status" ;;
       --doctor)    MODE="doctor" ;;
+      --rollback)
+        MODE="rollback"
+        if [[ -n "${2:-}" && "${2:-}" != --* ]]; then ROLLBACK_TARGET="$2"; shift; fi
+        ;;
       --repair)    MODE="repair" ;;
       --enroll-hy2) MODE="enroll-hy2" ;;
       --help|-h)   print_help; exit 0 ;;
@@ -172,6 +177,7 @@ OPTIONS:
                           remove the panel block, close any legacy bare port
   --status               Print full health report
   --doctor               Run read-only diagnostics; exit non-zero on failures
+  --rollback [backup-id] Restore latest (or selected) update backup safely
   --repair               Rebuild Caddyfile + mita config from SQLite DB; restart services
   --enroll-hy2           Add Hysteria2 to EVERY existing user + rewrite userpass +
                          restart Hy2 (one-off; existing clients start working over Hy2).
@@ -184,6 +190,7 @@ EXAMPLES:
   bash update.sh --force -y        # Force update, non-interactive
   bash update.sh --status          # Health check
   bash update.sh --doctor          # Read-only diagnostics for automation
+  bash update.sh --rollback        # Roll back to the newest backup
   bash update.sh --repair          # Fix broken installation
   bash update.sh --expose panel.example.com
   bash update.sh --ssh-only        # Revert to SSH-only
@@ -551,12 +558,22 @@ auto_backup() {
   local ts; ts=$(date +%Y-%m-%d-%H%M%S)
   local bdir="$BACKUP_DIR/$ts"
 
+  # Never merge two snapshots created within the same second.
+  local n=1
+  while [[ -e "$bdir" ]]; do
+    bdir="$BACKUP_DIR/${ts}-$(printf '%02d' "$n")"
+    (( n+=1 ))
+  done
+
   $DRY_RUN && { log_dry "Would create backup at $bdir"; echo "$bdir"; return; }
 
   mkdir -p "$bdir"
   [[ -f "$CADDY_FILE"      ]] && cp "$CADDY_FILE"       "$bdir/Caddyfile"      || true
   [[ -f "$MITA_STATE_FILE" ]] && cp "$MITA_STATE_FILE"  "$bdir/mita-state.json" || true
   [[ -f "$PANEL_CONFIG"    ]] && cp "$PANEL_CONFIG"     "$bdir/config.json"    || true
+  [[ -f "$VERSION_FILE"    ]] && cp "$VERSION_FILE"     "$bdir/version"        || true
+  [[ -f "$COMPONENT_REGISTRY" ]] && cp "$COMPONENT_REGISTRY" "$bdir/components.json" || true
+  [[ -f /etc/hysteria/config.yaml ]] && cp /etc/hysteria/config.yaml "$bdir/hysteria-config.yaml" || true
   # Bug 99: back up the user DB too (it holds all issued keys). Use SQLite's
   # online backup when available so a live/WAL DB is copied consistently; fall
   # back to a plain cp otherwise.
@@ -571,6 +588,19 @@ auto_backup() {
     cp /etc/systemd/system/caddy-naive.service "$bdir/" || true
   [[ -f /etc/systemd/system/mita.service ]] && \
     cp /etc/systemd/system/mita.service "$bdir/" || true
+  [[ -f /etc/systemd/system/hysteria-server.service ]] && \
+    cp /etc/systemd/system/hysteria-server.service "$bdir/" || true
+  if [[ -d "$PANEL_DIR" ]]; then
+    tar --exclude='./node_modules' --exclude='./.git' --exclude='./logs' \
+      -czf "$bdir/panel-files.tar.gz" -C "$PANEL_DIR" . 2>/dev/null || \
+      log_warn "Could not archive panel files in backup"
+  fi
+  jq -n --arg created "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --arg version "$(get_current_version)" --arg source "$REPO_URL" \
+    '{schema:1,createdAt:$created,panelVersion:$version,source:$source}' \
+    > "$bdir/manifest.json"
+  chmod 700 "$bdir"
+  find "$bdir" -type f -exec chmod 600 {} + 2>/dev/null || true
 
   log_info "Backup created: $bdir"
 
@@ -1946,6 +1976,181 @@ do_doctor() {
   (( fail == 0 ))
 }
 
+resolve_rollback_backup() {
+  local requested="${1:-latest}" candidate=""
+  if [[ "$requested" == "latest" ]]; then
+    candidate=$(find "$BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null \
+      | sort -r | head -n1)
+  else
+    # IDs are directory basenames created by auto_backup; reject paths/globs.
+    [[ "$requested" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{6}(-[0-9]{2})?$ ]] || return 1
+    candidate="$requested"
+  fi
+  [[ -n "$candidate" && -d "$BACKUP_DIR/$candidate" ]] || return 1
+  printf '%s' "$BACKUP_DIR/$candidate"
+}
+
+validate_rollback_backup() {
+  local dir="$1"
+  [[ -f "$dir/config.json" && -f "$dir/db.sqlite" ]] || {
+    log_error "Backup is incomplete: config.json and db.sqlite are required"; return 1; }
+  jq empty "$dir/config.json" >/dev/null 2>&1 || {
+    log_error "Backup config.json is invalid"; return 1; }
+  if command -v sqlite3 >/dev/null 2>&1; then
+    [[ "$(sqlite3 "$dir/db.sqlite" 'PRAGMA quick_check;' 2>/dev/null || true)" == "ok" ]] || {
+      log_error "Backup database failed SQLite quick_check"; return 1; }
+  fi
+  if [[ -f "$dir/Caddyfile" ]]; then
+    "$CADDY_BIN" validate --config "$dir/Caddyfile" --adapter caddyfile >/dev/null 2>&1 || {
+      log_error "Backup Caddyfile does not validate"; return 1; }
+  fi
+  [[ ! -f "$dir/mita-state.json" ]] || jq empty "$dir/mita-state.json" >/dev/null 2>&1 || {
+    log_error "Backup Mieru state is invalid"; return 1; }
+  if [[ -f "$dir/panel-files.tar.gz" ]]; then
+    tar -tzf "$dir/panel-files.tar.gz" >/dev/null 2>&1 || {
+      log_error "Backup panel archive is corrupt"; return 1; }
+    if tar -tzf "$dir/panel-files.tar.gz" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
+      log_error "Backup panel archive contains unsafe paths"; return 1
+    fi
+  fi
+  return 0
+}
+
+restore_backup_files() {
+  local dir="$1" staging=""
+  pm2 stop panel-naive-mieru >/dev/null 2>&1 || true
+
+  install -m 600 "$dir/config.json" "${PANEL_CONFIG}.rollback-new"
+  mv "${PANEL_CONFIG}.rollback-new" "$PANEL_CONFIG"
+  install -m 600 "$dir/db.sqlite" "${DB_PATH}.rollback-new"
+  # A WAL from the newer database must never be replayed over the restored DB.
+  rm -f "${DB_PATH}-wal" "${DB_PATH}-shm"
+  mv "${DB_PATH}.rollback-new" "$DB_PATH"
+  if [[ -f "$dir/Caddyfile" ]]; then
+    install -m 640 "$dir/Caddyfile" "${CADDY_FILE}.rollback-new"; mv "${CADDY_FILE}.rollback-new" "$CADDY_FILE"
+  fi
+  if [[ -f "$dir/mita-state.json" ]]; then
+    install -m 600 "$dir/mita-state.json" "${MITA_STATE_FILE}.rollback-new"; mv "${MITA_STATE_FILE}.rollback-new" "$MITA_STATE_FILE"
+  fi
+  if [[ -f "$dir/hysteria-config.yaml" ]]; then
+    install -m 640 "$dir/hysteria-config.yaml" /etc/hysteria/config.yaml.rollback-new
+    mv /etc/hysteria/config.yaml.rollback-new /etc/hysteria/config.yaml
+    if id hysteria >/dev/null 2>&1; then
+      chown hysteria:hysteria /etc/hysteria/config.yaml 2>/dev/null || true
+    fi
+  fi
+  if [[ -f "$dir/version" ]]; then
+    install -m 644 "$dir/version" "${VERSION_FILE}.rollback-new"; mv "${VERSION_FILE}.rollback-new" "$VERSION_FILE"
+  fi
+  if [[ -f "$dir/components.json" ]]; then
+    install -m 644 "$dir/components.json" "${COMPONENT_REGISTRY}.rollback-new"
+    mv "${COMPONENT_REGISTRY}.rollback-new" "$COMPONENT_REGISTRY"
+  fi
+  for unit in caddy-naive.service mita.service hysteria-server.service; do
+    [[ ! -f "$dir/$unit" ]] || install -m 644 "$dir/$unit" "/etc/systemd/system/$unit"
+  done
+
+  if [[ -f "$dir/panel-files.tar.gz" ]]; then
+    staging=$(mktemp -d)
+    tar -xzf "$dir/panel-files.tar.gz" -C "$staging"
+    mkdir -p "$PANEL_DIR"
+    cp -a "$staging/." "$PANEL_DIR/"
+    rm -rf "$staging"
+  else
+    log_warn "Legacy backup has no panel archive; data/config will be restored, code stays current"
+  fi
+  systemctl daemon-reload
+  return 0
+}
+
+activate_rollback() {
+  load_config
+  fix_caddy_perms
+  if [[ -f "$MITA_STATE_FILE" ]]; then
+    mita apply config "$MITA_STATE_FILE" >/dev/null 2>&1 || return 1
+  fi
+  systemctl reset-failed caddy-naive mita hysteria-server 2>/dev/null || true
+  systemctl restart caddy-naive >/dev/null 2>&1 || return 1
+  if [[ "$(jq '.users | length' "$MITA_STATE_FILE" 2>/dev/null || echo 0)" -gt 0 ]]; then
+    systemctl restart mita >/dev/null 2>&1 || return 1
+  else
+    systemctl stop mita >/dev/null 2>&1 || true
+    systemctl reset-failed mita >/dev/null 2>&1 || true
+  fi
+  if [[ -f /etc/hysteria/config.yaml && -x /usr/local/bin/hysteria ]]; then
+    systemctl restart hysteria-server >/dev/null 2>&1 || return 1
+  fi
+  ( cd "$PANEL_DIR" && npm install --omit=dev --silent ) || \
+    log_warn "Dependency refresh failed; trying the preserved node_modules"
+  pm2 restart panel-naive-mieru --update-env >/dev/null 2>&1 \
+    || pm2 start "$PANEL_DIR/server/index.js" --name panel-naive-mieru --time >/dev/null 2>&1 \
+    || return 1
+  local attempt
+  for attempt in 1 2 3 4 5; do
+    curl -fsS --max-time 3 http://127.0.0.1:3000/ -o /dev/null 2>/dev/null && return 0
+    sleep 1
+  done
+  return 1
+}
+
+write_rollback_report() {
+  local target="$1" safety="$2" outcome="$3"
+  local report=/root/rixxx-panel-rollback-report.txt
+  {
+    echo "Panel rollback report"
+    echo "Time (UTC): $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "Restored backup: $target"
+    echo "Pre-rollback safety backup: $safety"
+    echo "Outcome: $outcome"
+    echo "Panel version: $(get_current_version)"
+    echo "Verify: sudo bash $PANEL_DIR/update.sh --doctor"
+  } > "$report"
+  chmod 600 "$report"
+  echo "$report"
+}
+
+do_rollback() {
+  log_step "Safe rollback"
+  local target safety report
+  target=$(resolve_rollback_backup "$ROLLBACK_TARGET") || \
+    die "Backup not found or invalid ID: $ROLLBACK_TARGET"
+  validate_rollback_backup "$target" || die "Rollback stopped before changing the server"
+  log_info "Selected backup: $target"
+
+  if ! $YES; then
+    if [[ -r /dev/tty ]]; then
+      read -rp "Restore this backup? A safety snapshot will be created first. [y/N]: " confirm </dev/tty || confirm=""
+      [[ "${confirm^^}" == "Y" ]] || { log_info "Aborted."; return 0; }
+    else
+      die "Non-interactive rollback requires -y"
+    fi
+  fi
+  $DRY_RUN && { log_dry "Would restore $target after creating a safety snapshot"; return 0; }
+
+  safety=$(auto_backup | tail -n1)
+  validate_rollback_backup "$safety" || die "Safety snapshot validation failed; server unchanged"
+  log_info "Safety snapshot: $safety"
+
+  if restore_backup_files "$target" && activate_rollback; then
+    report=$(write_rollback_report "$target" "$safety" "success")
+    log_info "Rollback completed and health check passed ✓"
+    log_info "Report: $report"
+    return 0
+  fi
+
+  log_error "Restored backup did not become healthy; returning to the pre-rollback state"
+  if restore_backup_files "$safety" && activate_rollback; then
+    report=$(write_rollback_report "$target" "$safety" "failed; safety snapshot restored")
+    log_warn "Rollback was cancelled automatically; original state restored"
+    log_warn "Report: $report"
+    return 1
+  fi
+  report=$(write_rollback_report "$target" "$safety" "CRITICAL: rollback and safety restore failed")
+  log_error "Automatic recovery failed. Report: $report"
+  log_error "Run: sudo bash $PANEL_DIR/update.sh --doctor"
+  return 2
+}
+
 # ── --expose mode (v1.4.0) ────────────────────────────────────────────────────
 # Switch the panel to EXTERNAL access via a dedicated TLS subdomain. The panel
 # itself keeps listening on loopback (127.0.0.1:3000); Caddy reverse_proxies to
@@ -2420,6 +2625,7 @@ main() {
   case "$MODE" in
     status)   check_install; load_config; do_status ;;
     doctor)   check_install; load_config; do_doctor || exit $? ;;
+    rollback) check_install; load_config; do_rollback || exit $? ;;
     expose)   check_install; load_config; do_expose ;;
     ssh-only) check_install; load_config; do_ssh_only ;;
     repair)   check_install; load_config; do_repair ;;
@@ -2428,4 +2634,6 @@ main() {
   esac
 }
 
-main "$@"
+if [[ "${RIXXX_UPDATE_LIBRARY_ONLY:-0}" != "1" ]]; then
+  main "$@"
+fi

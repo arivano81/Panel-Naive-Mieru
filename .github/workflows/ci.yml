@@ -39,7 +39,7 @@ jobs:
         release: ['12', '13']
     steps:
       - name: Install runner prerequisites
-        run: apt-get update && apt-get install -y --no-install-recommends ca-certificates curl git shellcheck xz-utils
+        run: apt-get update && apt-get install -y --no-install-recommends ca-certificates curl git jq shellcheck sqlite3 xz-utils
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -56,6 +56,8 @@ jobs:
         run: |
           find . -type f -name '*.sh' -not -path './panel/node_modules/*' -print0 |
             xargs -0 -n1 bash -n
+      - name: Test rollback lifecycle
+        run: bash tests/rollback-lifecycle.sh
       - name: Run ShellCheck (errors only)
         run: |
           find . -type f -name '*.sh' -not -path './panel/node_modules/*' -print0 |

@@ -34,6 +34,14 @@ ok(/function|do_doctor\(\)/.test(update) && update.includes('No configuration or
   '--doctor explicitly reports its read-only contract');
 ok(update.includes("PRAGMA quick_check;"), '--doctor checks SQLite integrity');
 ok(update.includes('validate --config "$CADDY_FILE"'), '--doctor validates Caddy config');
+ok(update.includes('--rollback)') && update.includes('MODE="rollback"'),
+  'updater parses --rollback mode');
+ok(/validate_rollback_backup\(\)/.test(update), 'rollback validates snapshots before replacement');
+ok(/safety=\$\(auto_backup \| tail -n1\)/.test(update), 'rollback creates a pre-change safety snapshot');
+ok(update.includes('safety snapshot restored'), 'failed rollback automatically restores original state');
+ok(update.includes('rixxx-panel-rollback-report.txt'), 'rollback writes a root-only outcome report');
+ok(update.includes('"${DB_PATH}-wal" "${DB_PATH}-shm"'),
+  'rollback removes newer SQLite WAL/SHM before activating the restored DB');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

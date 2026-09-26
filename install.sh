@@ -61,6 +61,7 @@ die()       { log_error "$*"; exit 1; }
 PANEL_DIR="/opt/panel-naive-mieru"
 PANEL_CONFIG="/etc/rixxx-panel/config.json"
 VERSION_FILE="/etc/rixxx-panel/version"
+COMPONENT_REGISTRY="/etc/rixxx-panel/components.json"
 BACKUP_DIR="/etc/rixxx-panel/backups"
 DB_PATH="/var/lib/rixxx-panel/db.sqlite"
 MITA_STATE_FILE="/var/lib/rixxx-panel/mita-state.json"
@@ -1601,6 +1602,33 @@ maybe_ufw() {
   [[ "${ans^^}" =~ ^(Y|Д)$ ]] && setup_ufw || true
 }
 
+write_component_registry() {
+  local tmp="${COMPONENT_REGISTRY}.new"
+  local hy2_v="" hy2_installed=false
+  if [[ -x /usr/local/bin/hysteria ]]; then
+    hy2_installed=true
+    hy2_v=$(/usr/local/bin/hysteria version 2>/dev/null | head -n1 || true)
+  fi
+  jq -n \
+    --arg generated "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --arg source "$REPO_URL" --arg branch "main" \
+    --arg panel "$CURRENT_VERSION" \
+    --arg caddy "${CADDY_VERSION:-unknown}" \
+    --arg mieru "${MIERU_VERSION:-unknown}" \
+    --arg hy2 "$hy2_v" --argjson hy2Installed "$hy2_installed" \
+    '{schema:1,generatedAt:$generated,source:{repository:$source,branch:$branch},components:{
+      panel:{installed:true,version:$panel,path:"/opt/panel-naive-mieru"},
+      caddyNaive:{installed:true,version:$caddy,path:"/usr/local/bin/caddy-naive"},
+      mieru:{installed:true,version:$mieru,path:"/usr/local/bin/mita"},
+      hysteria2:{installed:$hy2Installed,version:$hy2,path:"/usr/local/bin/hysteria"},
+      vless:{installed:false},openflux:{installed:false}
+    }}' > "$tmp"
+  chmod 644 "$tmp"
+  mv "$tmp" "$COMPONENT_REGISTRY"
+  log_info "$(t "Реестр компонентов записан → $COMPONENT_REGISTRY ✓" \
+    "Component registry written → $COMPONENT_REGISTRY ✓")"
+}
+
 # Save access details before service configuration starts. This intentionally
 # happens early: even if a later download, certificate request or smoke test
 # fails, the administrator still knows the generated credentials. The report
@@ -1802,6 +1830,7 @@ main() {
   install_panel
   write_config_json
   write_version
+  write_component_registry
   tune_network      # BBR + UDP buffers (uses panel/scripts/sysctl_tune.sh)
   ensure_ipv4_preference   # Bug 103: force IPv4 when no working IPv6 route
   maybe_ufw

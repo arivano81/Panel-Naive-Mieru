@@ -51,6 +51,7 @@ trap 'on_error $LINENO' ERR
 PANEL_DIR="/opt/panel-naive-mieru"
 PANEL_CONFIG="/etc/rixxx-panel/config.json"
 VERSION_FILE="/etc/rixxx-panel/version"
+COMPONENT_REGISTRY="/etc/rixxx-panel/components.json"
 BACKUP_DIR="/etc/rixxx-panel/backups"
 DB_PATH="/var/lib/rixxx-panel/db.sqlite"
 MITA_STATE_FILE="/var/lib/rixxx-panel/mita-state.json"
@@ -629,6 +630,33 @@ get_caddy_version_file() {
   else
     echo "unknown"
   fi
+}
+
+write_component_registry() {
+  local tmp="${COMPONENT_REGISTRY}.new"
+  local caddy_v mieru_v hy2_v="" hy2_installed=false
+  caddy_v=$("$CADDY_BIN" version 2>/dev/null | head -n1 || "$CADDY_BIN" --version 2>/dev/null | head -n1 || true)
+  mieru_v=$(mita version 2>/dev/null | head -n1 || true)
+  if [[ -x /usr/local/bin/hysteria ]]; then
+    hy2_installed=true
+    hy2_v=$(/usr/local/bin/hysteria version 2>/dev/null | head -n1 || true)
+  fi
+  jq -n \
+    --arg generated "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --arg source "$REPO_URL" --arg branch "main" \
+    --arg panel "$(get_current_version)" --arg caddy "$caddy_v" \
+    --arg mieru "$mieru_v" --arg hy2 "$hy2_v" \
+    --argjson hy2Installed "$hy2_installed" \
+    '{schema:1,generatedAt:$generated,source:{repository:$source,branch:$branch},components:{
+      panel:{installed:true,version:$panel,path:"/opt/panel-naive-mieru"},
+      caddyNaive:{installed:true,version:$caddy,path:"/usr/local/bin/caddy-naive"},
+      mieru:{installed:true,version:$mieru,path:"/usr/local/bin/mita"},
+      hysteria2:{installed:$hy2Installed,version:$hy2,path:"/usr/local/bin/hysteria"},
+      vless:{installed:false},openflux:{installed:false}
+    }}' > "$tmp"
+  chmod 644 "$tmp"
+  mv "$tmp" "$COMPONENT_REGISTRY"
+  log_info "Component registry updated → $COMPONENT_REGISTRY ✓"
 }
 
 # ── v1.2.3: Rebuild Caddyfile via panel API (rebuild-all endpoint) ────────────
@@ -2142,6 +2170,7 @@ FAKEHTML
   # installed). Sync config.json to the installed VERSION *before* restarting the
   # panel so the freshly-started process reads the correct version.
   sync_config_version
+  write_component_registry
 
   pm2 restart panel-naive-mieru 2>/dev/null || true
 
@@ -2301,6 +2330,7 @@ do_update() {
   # Bug A (v1.3.1): keep config.json's "version" in sync so the UI / PM2 show
   # the real version (centralised in sync_config_version — also used by --repair).
   sync_config_version
+  write_component_registry
 
   # Remove legacy naive paths if present (migration cleanup)
   if [[ -f "$LEGACY_NAIVE_BIN" ]]; then

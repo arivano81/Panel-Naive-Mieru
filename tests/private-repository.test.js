@@ -22,6 +22,13 @@ for (const [name, source] of [['install.sh', install], ['update.sh', update]]) {
 ok(update.includes('curl -H @-'), 'updater keeps the curl authorization header out of argv');
 ok(html.includes('github.com/arivano81/Panel-Naive-Mieru'), 'panel GitHub links point to this fork');
 ok(!html.includes('github.com/cwash797-cmd'), 'panel has no duplicate parent-project link');
+for (const [name, source] of [['install.sh', install], ['update.sh', update]]) {
+  ok(source.includes('COMPONENT_REGISTRY="/etc/rixxx-panel/components.json"'),
+    `${name} uses the canonical component registry path`);
+  ok(/write_component_registry\(\)/.test(source), `${name} defines component registry writer`);
+  ok(source.includes('vless:{installed:false},openflux:{installed:false}'),
+    `${name} reserves disabled VLESS/OpenFlux registry entries`);
+}
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

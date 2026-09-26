@@ -31,8 +31,8 @@ ok(/app\.post\(\s*['"]\/api\/backup\/import['"]\s*,\s*requireAuth/.test(src),
    'POST /api/backup/import is registered and auth-gated');
 ok(/const BACKUP_FORMAT\s*=\s*'rixxx-panel-backup'/.test(backupRestoreSrc),
    'backup format tag is "rixxx-panel-backup"');
-ok(/const BACKUP_SCHEMA\s*=\s*2/.test(backupRestoreSrc),
-   'backup schema version is 2');
+ok(/const BACKUP_SCHEMA\s*=\s*3/.test(backupRestoreSrc),
+   'backup schema version is 3');
 
 // Import must reject a wrong format tag / bad schema / missing sections BEFORE
 // mutating anything.
@@ -66,7 +66,7 @@ ok(/express\.json\(\{\s*limit:\s*'25mb'\s*\}\)/.test(src),
 function makeExport(cfg, users) {
   return {
     format: 'rixxx-panel-backup',
-    schema: 2,
+    schema: 3,
     version: '1.6.0',
     exportedAt: new Date().toISOString(),
     config: cfg,
@@ -76,7 +76,8 @@ function makeExport(cfg, users) {
       expiry: u.expiry || null, protocols: u.protocols || '["naive","mieru"]',
       quotaMB: u.quotaMB || 0, usedMB: u.usedMB || 0,
       createdAt: u.createdAt, updatedAt: u.updatedAt, lastSeen: u.lastSeen || null,
-      sub_token: u.sub_token || null, bonus_links: u.bonus_links || null
+      sub_token: u.sub_token || null, bonus_links: u.bonus_links || null,
+      vless_uuid: u.vless_uuid || null
     }))
   };
 }
@@ -89,17 +90,19 @@ const cfgOld = {
 const usersOld = [
   { id: 'u1', username: 'alice', passHash: '$2a$a', password: 'secretA',
     protocols: '["naive","mieru"]', sub_token: 'token-a',
+    vless_uuid: '22222222-2222-4222-8222-222222222222',
     bonus_links: '[{"url":"vless://example","enabled":true}]', createdAt: 't0', updatedAt: 't0' },
   { id: 'u2', username: 'bob', passHash: '$2a$b', password: 'secretB',
     protocols: '["mieru"]', createdAt: 't0', updatedAt: 't0' }
 ];
 const backup = makeExport(cfgOld, usersOld);
-ok(backup.format === 'rixxx-panel-backup' && backup.schema === 2, 'export shape is tagged');
+ok(backup.format === 'rixxx-panel-backup' && backup.schema === 3, 'export shape is tagged');
 ok(backup.users.length === 2, 'export carries all users');
 ok(backup.users[0].password === 'secretA', 'export preserves plaintext password');
 ok(backup.config.domain === 'old.example.com', 'export carries the domain');
 ok(backup.users[0].sub_token === 'token-a', 'export preserves subscription token');
 ok(backup.users[0].bonus_links.includes('vless://example'), 'export preserves bonus links');
+ok(backup.users[0].vless_uuid === usersOld[0].vless_uuid, 'export preserves VLESS UUID');
 
 // round-trip: JSON serialise/parse must be lossless
 const rt = JSON.parse(JSON.stringify(backup));

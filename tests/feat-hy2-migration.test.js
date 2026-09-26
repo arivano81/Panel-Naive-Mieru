@@ -28,6 +28,8 @@ const UPDATE_SH  = path.join(ROOT, 'update.sh');
 const INSTALL_SH = path.join(ROOT, 'install.sh');
 const WARP_SH    = path.join(ROOT, 'panel', 'scripts', 'warp_egress.sh');
 const SERVER_JS  = path.join(ROOT, 'panel', 'server', 'index.js');
+const CONFIG_MIGRATIONS_JS = path.join(ROOT, 'panel', 'server', 'configMigrations.js');
+const DATABASE_MIGRATIONS_JS = path.join(ROOT, 'panel', 'server', 'databaseMigrations.js');
 const INSTALL_HY2_SH = path.join(ROOT, 'panel', 'scripts', 'install_hysteria.sh');
 const CASCADE_SH = path.join(ROOT, 'panel', 'scripts', 'cascade_mieru.sh');
 
@@ -35,6 +37,8 @@ const upSrc     = fs.readFileSync(UPDATE_SH, 'utf8');
 const instSrc   = fs.readFileSync(INSTALL_SH, 'utf8');
 const warpSrc   = fs.readFileSync(WARP_SH, 'utf8');
 const serverSrc = fs.readFileSync(SERVER_JS, 'utf8');
+const configMigrationSrc = fs.readFileSync(CONFIG_MIGRATIONS_JS, 'utf8');
+const databaseMigrationSrc = fs.readFileSync(DATABASE_MIGRATIONS_JS, 'utf8');
 const hy2Src    = fs.readFileSync(INSTALL_HY2_SH, 'utf8');
 const cascadeSrc= fs.readFileSync(CASCADE_SH, 'utf8');
 
@@ -155,12 +159,12 @@ console.log('\n[6] install.sh: fresh installs ship Hy2 defaults (but do NOT inst
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-console.log('\n[7] server: runtime backfill + install detection + settings endpoint');
+console.log('\n[7] server: explicit config migration + install detection + settings endpoint');
 {
-  ok(/if \(cfg\.hy2Port === undefined \|\| cfg\.hy2Port === null\) cfg\.hy2Port = 443/.test(serverSrc),
-     'server backfills hy2Port on load (belt-and-braces with update.sh)');
-  ok(/if \(cfg\.stack\.hy2\s+=== undefined\) cfg\.stack\.hy2\s+= false/.test(serverSrc),
-     'server backfills stack.hy2=false on load');
+  ok(/if \(config\.hy2Port == null\) config\.hy2Port = 443/.test(configMigrationSrc),
+     'versioned config migration backfills hy2Port');
+  ok(/if \(config\.stack\.hy2 == null\) config\.stack\.hy2 = false/.test(configMigrationSrc),
+     'versioned config migration keeps stack.hy2 opt-in');
   ok(/function hy2Installed\(\)/.test(serverSrc), 'server has hy2Installed() detection');
   ok(/app\.get\('\/api\/settings\/hy2'/.test(serverSrc),
      'server exposes GET /api/settings/hy2 (drives the install card)');
@@ -463,9 +467,9 @@ console.log('\n[14] Subscription link: sub_token, /sub route, universal Hy2, sub
   const caddyTplSrc = fs.readFileSync(path.join(ROOT, 'panel', 'server', 'caddyTemplate.js'), 'utf8');
 
   // ── DB migration: sub_token column + back-fill for existing users ──────────
-  ok(/ALTER TABLE users ADD COLUMN sub_token TEXT/.test(serverSrc),
+  ok(/addColumn\(db, 'users', 'sub_token TEXT'\)/.test(databaseMigrationSrc),
      'server: adds sub_token column (migration)');
-  ok(/sub_token IS NULL OR sub_token = ''/.test(serverSrc),
+  ok(/sub_token IS NULL OR sub_token = ''/.test(databaseMigrationSrc),
      'server: back-fills sub_token for existing users');
   ok(/function getUserBySubToken\(/.test(serverSrc),
      'server: getUserBySubToken() lookup helper defined');

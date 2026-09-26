@@ -3,6 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 const root = path.resolve(__dirname, '..');
 const install = fs.readFileSync(path.join(root, 'install.sh'), 'utf8');
 const update = fs.readFileSync(path.join(root, 'update.sh'), 'utf8');
@@ -42,6 +43,13 @@ ok(update.includes('safety snapshot restored'), 'failed rollback automatically r
 ok(update.includes('rixxx-panel-rollback-report.txt'), 'rollback writes a root-only outcome report');
 ok(update.includes('"${DB_PATH}-wal" "${DB_PATH}-shm"'),
   'rollback removes newer SQLite WAL/SHM before activating the restored DB');
+
+const migrations = spawnSync(process.execPath, [path.join(__dirname, 'database-migrations.test.js')],
+  { stdio: 'inherit' });
+ok(migrations.status === 0, 'explicit SQLite migration regression suite passes');
+const configMigrations = spawnSync(process.execPath, [path.join(__dirname, 'config-migrations.test.js')],
+  { stdio: 'inherit' });
+ok(configMigrations.status === 0, 'explicit config migration regression suite passes');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

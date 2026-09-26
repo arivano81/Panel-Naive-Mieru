@@ -40,6 +40,13 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Replaced best-effort `ALTER TABLE` startup snippets with ordered, transactional
+  SQLite migrations recorded in `PRAGMA user_version`. The legacy nullable-email
+  table rebuild now preserves `sub_token` and `bonus_links` instead of silently
+  dropping those newer columns.
+- Added ordered `config.json` migrations with a persisted `schemaVersion`, safe
+  opt-in defaults and forward-schema refusal. Unknown operator fields and
+  explicit `false` settings are preserved.
 - Fixed installer, updater and panel links that still targeted the parent
   repository. Production installs now stay on this fork's `main` branch.
 - Fixed Mieru rollback snapshots: the old `.last` logic copied the newly-written

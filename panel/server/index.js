@@ -39,6 +39,8 @@ const si             = require('systeminformation');
 const crypto         = require('crypto');   // Bug 100: module-level require so generateSafePassword() has a real Node crypto (not Web-Crypto globalThis.crypto, which lacks randomInt)
 const { readPanelVersion: resolvePanelVersion } = require('./version');
 const { applyFileTransaction } = require('./fileTransaction');
+const { runDatabaseMigrations } = require('./databaseMigrations');
+const { runConfigMigrations } = require('./configMigrations');
 
 // ── Paths ─────────────────────────────────────────────────────────────────────
 const PANEL_CONFIG    = '/etc/rixxx-panel/config.json';
@@ -63,8 +65,10 @@ const LEGACY_NAIVE_BIN = '/usr/local/bin/naive';
 
 // ── Load system config ────────────────────────────────────────────────────────
 let cfg = {};
+let configLoadedFromDisk = false;
 try {
   cfg = JSON.parse(fs.readFileSync(PANEL_CONFIG, 'utf8'));
+  configLoadedFromDisk = true;
 } catch {
   cfg = {
     domain: 'localhost', serverIp: '127.0.0.1',
@@ -127,19 +131,15 @@ try {
   };
 }
 
-// ── Hy2 config normalization ──────────────────────────────────────────────────
-// Existing installs (config.json written before Hy2 support) will NOT have
-// `hy2Port` or `stack`. Backfill safe defaults at load time so the rest of the
-// code can assume they exist. We DO NOT flip stack.hy2 to true here — that only
-// happens after the operator installs Hy2 (POST /api/settings/hy2/install).
-if (cfg.hy2Port === undefined || cfg.hy2Port === null) cfg.hy2Port = 443;
-if (!cfg.stack || typeof cfg.stack !== 'object') {
-  // Legacy config: naive+mieru were always installed together by install.sh.
-  cfg.stack = { naive: true, mieru: true, hy2: false };
+// Ordered config migrations replace scattered runtime backfills. Persist only
+// when a real config was loaded; never write the insecure emergency defaults.
+const configMigration = runConfigMigrations(cfg);
+if (configLoadedFromDisk && configMigration.changed) {
+  const tmp = PANEL_CONFIG + '.migration-new';
+  fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2), { mode: 0o600 });
+  fs.renameSync(tmp, PANEL_CONFIG);
+  fs.chmodSync(PANEL_CONFIG, 0o600);
 }
-if (cfg.stack.naive === undefined) cfg.stack.naive = true;
-if (cfg.stack.mieru === undefined) cfg.stack.mieru = true;
-if (cfg.stack.hy2   === undefined) cfg.stack.hy2   = false;
 
 // Bug 143 (recurring): single source of truth for the displayed version.
 // Precedence, read LIVE so the UI updates the moment update.sh runs:
@@ -187,7 +187,9 @@ try {
       usedMB    REAL    DEFAULT 0,
       createdAt TEXT NOT NULL,
       updatedAt TEXT NOT NULL,
-      lastSeen  TEXT
+      lastSeen  TEXT,
+      sub_token TEXT,
+      bonus_links TEXT
     );
     CREATE TABLE IF NOT EXISTS traffic_snapshots (
       id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -201,94 +203,13 @@ try {
       value TEXT
     );
   `);
-  // Migrate: add password column if missing (upgrade from v1.0.x)
-  try { db.exec(`ALTER TABLE users ADD COLUMN password TEXT NOT NULL DEFAULT ''`); } catch {}
-
-  // v1.8.7: add sub_token column for the per-user subscription link (/sub/:token).
-  // The token is a random, unguessable 128-bit hex string minted at user
-  // creation. It is deliberately SEPARATE from the sequential-ish `id` so the
-  // PUBLIC /sub/:token route can never be enumerated from a leaked id. Existing
-  // users get a token back-filled below (idempotent).
-  try { db.exec(`ALTER TABLE users ADD COLUMN sub_token TEXT`); } catch {}
-  try {
-    const missing = db.prepare(`SELECT id FROM users WHERE sub_token IS NULL OR sub_token = ''`).all();
-    if (missing.length) {
-      const upd = db.prepare(`UPDATE users SET sub_token = ? WHERE id = ?`);
-      const tx  = db.transaction(rows => {
-        for (const r of rows) upd.run(require('crypto').randomBytes(16).toString('hex'), r.id);
-      });
-      tx(missing);
-      console.log(`[DB] back-filled sub_token for ${missing.length} existing user(s)`);
-    }
-  } catch (e) { console.warn('[DB] sub_token back-fill skipped:', e && e.message); }
-
-  // v1.9.0: personal "bonus links" per user (BONUS-LINKS feature).
-  // A nullable JSON-TEXT column holding an array of {url, enabled} objects that
-  // the admin manually attaches to THIS user's subscription (e.g. a vless://
-  // link exported from 3x-ui). Empty/NULL == no bonuses == byte-identical
-  // subscription output as before (see parseUserRow + /sub/:token). The ALTER is
-  // idempotent: a second run throws "duplicate column" which we swallow, so
-  // update.sh never fails on an already-migrated live install. We deliberately
-  // do NOT touch the DB file perms/owner here (stays 600 root:root).
-  try { db.exec(`ALTER TABLE users ADD COLUMN bonus_links TEXT`); } catch {}
-
-  // Migrate: make `email` nullable so it can be optional (TLS cert is set at
-  // install time via Caddy ACME, not per-user). Old schema had `email TEXT
-  // NOT NULL UNIQUE`, which rejects empty/absent emails and collides on ''.
-  // Rebuild the table only if the column is still NOT NULL.
-  try {
-    const cols = db.prepare(`PRAGMA table_info(users)`).all();
-    const emailCol = cols.find(c => c.name === 'email');
-    if (emailCol && emailCol.notnull === 1) {
-      db.exec(`
-        BEGIN TRANSACTION;
-        ALTER TABLE users RENAME TO users_legacy;
-        CREATE TABLE users (
-          id        TEXT PRIMARY KEY,
-          email     TEXT UNIQUE,
-          username  TEXT NOT NULL UNIQUE,
-          passHash  TEXT NOT NULL,
-          password  TEXT NOT NULL DEFAULT '',
-          expiry    TEXT,
-          protocols TEXT DEFAULT '["naive","mieru"]',
-          quotaMB   INTEGER DEFAULT 0,
-          usedMB    REAL    DEFAULT 0,
-          createdAt TEXT NOT NULL,
-          updatedAt TEXT NOT NULL,
-          lastSeen  TEXT
-        );
-        INSERT INTO users
-          (id,email,username,passHash,password,expiry,protocols,quotaMB,usedMB,createdAt,updatedAt,lastSeen)
-        SELECT
-          id,
-          CASE WHEN email='' THEN NULL ELSE email END,
-          username,passHash,password,expiry,protocols,quotaMB,usedMB,createdAt,updatedAt,lastSeen
-        FROM users_legacy;
-        DROP TABLE users_legacy;
-        COMMIT;
-      `);
-      console.log('[DB] migrated users.email -> nullable (email is now optional)');
-    }
-  } catch (e) {
-    try { db.exec('ROLLBACK'); } catch {}
-    console.error('[DB] email-nullable migration skipped:', e.message);
-  }
-
-  // Bug 149 (CRITICAL): servers upgraded from v1.2 have `email TEXT UNIQUE`
-  // (already nullable, so the rebuild above is skipped) but v1.2 *stored* an
-  // empty string '' for users without an email. SQLite treats '' as a real,
-  // distinct value for UNIQUE — so the SECOND empty-email row already collides,
-  // and creating ANY new user fails with "UNIQUE constraint failed: users.email".
-  // Normalise every legacy '' email to NULL unconditionally (NULLs are exempt
-  // from UNIQUE in SQLite, so an unlimited number of users may have no email).
-  try {
-    const fixed = db.prepare(`UPDATE users SET email = NULL WHERE email = ''`).run();
-    if (fixed.changes > 0)
-      console.log(`[DB] Bug 149 fix: normalised ${fixed.changes} legacy empty-string email(s) -> NULL`);
-  } catch (e) {
-    console.error('[DB] empty-email normalisation failed:', e.message);
-  }
+  const migration = runDatabaseMigrations(db);
+  if (migration.tokensBackfilled > 0)
+    console.log(`[DB] back-filled sub_token for ${migration.tokensBackfilled} existing user(s)`);
 } catch (err) {
+  try { if (db) db.close(); } catch {}
+  db = null;
+  if (/newer than supported schema/.test(String(err && err.message))) throw err;
   console.error('[DB] SQLite unavailable:', err.message, '— using in-memory store');
 }
 

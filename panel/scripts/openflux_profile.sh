@@ -122,9 +122,15 @@ NODE
   mv "${config}.new" "$config"
   mv "${meta}.new" "$meta"
 
-  install -d -o root -g root -m 0700 "$bundle"
-  install -o root -g root -m 0600 "$work/profile.key" "$bundle/openflux.key"
-  install -o root -g root -m 0600 "$work/client.conf" "$bundle/client.conf"
+  if [[ -n "$TEST_ROOT" ]]; then
+    install -d -m 0700 "$bundle"
+    install -m 0600 "$work/profile.key" "$bundle/openflux.key"
+    install -m 0600 "$work/client.conf" "$bundle/client.conf"
+  else
+    install -d -o root -g root -m 0700 "$bundle"
+    install -o root -g root -m 0600 "$work/profile.key" "$bundle/openflux.key"
+    install -o root -g root -m 0600 "$work/client.conf" "$bundle/client.conf"
+  fi
   committed=1
   jq -n --arg id "$id" --argjson port "$port" --arg host "$host" --arg service "$service" \
     --arg bundle "$bundle" \

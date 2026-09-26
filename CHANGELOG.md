@@ -30,6 +30,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   explicit installation and profile list/create/start/stop/restart/remove.
   Routes delegate only to the isolated argument-safe lifecycle service, expose
   no key material, and do not activate a newly installed component.
+- Added a separate OpenFlux Experimental page for explicit install and
+  profile create/start/stop/restart/remove. It keeps client bundles on the
+  server, warns about the one-client model, and never edits shared users.
 
 - Began VLESS stage B with an isolated REALITY/Vision config adapter and a
   pinned Xray-core `v26.3.27` installer. The installer verifies the official

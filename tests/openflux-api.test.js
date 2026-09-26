@@ -7,6 +7,8 @@ const { createOpenFluxService, safeFailure } = require('../panel/server/openflux
 const root = path.resolve(__dirname, '..');
 const routes = fs.readFileSync(path.join(root, 'panel/server/openfluxRoutes.js'), 'utf8');
 const server = fs.readFileSync(path.join(root, 'panel/server/index.js'), 'utf8');
+const html = fs.readFileSync(path.join(root, 'panel/public/index.html'), 'utf8');
+const ui = fs.readFileSync(path.join(root, 'panel/public/app.js'), 'utf8');
 let pass = 0, fail = 0;
 function ok(value, message) {
   if (value) { console.log('  ✓', message); pass++; }
@@ -45,6 +47,14 @@ for (const route of [
 ok(routes.includes("new Set(['start', 'stop', 'restart'])"), 'action endpoint has an explicit allowlist');
 ok(!/caddy|mieru|hysteria|xray|warp|cascade/i.test(routes), 'OpenFlux routes cannot address the primary stack');
 ok(server.includes('registerOpenFluxRoutes(app, requireAuth, openFluxService)'), 'isolated routes are registered by the panel');
+ok(html.includes('id="page-openflux"') && html.includes('OpenFlux Experimental'),
+  'OpenFlux is visually separated on an experimental page');
+ok(html.includes('/root/openflux-&lt;id&gt;-client') && html.includes('Секрет не передаётся браузеру'),
+  'UI explains the server-only client bundle boundary');
+ok(ui.includes("case 'openflux':    loadOpenFlux()") && ui.includes("'/api/openflux/profiles'"),
+  'page loads isolated profile state and creates profiles through its namespace');
+ok(ui.includes("['start', 'stop', 'restart'].includes(action)"), 'browser action dispatcher repeats the server allowlist');
+ok(!/protocols[^\n]*openflux/i.test(ui), 'UI never adds OpenFlux to shared user protocols');
 ok(!safeFailure({ stderr: 'one\ntwo\nthree\nfour' }).includes('one'), 'external failure output is length-bounded to its tail');
 
 const absent = createOpenFluxService({

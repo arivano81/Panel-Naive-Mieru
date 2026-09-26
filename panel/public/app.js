@@ -161,6 +161,7 @@ function buildTitles() {
     dashboard:   t('nav.dashboard'),
     users:       t('nav.users'),
     settings:    t('nav.settings'),
+    openflux:    'OpenFlux Experimental',
     federation:  t('nav.federation'),
     monitoring:  t('nav.monitoring'),
     logs:        t('nav.logs'),
@@ -309,6 +310,11 @@ function handleDelegatedClick(e) {
     case 'change-hy2-port':      changeHy2Port(); break;
     case 'install-vless':        installVless(); break;
     case 'rebuild-vless':        rebuildVless(); break;
+    case 'openflux-install':     installOpenFlux(); break;
+    case 'openflux-create':      createOpenFluxProfile(); break;
+    case 'openflux-refresh':     loadOpenFlux(); break;
+    case 'openflux-action':      openFluxProfileAction(btn.dataset.id, btn.dataset.profileAction); break;
+    case 'openflux-remove':      removeOpenFluxProfile(btn.dataset.id); break;
     case 'change-traffic-pattern': changeTrafficPattern(); break;
     case 'change-udp-mode':      changeUdpMode(); break;
     case 'change-language':      changeLanguage(); break;
@@ -452,6 +458,7 @@ function navigateTo(page) {
     case 'dashboard':   loadDashboard();   break;
     case 'users':       loadUsers();       break;
     case 'settings':    loadSettings();    break;
+    case 'openflux':    loadOpenFlux();    break;
     case 'federation':  loadFederation();  break;
     case 'monitoring':  loadMonitoring();  break;
     case 'logs':        loadLogs(currentLogService); break;
@@ -1962,6 +1969,92 @@ async function rebuildVless() {
     renderVlessCard(v);
     showMsg('vless-rebuild-msg', 'Конфигурация проверена и применена', true);
   } catch (error) { showMsg('vless-rebuild-msg', error.message, false); }
+}
+
+// ── OpenFlux Experimental ────────────────────────────────────────────────────
+async function loadOpenFlux() {
+  const rows = el('openflux-profiles');
+  try {
+    const data = await api('GET', '/api/openflux');
+    if (el('openflux-version')) el('openflux-version').textContent = `v${data.version || '0.0.5'}`;
+    el('openflux-not-installed')?.classList.toggle('hidden', !!data.installed);
+    el('openflux-installed')?.classList.toggle('hidden', !data.installed);
+    const profiles = Array.isArray(data.profiles) ? data.profiles : [];
+    if (!rows) return;
+    if (!profiles.length) {
+      rows.innerHTML = `<tr><td colspan="5">${data.installed ? 'Профили ещё не созданы.' : 'Сначала установите компонент.'}</td></tr>`;
+      return;
+    }
+    rows.innerHTML = profiles.map(p => {
+      const active = p.active === true;
+      const stateLabel = active ? '● active' : (p.enabled ? '○ enabled / inactive' : '○ stopped');
+      return `<tr>
+        <td><strong>${esc(p.id)}</strong></td><td>${esc(p.host || '—')}</td><td>${Number(p.port)}/tcp</td>
+        <td><span class="${active ? 'text-success' : ''}">${stateLabel}</span></td>
+        <td class="actions-cell">
+          <button class="btn btn-xs ${active ? 'btn-warning' : 'btn-success'}" data-action="openflux-action"
+            data-id="${esc(p.id)}" data-profile-action="${active ? 'stop' : 'start'}">${active ? 'Остановить' : 'Запустить'}</button>
+          ${active ? `<button class="btn btn-xs btn-secondary" data-action="openflux-action" data-id="${esc(p.id)}" data-profile-action="restart">Перезапустить</button>` : ''}
+          <button class="btn btn-xs btn-danger" data-action="openflux-remove" data-id="${esc(p.id)}">Удалить</button>
+        </td></tr>`;
+    }).join('');
+  } catch (error) {
+    if (rows) rows.innerHTML = `<tr><td colspan="5">${esc(error.message)}</td></tr>`;
+    toast(error.message, 'error');
+  }
+}
+
+async function installOpenFlux() {
+  if (!confirm('Установить экспериментальный OpenFlux? Профили, порты и службы автоматически запущены не будут.')) return;
+  const btn = el('btn-openflux-install');
+  setBtnBusy(btn, true);
+  showMsg('openflux-msg', 'Загрузка и проверка закреплённого релиза…', true);
+  try {
+    await api('POST', '/api/openflux/install', {});
+    showMsg('openflux-msg', 'OpenFlux установлен, но не активирован.', true);
+    toast('OpenFlux установлен без запуска служб', 'success');
+    await loadOpenFlux();
+  } catch (error) { showMsg('openflux-msg', error.message, false); }
+  finally { setBtnBusy(btn, false); }
+}
+
+async function createOpenFluxProfile() {
+  const id = (el('openflux-id')?.value || '').trim();
+  const port = Number(el('openflux-port')?.value);
+  const host = (el('openflux-host')?.value || '').trim();
+  if (!/^[a-z][a-z0-9-]{0,31}$/.test(id))
+    return showMsg('openflux-msg', 'Имя: строчные a-z, цифры и дефис; первый символ — буква.', false);
+  if (!Number.isInteger(port) || port < 1024 || port > 65535)
+    return showMsg('openflux-msg', 'Порт должен быть в диапазоне 1024–65535.', false);
+  if (!host) return showMsg('openflux-msg', 'Укажите публичный IP или домен сервера.', false);
+  const btn = el('btn-openflux-create');
+  setBtnBusy(btn, true);
+  try {
+    const result = await api('POST', '/api/openflux/profiles', { id, port, host });
+    showMsg('openflux-msg', `Профиль создан и остановлен. Bundle: ${result.clientBundle}`, true);
+    toast('OpenFlux-профиль создан без запуска', 'success');
+    await loadOpenFlux();
+  } catch (error) { showMsg('openflux-msg', error.message, false); }
+  finally { setBtnBusy(btn, false); }
+}
+
+async function openFluxProfileAction(id, action) {
+  if (!['start', 'stop', 'restart'].includes(action)) return;
+  if (action === 'start' && !confirm(`Открыть порт и запустить профиль ${id}?`)) return;
+  try {
+    await api('POST', `/api/openflux/profiles/${encodeURIComponent(id)}/${action}`, {});
+    toast(`OpenFlux ${id}: ${action}`, 'success');
+    await loadOpenFlux();
+  } catch (error) { toast(error.message, 'error'); }
+}
+
+async function removeOpenFluxProfile(id) {
+  if (!confirm(`Безвозвратно удалить профиль ${id}, его ключ и client bundle?`)) return;
+  try {
+    await api('DELETE', `/api/openflux/profiles/${encodeURIComponent(id)}`);
+    toast(`Профиль ${id} удалён`, 'success');
+    await loadOpenFlux();
+  } catch (error) { toast(error.message, 'error'); }
 }
 
 // ── Hy2 (Hysteria2) ──────────────────────────────────────────────────────────

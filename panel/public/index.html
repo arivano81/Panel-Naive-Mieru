@@ -110,6 +110,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         <span data-i18n="nav.settings">Server Settings</span>
       </a>
+      <a href="#" class="nav-item" data-page="openflux">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h8l-1 8 10-12h-8z"/></svg>
+        <span>OpenFlux <small style="color:var(--warning)">Experimental</small></span>
+      </a>
       <a href="#" class="nav-item" data-page="federation">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><line x1="12" y1="8" x2="5" y2="16"/><line x1="12" y1="8" x2="19" y2="16"/></svg>
         <span data-i18n="nav.federation">Federation</span>
@@ -936,6 +940,43 @@
               <a href="https://github.com/klzgrad/naiveproxy/releases"      target="_blank" class="app-link">🛡 NaiveProxy CLI</a>
             </div>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- OpenFlux is deliberately separate from shared users and stable protocols. -->
+    <section id="page-openflux" class="content-page">
+      <div class="page-header"><h3>OpenFlux Experimental</h3></div>
+      <div class="alert alert-warning" style="margin-bottom:16px">
+        <strong>⚠ Экспериментальная функция.</strong>
+        OpenFlux не входит в общие ключи и Sub-ссылки. Один профиль предназначен для одного
+        активного клиента. Используйте только после проверки доступа к серверу по SSH.
+      </div>
+      <div class="card">
+        <div class="card-header">Компонент OpenFlux <span id="openflux-version"></span></div>
+        <div class="card-body">
+          <div id="openflux-not-installed">
+            <p class="card-desc">Установка загрузит закреплённый и проверенный бинарник, но не откроет порт и не запустит службу.</p>
+            <button class="btn btn-primary" id="btn-openflux-install" data-action="openflux-install">Установить OpenFlux</button>
+          </div>
+          <div id="openflux-installed" class="hidden">
+            <div class="alert alert-success"><strong>✓</strong> Компонент установлен. Каждый профиль запускается отдельно.</div>
+            <div class="form-row">
+              <div class="form-group"><label>Имя профиля</label><input id="openflux-id" placeholder="phone" maxlength="32" /></div>
+              <div class="form-group"><label>TCP-порт</label><input id="openflux-port" type="number" min="1024" max="65535" value="18445" /></div>
+              <div class="form-group"><label>Публичный IP или домен</label><input id="openflux-host" placeholder="vpn.example.com" /></div>
+            </div>
+            <button class="btn btn-primary" id="btn-openflux-create" data-action="openflux-create">Создать остановленный профиль</button>
+            <p class="card-desc" style="margin-top:10px">Клиентский bundle сохраняется только на сервере в <code>/root/openflux-&lt;id&gt;-client</code>. Секрет не передаётся браузеру.</p>
+          </div>
+          <div id="openflux-msg" class="msg-inline hidden"></div>
+        </div>
+      </div>
+      <div class="card" id="openflux-profiles-card">
+        <div class="card-header">Профили <button class="btn btn-ghost btn-sm" data-action="openflux-refresh">Обновить</button></div>
+        <div class="card-body table-wrap">
+          <table><thead><tr><th>Имя</th><th>Адрес</th><th>Порт</th><th>Состояние</th><th>Действия</th></tr></thead>
+            <tbody id="openflux-profiles"><tr><td colspan="5">Загрузка…</td></tr></tbody></table>
         </div>
       </div>
     </section>

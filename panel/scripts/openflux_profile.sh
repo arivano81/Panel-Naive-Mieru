@@ -182,13 +182,17 @@ restart_profile() {
 }
 
 status_profile() {
-  local id=$1 meta service active=false enabled=false
+  local id=$1 meta service port active=false enabled=false listening=false healthy=false
   valid_id "$id" || die "invalid profile id"
   require_profile "$id"; meta=$(profile_meta "$id"); service=$(service_name "$id")
+  port=$(jq -er '.port' "$meta"); valid_port "$port" || die "invalid stored port"
   systemctl is-active --quiet "$service" && active=true
   systemctl is-enabled --quiet "$service" && enabled=true
+  port_is_busy "$port" && listening=true
+  [[ "$active" == true && "$listening" == true ]] && healthy=true
   jq --arg service "$service" --argjson active "$active" --argjson enabled "$enabled" \
-    '. + {service:$service,active:$active,enabled:$enabled}' "$meta"
+    --argjson listening "$listening" --argjson healthy "$healthy" \
+    '. + {service:$service,active:$active,enabled:$enabled,listening:$listening,healthy:$healthy}' "$meta"
 }
 
 list_profiles() {

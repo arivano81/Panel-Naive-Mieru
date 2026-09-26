@@ -31,6 +31,9 @@ ok(script.includes('buildOpenFluxExitConfig') && script.includes('buildOpenFluxC
   'server and client configs use the validated adapter');
 ok(script.includes('port_is_busy "$port"') && script.includes('select(.port == $port)'),
   'live and assigned port collisions are rejected');
+ok(script.includes('listening:$listening,healthy:$healthy') &&
+   script.includes('[[ "$active" == true && "$listening" == true ]]'),
+  'status requires both an active unit and its assigned listening socket');
 ok(script.includes('systemctl enable --now "$service"') && script.includes('systemctl is-active --quiet "$service"'),
   'start enables reboot persistence and checks service health');
 ok(script.includes('profile failed its systemd health check; activation rolled back') &&

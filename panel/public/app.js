@@ -2034,10 +2034,13 @@ async function loadOpenFlux() {
     }
     rows.innerHTML = profiles.map(p => {
       const active = p.active === true;
-      const stateLabel = active ? '● active' : (p.enabled ? '○ enabled / inactive' : '○ stopped');
+      const stateLabel = active
+        ? (p.listening === true ? '● active · port listening' : '⚠ active · port closed')
+        : (p.enabled ? '○ enabled / inactive' : '○ stopped');
+      const healthy = p.healthy === true;
       return `<tr>
         <td><strong>${esc(p.id)}</strong></td><td>${esc(p.host || '—')}</td><td>${Number(p.port)}/tcp</td>
-        <td><span class="${active ? 'text-success' : ''}">${stateLabel}</span></td>
+        <td><span class="${healthy ? 'text-success' : (active ? 'text-warning' : '')}">${stateLabel}</span></td>
         <td class="actions-cell">
           <button class="btn btn-xs ${active ? 'btn-warning' : 'btn-success'}" data-action="openflux-action"
             data-id="${esc(p.id)}" data-profile-action="${active ? 'stop' : 'start'}">${active ? 'Остановить' : 'Запустить'}</button>

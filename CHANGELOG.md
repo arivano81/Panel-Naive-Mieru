@@ -53,6 +53,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added transactional OpenFlux key rotation with administrator password
   confirmation. Active profiles restart and health-check; a failed restart
   restores both server and client keys and returns the service to the old key.
+- OpenFlux profile status now verifies that the assigned TCP socket is actually
+  listening. The Experimental page distinguishes a healthy active profile from
+  an active unit whose port is unexpectedly closed.
 - Documented the OpenFlux share-link compatibility gate: pinned release `0.0.5`
   has no `--share` or `openflux://` implementation, so the panel deliberately
   keeps the verified client bundle instead of inventing an incompatible QR URI.

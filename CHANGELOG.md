@@ -56,6 +56,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - OpenFlux profile status now verifies that the assigned TCP socket is actually
   listening. The Experimental page distinguishes a healthy active profile from
   an active unit whose port is unexpectedly closed.
+- Added an idempotent OpenFlux profile Repair/reset action. Start, restart and
+  reset now wait for the assigned listener; an active unit without a socket is
+  disabled and its scoped firewall rule is removed instead of reporting success.
 - Documented the OpenFlux share-link compatibility gate: pinned release `0.0.5`
   has no `--share` or `openflux://` implementation, so the panel deliberately
   keeps the verified client bundle instead of inventing an incompatible QR URI.

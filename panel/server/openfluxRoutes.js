@@ -1,7 +1,7 @@
 'use strict';
 
 const PROFILE_ID_RE = /^[a-z][a-z0-9-]{0,31}$/;
-const ACTIONS = new Set(['start', 'stop', 'restart']);
+const ACTIONS = new Set(['start', 'stop', 'restart', 'reset']);
 
 function registerOpenFluxRoutes(app, requireAuth, service, verifyAdminPassword, secretExportLimiter) {
   const replyError = (res, error) => res.status(error.status || 500)

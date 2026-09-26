@@ -2045,6 +2045,7 @@ async function loadOpenFlux() {
           <button class="btn btn-xs ${active ? 'btn-warning' : 'btn-success'}" data-action="openflux-action"
             data-id="${esc(p.id)}" data-profile-action="${active ? 'stop' : 'start'}">${active ? 'Остановить' : 'Запустить'}</button>
           ${active ? `<button class="btn btn-xs btn-secondary" data-action="openflux-action" data-id="${esc(p.id)}" data-profile-action="restart">Перезапустить</button>` : ''}
+          <button class="btn btn-xs btn-secondary" data-action="openflux-action" data-id="${esc(p.id)}" data-profile-action="reset">Repair</button>
           <button class="btn btn-xs btn-ghost" data-action="openflux-logs" data-id="${esc(p.id)}">Журнал</button>
           <button class="btn btn-xs btn-secondary" data-action="openflux-bundle" data-id="${esc(p.id)}">Скачать bundle</button>
           <button class="btn btn-xs btn-warning" data-action="openflux-rotate" data-id="${esc(p.id)}">Сменить ключ</button>
@@ -2092,7 +2093,7 @@ async function createOpenFluxProfile() {
 }
 
 async function openFluxProfileAction(id, action) {
-  if (!['start', 'stop', 'restart'].includes(action)) return;
+  if (!['start', 'stop', 'restart', 'reset'].includes(action)) return;
   if (action === 'start' && !confirm(`Открыть порт и запустить профиль ${id}?`)) return;
   try {
     await api('POST', `/api/openflux/profiles/${encodeURIComponent(id)}/${action}`, {});

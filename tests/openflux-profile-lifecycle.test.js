@@ -17,7 +17,7 @@ function ok(value, message) {
 console.log('OpenFlux profile lifecycle regression test');
 const syntax = spawnSync('bash', ['-n', 'panel/scripts/openflux_profile.sh'], { cwd: root, encoding: 'utf8' });
 ok(syntax.status === 0, `profile CLI has valid Bash syntax${syntax.stderr ? `: ${syntax.stderr}` : ''}`);
-for (const action of ['list', 'create', 'start', 'stop', 'restart', 'rotate', 'status', 'remove']) {
+for (const action of ['list', 'create', 'start', 'stop', 'restart', 'reset', 'rotate', 'status', 'remove']) {
   ok(new RegExp(`\\b${action}\\)`).test(script), `${action} command is explicitly dispatched`);
 }
 ok(script.includes('flock -n 9'), 'profile mutations are serialized');
@@ -70,7 +70,13 @@ case "$cmd" in
 esac
 `, { mode: 0o755 });
   fs.writeFileSync(path.join(bin, 'ufw'), '#!/bin/sh\nprintf "%s\\n" "$*" >> "$OPENFLUX_TEST_STATE/ufw.log"\n', { mode: 0o755 });
-  fs.writeFileSync(path.join(bin, 'ss'), '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+  fs.writeFileSync(path.join(bin, 'ss'), `#!/bin/sh
+set -eu
+[ "\${OPENFLUX_TEST_NO_LISTENER:-0}" != 1 ] || exit 1
+set -- "$OPENFLUX_TEST_STATE"/*.active
+[ -e "$1" ] || exit 1
+echo 'LISTEN 0 4096 0.0.0.0:18445 0.0.0.0:*'
+`, { mode: 0o755 });
   const env = { ...process.env, OPENFLUX_TEST_ROOT: fixture, OPENFLUX_TEST_STATE: state,
     PATH: `${bin}:${process.env.PATH}` };
   const run = (args, extra = {}) => spawnSync('bash', ['panel/scripts/openflux_profile.sh', ...args],
@@ -99,11 +105,18 @@ esac
   ok(firewallAfterFailure.includes('allow 18445/tcp comment RIXXX OpenFlux alpha') &&
     firewallAfterFailure.includes('delete allow 18445/tcp comment RIXXX OpenFlux alpha'),
   'failed start removes the same scoped firewall rule');
+  const missingListener = run(['start', 'alpha'], { OPENFLUX_TEST_NO_LISTENER: '1' });
+  ok(missingListener.status !== 0 &&
+    !fs.existsSync(path.join(state, 'openflux-exit@alpha.service.active')),
+  'active unit without a listening socket is rolled back');
   const started = run(['start', 'alpha']);
   let startedJson = null;
   try { startedJson = JSON.parse(started.stdout); } catch {}
   ok(started.status === 0 && startedJson?.active === true,
     `fixture starts and enables the instance${started.stderr ? `: ${started.stderr.trim()}` : ''}`);
+  const reset = run(['reset', 'alpha']);
+  ok(reset.status === 0 && JSON.parse(reset.stdout).reset === true && JSON.parse(reset.stdout).listening === true,
+    'reset repairs and health-checks the same profile idempotently');
   const oldKey = fs.readFileSync(secretPath, 'utf8');
   const rotated = run(['rotate', 'alpha']);
   const rotatedKey = fs.readFileSync(secretPath, 'utf8');

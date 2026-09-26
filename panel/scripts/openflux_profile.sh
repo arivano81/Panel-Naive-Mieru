@@ -74,6 +74,16 @@ port_is_busy() {
   ss -H -ltn "sport = :$1" 2>/dev/null | grep -q .
 }
 
+wait_for_port() {
+  local port=$1 attempt attempts=20
+  [[ -z "$TEST_ROOT" ]] || attempts=2
+  for (( attempt=1; attempt<=attempts; attempt++ )); do
+    port_is_busy "$port" && return 0
+    sleep 0.25
+  done
+  return 1
+}
+
 create_profile() (
   local id=$1 port=$2 host=$3 config meta secret service work bundle existing committed=0
   valid_id "$id" || die "invalid profile id"
@@ -150,7 +160,8 @@ start_profile() {
   fi
   port_is_busy "$port" && die "TCP port $port is already in use"
   firewall_add "$id" "$port"
-  if ! systemctl enable --now "$service" >/dev/null 2>&1 || ! systemctl is-active --quiet "$service"; then
+  if ! systemctl enable --now "$service" >/dev/null 2>&1 ||
+     ! systemctl is-active --quiet "$service" || ! wait_for_port "$port"; then
     systemctl disable --now "$service" >/dev/null 2>&1 || true
     firewall_remove "$id" "$port"
     die "profile failed its systemd health check; activation rolled back"
@@ -172,13 +183,35 @@ stop_profile() {
 }
 
 restart_profile() {
-  local id=$1 service
+  local id=$1 service meta port
   valid_id "$id" || die "invalid profile id"
   require_installation; require_profile "$id"; service=$(service_name "$id")
+  meta=$(profile_meta "$id"); port=$(jq -er '.port' "$meta"); valid_port "$port" || die "invalid stored port"
   systemctl is-active --quiet "$service" || die "profile is not active"
   systemctl restart "$service"
-  systemctl is-active --quiet "$service" || die "profile failed after restart"
+  systemctl is-active --quiet "$service" && wait_for_port "$port" || die "profile failed after restart"
   jq -n --arg id "$id" --arg service "$service" '{id:$id,service:$service,active:true,restarted:true}'
+}
+
+reset_profile() {
+  local id=$1 meta port service
+  valid_id "$id" || die "invalid profile id"
+  require_installation; require_profile "$id"
+  meta=$(profile_meta "$id"); port=$(jq -er '.port' "$meta"); valid_port "$port" || die "invalid stored port"
+  service=$(service_name "$id")
+  systemctl disable --now "$service" >/dev/null 2>&1 || true
+  firewall_remove "$id" "$port"
+  systemctl reset-failed "$service" >/dev/null 2>&1 || true
+  port_is_busy "$port" && die "TCP port $port is still in use after stopping the profile"
+  firewall_add "$id" "$port"
+  if ! systemctl enable --now "$service" >/dev/null 2>&1 ||
+     ! systemctl is-active --quiet "$service" || ! wait_for_port "$port"; then
+    systemctl disable --now "$service" >/dev/null 2>&1 || true
+    firewall_remove "$id" "$port"
+    die "profile reset failed its listener health check; activation rolled back"
+  fi
+  jq -n --arg id "$id" --arg service "$service" --argjson port "$port" \
+    '{id:$id,service:$service,port:$port,active:true,listening:true,reset:true}'
 }
 
 status_profile() {
@@ -272,7 +305,7 @@ remove_profile() {
 }
 
 usage() {
-  echo "Usage: $0 list | create <id> <port> <public-host> | start|stop|restart|rotate|status|remove <id>" >&2
+  echo "Usage: $0 list | create <id> <port> <public-host> | start|stop|restart|reset|rotate|status|remove <id>" >&2
   exit 2
 }
 
@@ -283,6 +316,7 @@ case "$ACTION" in
   start)   [[ $# -eq 2 ]] || usage; start_profile "$ID" ;;
   stop)    [[ $# -eq 2 ]] || usage; stop_profile "$ID" ;;
   restart) [[ $# -eq 2 ]] || usage; restart_profile "$ID" ;;
+  reset)   [[ $# -eq 2 ]] || usage; reset_profile "$ID" ;;
   rotate)  [[ $# -eq 2 ]] || usage; rotate_profile "$ID" ;;
   status)  [[ $# -eq 2 ]] || usage; status_profile "$ID" ;;
   remove)  [[ $# -eq 2 ]] || usage; remove_profile "$ID" ;;

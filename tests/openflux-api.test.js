@@ -61,7 +61,7 @@ for (const route of [
   "app.get('/api/openflux/profiles/:id/logs', requireAuth",
   "app.delete('/api/openflux/profiles/:id', requireAuth",
 ]) ok(routes.includes(route), `${route.split(',')[0]} is authenticated`);
-ok(routes.includes("new Set(['start', 'stop', 'restart'])"), 'action endpoint has an explicit allowlist');
+ok(routes.includes("new Set(['start', 'stop', 'restart', 'reset'])"), 'action endpoint has an explicit allowlist');
 ok(!/caddy|mieru|hysteria|xray|warp|cascade/i.test(routes), 'OpenFlux routes cannot address the primary stack');
 ok(server.includes('registerOpenFluxRoutes(app, requireAuth, openFluxService,'), 'isolated routes are registered by the panel');
 ok(html.includes('id="page-openflux"') && html.includes('OpenFlux Experimental'),
@@ -70,7 +70,7 @@ ok(html.includes('/root/openflux-&lt;id&gt;-client') && html.includes('Секр�
   'UI explains the server-only client bundle boundary');
 ok(ui.includes("case 'openflux':    loadOpenFlux()") && ui.includes("'/api/openflux/profiles'"),
   'page loads isolated profile state and creates profiles through its namespace');
-ok(ui.includes("['start', 'stop', 'restart'].includes(action)"), 'browser action dispatcher repeats the server allowlist');
+ok(ui.includes("['start', 'stop', 'restart', 'reset'].includes(action)"), 'browser action dispatcher repeats the server allowlist');
 ok(ui.includes("case 'openflux-logs'") && html.includes('id="openflux-logs"'), 'UI exposes the filtered per-profile journal');
 ok(routes.includes('verifyAdminPassword(req.body.password)') && routes.includes("'Cache-Control', 'no-store'"),
   'secret bundle export requires password re-authentication and disables caching');

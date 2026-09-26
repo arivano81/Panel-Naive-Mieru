@@ -125,6 +125,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Consolidated regression coverage for the existing dedicated login,
+  subscription-token and federation rate limits, including every public
+  federation mutation endpoint.
 - Added a bounded SQLite administrator audit log for authenticated mutations.
   It records time, account, method, route, result, source address and duration,
   never request bodies or query strings, and is available under **Logs → Audit**.

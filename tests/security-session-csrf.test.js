@@ -44,6 +44,12 @@ ok(ui.includes("opts.headers['X-CSRF-Token'] = state.csrfToken") &&
   'shared API helper and direct secret download send the CSRF header');
 ok(ui.includes("headers: state.csrfToken ? { 'X-CSRF-Token': state.csrfToken } : {}"),
   'logout sends CSRF protection before clearing browser state');
+ok(/const loginLimiter = rateLimit\([\s\S]*app\.post\('\/api\/login', loginLimiter,/.test(server),
+  'administrator login has a dedicated brute-force limiter');
+ok(/const subLimiter = rateLimit\([\s\S]*app\.get\('\/sub\/:token', subLimiter,/.test(server),
+  'public subscription links have a dedicated token-probing limiter');
+ok(/const fedLimiter = rateLimit\([\s\S]*app\.post\('\/api\/federation\/fetch', fedLimiter,[\s\S]*app\.post\('\/api\/federation\/provision', fedLimiter,[\s\S]*app\.post\('\/api\/federation\/deprovision', fedLimiter,/.test(server),
+  'all public federation operations share their dedicated limiter');
 
 console.log(`\nResult: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

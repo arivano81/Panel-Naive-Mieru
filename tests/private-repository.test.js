@@ -127,6 +127,11 @@ const logRedaction = spawnSync(process.execPath, [path.join(__dirname, 'log-reda
 if (logRedaction.stdout) process.stdout.write(logRedaction.stdout);
 if (logRedaction.stderr) process.stderr.write(logRedaction.stderr);
 ok(logRedaction.status === 0, 'sensitive log redaction regression suite passes');
+const securityPolicy = spawnSync(process.execPath, [path.join(__dirname, 'security-policy.test.js')],
+  { encoding: 'utf8' });
+if (securityPolicy.stdout) process.stdout.write(securityPolicy.stdout);
+if (securityPolicy.stderr) process.stderr.write(securityPolicy.stderr);
+ok(securityPolicy.status === 0, 'security reporting and release revocation policy suite passes');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

@@ -125,6 +125,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Documented private vulnerability reporting, administrator containment and a
+  non-silent release revocation procedure in `SECURITY.md`.
 - Added centralized runtime and HTTP access-log redaction for passwords, UUIDs,
   tokens, private keys and complete subscription URLs. Generated installation
   credentials now bypass the persistent log and remain available only on the

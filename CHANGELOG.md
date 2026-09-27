@@ -14,6 +14,12 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Pinned wgcf 2.2.22 checksums for every supported Linux architecture. WARP
   setup now rejects unknown architectures and checksum mismatches and no longer
   falls back to an unreviewed `latest` download.
+- Kept the WARP health-check diagnostic on stderr so command substitution
+  captures only the IP address and emits a valid one-line `WARP_RESULT=ok`.
+- Verified WARP persistence on a real Debian 13 VPS: after a full reboot an
+  official Xray 26.3.27 VLESS client reached the Internet through the measured
+  Cloudflare egress IP, while SSH remained reachable; teardown restored the
+  original routing, firewall and core configuration state.
 
 - Began VLESS XHTTP stage F with an opt-in config adapter: a loopback-only
   XHTTP `mode=auto` inbound, TLS client link, and path-scoped unbuffered Caddy

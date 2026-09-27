@@ -24,6 +24,8 @@ const installAt = source.indexOf('install -m 0755 "$tmp" /usr/local/bin/wgcf');
 ok(checksumAt > 0 && checksumAt < installAt, 'checksum is verified before installation');
 ok(source.includes('unsupported architecture for wgcf'), 'unknown architectures fail closed');
 ok(source.includes('wgcf SHA-256 mismatch'), 'checksum mismatch has an explicit hard failure');
+ok(/log "healthcheck OK[^\n]+" >&2\s*\n\s*echo "\$ip"/.test(source),
+  'healthcheck keeps captured stdout to the machine-readable IP only');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

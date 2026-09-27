@@ -650,7 +650,9 @@ warp_healthcheck() {
     [[ -n "$rx" ]] && err "healthcheck: wg received bytes = ${rx} (expect non-trivial)"
     return 1
   fi
-  log "healthcheck OK — egress IP via ${dev}: ${ip}"
+  # Keep stdout machine-readable: warp_up captures this function's stdout as
+  # the egress IP used in WARP_RESULT. Human diagnostics belong on stderr.
+  log "healthcheck OK — egress IP via ${dev}: ${ip}" >&2
   echo "$ip"
   return 0
 }

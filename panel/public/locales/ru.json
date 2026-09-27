@@ -379,10 +379,12 @@
   "diagnostics": {
     "title": "Диагностика",
     "runChecks": "Запустить проверку",
+    "export": "Скачать безопасный отчёт",
+    "exported": "Диагностический отчёт скачан",
     "portStatus": "Статус портов",
     "configValidation": "Проверка конфига",
     "mitaStatus": "Статус mita",
-    "mitaConfig": "Конфиг mita (describe)",
+    "mitaConfig": "Сводка конфига mita",
     "checking": "Проверка…",
     "clickToRun": "Нажмите «Запустить проверку».",
     "open": "Открыт",

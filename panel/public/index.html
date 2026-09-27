@@ -1214,7 +1214,10 @@
     <section id="page-diagnostics" class="content-page">
       <div class="page-header">
         <h3 data-i18n="diagnostics.title">Diagnostics</h3>
-        <button class="btn btn-primary btn-sm" data-action="run-diagnostics" data-i18n="diagnostics.runChecks">Run Checks</button>
+        <div class="btn-row">
+          <button class="btn btn-secondary btn-sm" data-action="export-diagnostics" data-i18n="diagnostics.export">Download safe report</button>
+          <button class="btn btn-primary btn-sm" data-action="run-diagnostics" data-i18n="diagnostics.runChecks">Run Checks</button>
+        </div>
       </div>
       <div class="grid grid-2">
         <div class="card">
@@ -1236,7 +1239,7 @@
           </div>
         </div>
         <div class="card">
-          <div class="card-header" data-i18n="diagnostics.mitaConfig">Mita Config (describe)</div>
+          <div class="card-header" data-i18n="diagnostics.mitaConfig">Mita Config Summary</div>
           <div class="card-body">
             <pre class="mini-log" id="diag-mita-config">—</pre>
           </div>

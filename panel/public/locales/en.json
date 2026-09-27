@@ -379,10 +379,12 @@
   "diagnostics": {
     "title": "Diagnostics",
     "runChecks": "Run Checks",
+    "export": "Download safe report",
+    "exported": "Diagnostic report downloaded",
     "portStatus": "Port Status",
     "configValidation": "Config Validation",
     "mitaStatus": "Mita Status",
-    "mitaConfig": "Mita Config (describe)",
+    "mitaConfig": "Mita Config Summary",
     "checking": "Checking…",
     "clickToRun": "Click \"Run Checks\" to begin.",
     "open": "Open",

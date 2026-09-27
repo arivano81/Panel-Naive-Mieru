@@ -5819,31 +5819,69 @@ app.get('/api/logs/:service', requireAuth, (req, res) => {
 });
 
 // ── Diagnostics ───────────────────────────────────────────────────────────────
-app.get('/api/diagnostics', requireAuth, async (_req, res) => {
-  const exec_ = cmd => { try { return execSync(cmd, { timeout: 4000 }).toString().trim(); } catch { return ''; } };
-
+// Build an explicit allowlist report. Never return command stdout or config
+// contents: Mita/Xray/Caddy files contain credentials and client identities.
+function collectSafeDiagnostics() {
   const chkPort = p => {
+    const port = Number(p);
+    if (!Number.isInteger(port) || port < 1 || port > 65535) return false;
     try {
-      return parseInt(
-        execSync(`ss -tlnup sport = :${p} 2>/dev/null | grep -c :${p}`, { timeout: 3000 }).toString().trim(),
-        10) > 0;
+      return execFileSync('ss', ['-H', '-tlnup', 'sport', '=', `:${port}`],
+        { timeout: 3000, encoding: 'utf8' }).trim().length > 0;
     } catch { return false; }
+  };
+  const serviceState = unit => {
+    try {
+      return execFileSync('systemctl', ['is-active', unit],
+        { timeout: 3000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() === 'active'
+        ? 'active' : 'inactive';
+    } catch { return 'inactive'; }
+  };
+  const fileSummary = (file, summarize = () => ({})) => {
+    if (!fs.existsSync(file)) return { exists: false, validJson: false };
+    try { return { exists: true, validJson: true, ...summarize(JSON.parse(fs.readFileSync(file, 'utf8'))) }; }
+    catch { return { exists: true, validJson: false }; }
   };
 
   // v1.2.3: caddy-naive version check (replaces naive --version)
   let caddyVersionOk = false, caddyVersionStr = '';
   try {
-    caddyVersionStr = execSync(`${resolvedCaddyBin} version 2>&1`, { timeout: 6000 }).toString().trim() ||
-                     execSync(`${resolvedCaddyBin} --version 2>&1`, { timeout: 6000 }).toString().trim();
+    try {
+      caddyVersionStr = execFileSync(resolvedCaddyBin, ['version'],
+        { timeout: 6000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    } catch {
+      caddyVersionStr = execFileSync(resolvedCaddyBin, ['--version'],
+        { timeout: 6000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    }
+    caddyVersionStr = caddyVersionStr.split(/\r?\n/, 1)[0]
+      .replace(/[^A-Za-z0-9._+()\- /]/g, '').slice(0, 160);
     caddyVersionOk  = caddyVersionStr.length > 0;
-  } catch (e) { caddyVersionStr = e.message; }
+  } catch { caddyVersionStr = 'unavailable'; }
 
   const mieruPortsListening = [];
   for (const p of [cfg.mieruPortStart, cfg.mieruPortEnd]) {
     if (p && chkPort(p)) mieruPortsListening.push(p);
   }
 
-  res.json({
+  const mitaConfigSummary = fileSummary(resolvedMitaFile, state => ({
+    users: Array.isArray(state.users) ? state.users.length : 0,
+    portBindings: Array.isArray(state.portBindings) ? state.portBindings.length : 0,
+  }));
+  let openflux = { installed: false, profiles: 0, activeProfiles: 0 };
+  try {
+    if (openFluxService.installed()) {
+      const profiles = openFluxService.list();
+      openflux = { installed: true, profiles: profiles.length,
+        activeProfiles: profiles.filter(profile => profile.active).length };
+    }
+  } catch { /* optional component must never break the main diagnostic report */ }
+
+  return {
+    format: 'rixxx-panel-diagnostics',
+    schema: 1,
+    generatedAt: new Date().toISOString(),
+    panelVersion: readPanelVersion(),
+    runtime: { platform: process.platform, arch: process.arch, node: process.version },
     ports: {
       naive:       chkPort(cfg.naivePort),
       mieru:       chkPort(cfg.mieruPortStart),
@@ -5852,6 +5890,13 @@ app.get('/api/diagnostics', requireAuth, async (_req, res) => {
       hy2:         hy2Installed() ? chkPort(cfg.hy2Port) : false,
       hy2Port:     parseInt(cfg.hy2Port, 10) || 443,
       hy2Installed: hy2Installed()
+    },
+    services: {
+      caddy: serviceState('caddy-naive'),
+      mieru: serviceState('mita'),
+      panel: serviceState('pm2-root'),
+      hysteria2: hy2Installed() ? serviceState('hysteria-server') : 'not-installed',
+      xray: fs.existsSync(XRAY_BIN) ? serviceState('xray') : 'not-installed',
     },
     naiveVersionOk:    caddyVersionOk,
     naiveVersion:      caddyVersionStr,    // kept as 'naiveVersion' for front-end compat
@@ -5865,13 +5910,32 @@ app.get('/api/diagnostics', requireAuth, async (_req, res) => {
       // Bug 23: directive is now "basic_auth" (underscore), not "basicauth"
       return (content.match(/^\s*basic_auth\s+\S+\s+\S+/gm) || []).length;
     })(),
-    mitaStatus:   exec_('mita status 2>/dev/null'),
-    mitaConfig:   exec_('mita describe config 2>/dev/null'),
-    timeSynced:   exec_('timedatectl status 2>/dev/null').includes('synchronized: yes'),
-    mitaStateFile: resolvedMitaFile,
+    mitaStatus: serviceState('mita'),
+    mitaConfig: mitaConfigSummary,
+    xrayConfig: fileSummary(XRAY_CONFIG),
+    openflux,
+    timeSynced: (() => {
+      try { return execFileSync('timedatectl', ['show', '-p', 'NTPSynchronized', '--value'],
+        { timeout: 3000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() === 'yes'; }
+      catch { return false; }
+    })(),
     probeSecretSet: !!(cfg.probeSecret),
     probeMode: (cfg.probeMode || (cfg.probeSecret ? 'secret' : 'bare'))
-  });
+  };
+}
+
+app.get('/api/diagnostics', requireAuth, (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(collectSafeDiagnostics());
+});
+
+app.get('/api/diagnostics/export', requireAuth, (_req, res) => {
+  const report = collectSafeDiagnostics();
+  const dateTag = report.generatedAt.slice(0, 10);
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Content-Disposition', `attachment; filename="rixxx-diagnostics-${dateTag}.json"`);
+  res.send(JSON.stringify(report, null, 2));
 });
 
 // ── Service control ───────────────────────────────────────────────────────────

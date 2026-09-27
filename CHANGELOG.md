@@ -17,6 +17,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   administrator password re-authentication under a dedicated rate limit. Import
   accepts both the new versioned envelope and legacy plaintext JSON backups;
   wrong passwords, tampering and KDF downgrades fail before state changes.
+- Diagnostics no longer expose raw `mita describe config` output. The panel now
+  builds a versioned allowlist-only report from service states, port checks and
+  aggregate config metadata, and offers it as a non-cacheable JSON download.
 - Pinned wgcf 2.2.22 checksums for every supported Linux architecture. WARP
   setup now rejects unknown architectures and checksum mismatches and no longer
   falls back to an unreviewed `latest` download.

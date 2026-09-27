@@ -358,6 +358,7 @@ function handleDelegatedClick(e) {
 
     // ── Diagnostics
     case 'run-diagnostics':  runDiagnostics(); break;
+    case 'export-diagnostics': exportDiagnostics(); break;
 
     // ── Login / topbar lang + theme (also wired via data-action on the buttons)
     case 'lang':             cycleLang(); break;
@@ -2865,10 +2866,32 @@ async function runDiagnostics() {
       : `<span class="badge badge-red">${t('diagnostics.naiveInvalid') || 'caddy-naive WARN'}</span>
          <pre class="mini-log mt-2">${esc(data.naiveVersion || 'binary not found or version empty')}</pre>`;
 
-    el('diag-mita-status').textContent = data.mitaStatus  || t('diagnostics.noOutput') || '—';
-    el('diag-mita-config').textContent = data.mitaConfig  || t('diagnostics.noOutput') || '—';
+    el('diag-mita-status').textContent = data.mitaStatus || t('diagnostics.noOutput') || '—';
+    const mita = data.mitaConfig || {};
+    el('diag-mita-config').textContent = mita.exists
+      ? `${mita.validJson ? 'valid JSON' : 'invalid JSON'} · users=${mita.users ?? 0} · port bindings=${mita.portBindings ?? 0}`
+      : (t('diagnostics.noOutput') || '—');
   } catch (err) {
     toast(err.message, 'error');
+  }
+}
+
+async function exportDiagnostics() {
+  const btn = document.querySelector('[data-action="export-diagnostics"]');
+  if (btn) btn.disabled = true;
+  try {
+    const res = await fetch(apiUrl('/api/diagnostics/export'), { credentials: 'include' });
+    if (res.status === 401) { redirectToLogin(); return; }
+    if (!res.ok) throw new Error(await res.text());
+    const blob = await res.blob();
+    const cd = res.headers.get('Content-Disposition') || '';
+    const filename = cd.match(/filename="(.+)"/)?.[1] || 'rixxx-diagnostics.json';
+    downloadBlob(blob, filename);
+    toast(t('diagnostics.exported') || 'Diagnostic report downloaded', 'success');
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 

@@ -62,6 +62,9 @@ ok(backupRestore.status === 0, 'clean-install backup restore regression suite pa
 const backupCrypto = spawnSync(process.execPath, [path.join(__dirname, 'backup-crypto.test.js')],
   { stdio: 'inherit' });
 ok(backupCrypto.status === 0, 'encrypted backup regression suite passes');
+const diagnosticsExport = spawnSync(process.execPath, [path.join(__dirname, 'diagnostics-export.test.js')],
+  { stdio: 'inherit' });
+ok(diagnosticsExport.status === 0, 'secret-free diagnostic export regression suite passes');
 const vlessAdapter = spawnSync(process.execPath, [path.join(__dirname, 'vless-reality-adapter.test.js')],
   { stdio: 'inherit' });
 ok(vlessAdapter.status === 0, 'VLESS REALITY adapter regression suite passes');

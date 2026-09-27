@@ -53,6 +53,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The 1.x release policy now explicitly keeps current checksum-pinned upstream
   binaries and visible vulnerability findings; reproducible project-owned
   security builds are deferred to the 2.0/3.0 development line.
+- Fixed the clean-install client-config smoke test after global CSRF enforcement:
+  it now extracts the session token from login and sends it on temporary-user
+  creation and cleanup instead of reporting a false failure.
 - Pinned wgcf 2.2.22 checksums for every supported Linux architecture. WARP
   setup now rejects unknown architectures and checksum mismatches and no longer
   falls back to an unreviewed `latest` download.

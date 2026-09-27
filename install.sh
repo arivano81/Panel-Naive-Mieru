@@ -1462,10 +1462,18 @@ smoke_test_configs() {
     return 0
   fi
 
+  local csrf_token
+  csrf_token=$(echo "$login_res" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(String(JSON.parse(s).csrfToken||""));}catch(_){}})' 2>/dev/null || true)
+  if [[ -z "$csrf_token" ]]; then
+    echo -e "  ${RED}✗${NC} smoke login did not return a CSRF token"; (( ++fail ))
+    rm -f "$cookie_file"; return 0
+  fi
+
   # Create test user
   local create_res
   create_res=$(curl -sf -b "$cookie_file" -X POST "$panel_url/api/users" \
     -H "Content-Type: application/json" \
+    -H "X-CSRF-Token: $csrf_token" \
     -d "{\"username\":\"$test_user\",\"email\":\"$test_email\",\"password\":\"$test_pass\",\"protocols\":[\"naive\",\"mieru\"],\"quotaMB\":0}" \
     2>/dev/null) || true
   local user_id=""
@@ -1523,7 +1531,8 @@ smoke_test_configs() {
   fi
 
   # Cleanup test user
-  curl -sf -b "$cookie_file" -X DELETE "$panel_url/api/users/$user_id" > /dev/null 2>&1 || true
+  curl -sf -b "$cookie_file" -X DELETE "$panel_url/api/users/$user_id" \
+    -H "X-CSRF-Token: $csrf_token" > /dev/null 2>&1 || true
   echo -e "  ${GREEN}✓${NC} smoke test user cleaned up"
   rm -f "$cookie_file"
 

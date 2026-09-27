@@ -5,6 +5,7 @@ const path = require('path');
 const { newCsrfToken, tokenMatches, csrfProtection } = require('../panel/server/csrf');
 const server = fs.readFileSync(path.join(__dirname, '../panel/server/index.js'), 'utf8');
 const ui = fs.readFileSync(path.join(__dirname, '../panel/public/app.js'), 'utf8');
+const installer = fs.readFileSync(path.join(__dirname, '../install.sh'), 'utf8');
 let pass = 0, fail = 0;
 function ok(value, message) {
   if (value) { console.log('  ✓', message); pass++; }
@@ -44,6 +45,9 @@ ok(ui.includes("opts.headers['X-CSRF-Token'] = state.csrfToken") &&
   'shared API helper and direct secret download send the CSRF header');
 ok(ui.includes("headers: state.csrfToken ? { 'X-CSRF-Token': state.csrfToken } : {}"),
   'logout sends CSRF protection before clearing browser state');
+ok(installer.includes('JSON.parse(s).csrfToken') &&
+   (installer.match(/X-CSRF-Token: \$csrf_token/g) || []).length >= 2,
+  'installer smoke test carries the login CSRF token on create and cleanup');
 ok(/const loginLimiter = rateLimit\([\s\S]*app\.post\('\/api\/login', loginLimiter,/.test(server),
   'administrator login has a dedicated brute-force limiter');
 ok(/const subLimiter = rateLimit\([\s\S]*app\.get\('\/sub\/:token', subLimiter,/.test(server),

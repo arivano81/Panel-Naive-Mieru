@@ -89,7 +89,7 @@ for component in "${components[@]}"; do
 done
 
 if (( failed != 0 )); then
-  echo 'One or more pinned Go binaries contain a reachable known vulnerability.' >&2
+  echo 'One or more pinned Go binaries contain symbols associated with a known vulnerability.' >&2
   exit 1
 fi
 echo 'All pinned linux-amd64 Go binaries passed govulncheck.'

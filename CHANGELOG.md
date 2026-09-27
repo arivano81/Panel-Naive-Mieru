@@ -39,6 +39,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Updated caddy-forwardproxy-naive from `v2.10.0-naive` to the checksum-pinned
   `v2.11.2-naive` release and wgcf from 2.2.22 to checksum-pinned 2.3.0 assets for
   amd64, arm64 and armv7 after the initial Go binary audit exposed stale builds.
+- The first production Go binary audit remains intentionally red: every pinned
+  upstream binary contains known-vulnerability symbols. Caddy findings dropped
+  from 112 to 67 and wgcf from 85 to 2 after safe upstream upgrades; unresolved
+  results are documented without a wildcard allowlist or misleading green gate.
 - Pinned wgcf 2.2.22 checksums for every supported Linux architecture. WARP
   setup now rejects unknown architectures and checksum mismatches and no longer
   falls back to an unreviewed `latest` download.

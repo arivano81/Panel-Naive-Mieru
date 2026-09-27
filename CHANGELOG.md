@@ -38,6 +38,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a real reboot Caddy, Mita and `pm2-root` were active and enabled, doctor passed
   10/10, the public TLS panel path enforced Basic Auth, and the decoy root served
   its expected local page.
+- Pinned the optional Hysteria2 server to official release `app/v2.12.3` with
+  per-architecture SHA-256, candidate version smoke-test and atomic binary
+  replacement. Removed two unused legacy Naive/Mieru installers that still
+  selected `latest` and duplicated the protected production paths.
 
 - Began VLESS XHTTP stage F with an opt-in config adapter: a loopback-only
   XHTTP `mode=auto` inbound, TLS client link, and path-scoped unbuffered Caddy

@@ -48,11 +48,24 @@ fi
 log()  { echo "$1"; }
 step() { echo "STEP:$1"; }
 
+HY_VERSION="app/v2.12.3"
 case "$(uname -m)" in
-  x86_64)  HY_ARCH="amd64" ;;
-  aarch64) HY_ARCH="arm64" ;;
-  armv7l)  HY_ARCH="arm"   ;;
-  *)       HY_ARCH="amd64" ;;
+  x86_64|amd64)
+    HY_ARCH="amd64"
+    HY_SHA256="8c7a68a906998b747a0db87586e364f995fbfddb95693ae6e2fdb68a6e920d3e"
+    ;;
+  aarch64|arm64)
+    HY_ARCH="arm64"
+    HY_SHA256="c8dc653c3ba0a28d29a26b8fa52d2086f27c0927afddce95c09965e7174e78b0"
+    ;;
+  armv7l|armv7)
+    HY_ARCH="arm"
+    HY_SHA256="cc4bc596c2db473dd7ec1bbcc3cd10e0cb60302759facd95e0be733bc8751e110"
+    ;;
+  *)
+    log "ERROR: unsupported architecture for Hysteria2: $(uname -m)"
+    exit 1
+    ;;
 esac
 log "  Arch: $(uname -m) → Hy2:${HY_ARCH}"
 log "  Порт Hy2: ${HY_PORT}/udp (Naive остаётся на 443/tcp)"
@@ -103,30 +116,27 @@ step 4
 log "▶ Загрузка Hysteria2 (arch: ${HY_ARCH})..."
 # ══════════════════════════════════════════════════════
 
-HY_VERSION=$(curl -fsSL --connect-timeout 10 \
-  https://api.github.com/repos/apernet/hysteria/releases/latest 2>/dev/null \
-  | jq -r '.tag_name' 2>/dev/null || echo "")
-[[ -z "$HY_VERSION" || "$HY_VERSION" == "null" ]] && HY_VERSION="app/v2.5.2"
-
-log "  Версия: ${HY_VERSION}"
+log "  Закреплённая версия: ${HY_VERSION}"
 HY_URL="https://github.com/apernet/hysteria/releases/download/${HY_VERSION}/hysteria-linux-${HY_ARCH}"
-
-wget -q --timeout=120 "${HY_URL}" -O /usr/local/bin/hysteria 2>&1 || {
-  log "⚠ Не удалось скачать ${HY_VERSION}, fallback → app/v2.5.2"
-  wget -q --timeout=120 \
-    "https://github.com/apernet/hysteria/releases/download/app/v2.5.2/hysteria-linux-${HY_ARCH}" \
-    -O /usr/local/bin/hysteria || {
-    log "ERROR: Не удалось скачать hysteria!"
-    exit 1
-  }
+HY_WORK=$(mktemp -d /tmp/rixxx-hysteria.XXXXXX)
+HY_CANDIDATE="${HY_WORK}/hysteria"
+trap 'rm -rf "${HY_WORK:-}"' EXIT
+wget -q --timeout=120 "${HY_URL}" -O "$HY_CANDIDATE" 2>&1 || {
+  log "ERROR: Не удалось скачать Hysteria2 ${HY_VERSION}"
+  exit 1
 }
-
-if [[ ! -s /usr/local/bin/hysteria ]]; then
-  log "ERROR: бинарник hysteria пустой"
+HY_ACTUAL_SHA=$(sha256sum "$HY_CANDIDATE" | awk '{print $1}')
+if [[ "$HY_ACTUAL_SHA" != "$HY_SHA256" ]]; then
+  log "ERROR: Hysteria2 SHA-256 mismatch"
   exit 1
 fi
-
-chmod +x /usr/local/bin/hysteria
+chmod 0755 "$HY_CANDIDATE"
+"$HY_CANDIDATE" version >/dev/null 2>&1 || {
+  log "ERROR: загруженный Hysteria2 не прошёл version smoke-test"
+  exit 1
+}
+install -m 0755 "$HY_CANDIDATE" /usr/local/bin/hysteria.new
+mv -f /usr/local/bin/hysteria.new /usr/local/bin/hysteria
 setcap 'cap_net_bind_service=+ep' /usr/local/bin/hysteria 2>/dev/null || true
 
 HY_VER=$(/usr/local/bin/hysteria version 2>&1 | head -n1 || echo "unknown")

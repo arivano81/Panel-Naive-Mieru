@@ -154,6 +154,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   The official sing-box 1.14.2 binary accepted the generated JSON and carried
   an HTTPS request through the production Debian 13 REALITY profile; a CI
   regression now rejects reintroduction of removed schema fields.
+- Fixed `update.sh --doctor` after deleting the final Mieru user: the panel
+  intentionally stops Mita for an empty `users` array, and diagnostics now
+  recognise that exact state as healthy while still failing an inactive daemon
+  whenever configured Mieru users exist.
 - Fixed clean installation from a bundled/private checkout: Caddy archive
   extraction no longer changes the process working directory to `/`, so the
   following panel step cannot unexpectedly prompt for an interactive GitHub

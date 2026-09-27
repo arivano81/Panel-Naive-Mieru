@@ -1970,9 +1970,19 @@ do_doctor() {
 
   systemctl is-active --quiet caddy-naive && doctor_pass "caddy-naive active" \
     || doctor_fail "caddy-naive inactive"
-  if systemctl is-active --quiet mita; then doctor_pass "mita active"
-  elif mita status 2>/dev/null | grep -qi 'IDLE'; then doctor_warn "mita idle (normal with no Mieru users)"
-  else doctor_fail "mita inactive"; fi
+  if systemctl is-active --quiet mita; then
+    doctor_pass "mita active"
+  elif [[ -f "$MITA_STATE_FILE" ]] &&
+       jq -e '(.users // []) | type == "array" and length == 0' "$MITA_STATE_FILE" >/dev/null 2>&1; then
+    # The panel deliberately stops mita after the last Mieru user is removed:
+    # starting it with users=[] enters a fatal restart loop. This is a healthy,
+    # expected state rather than an unavailable configured protocol.
+    doctor_pass "mita inactive as expected (no Mieru users)"
+  elif mita status 2>/dev/null | grep -qi 'IDLE'; then
+    doctor_warn "mita idle; Mieru users exist but the daemon is not serving them"
+  else
+    doctor_fail "mita inactive"
+  fi
   if [[ -x /usr/local/bin/hysteria ]]; then
     systemctl is-active --quiet hysteria-server && doctor_pass "hysteria-server active" \
       || doctor_fail "hysteria-server installed but inactive"

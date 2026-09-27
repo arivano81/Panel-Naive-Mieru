@@ -35,6 +35,9 @@ ok(/function|do_doctor\(\)/.test(update) && update.includes('No configuration or
   '--doctor explicitly reports its read-only contract');
 ok(update.includes("PRAGMA quick_check;"), '--doctor checks SQLite integrity');
 ok(update.includes('validate --config "$CADDY_FILE"'), '--doctor validates Caddy config');
+ok(update.includes('mita inactive as expected (no Mieru users)') &&
+   update.includes("(.users // []) | type == \"array\" and length == 0"),
+  '--doctor accepts the intentional stopped Mita state only for an empty user list');
 ok(update.includes('--rollback)') && update.includes('MODE="rollback"'),
   'updater parses --rollback mode');
 ok(/validate_rollback_backup\(\)/.test(update), 'rollback validates snapshots before replacement');

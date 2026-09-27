@@ -96,9 +96,11 @@ CURRENT_VERSION="$(_read_version_file)"
 REPO_URL="https://github.com/arivano81/Panel-Naive-Mieru"
 # Bug 99: raw base for fetching single files (VERSION, update.sh) without git.
 REPO_RAW="https://raw.githubusercontent.com/arivano81/Panel-Naive-Mieru/main"
-# Bug 1: direct download URL for caddy-forwardproxy-naive (amd64 only)
-CADDY_NAIVE_RELEASES="https://api.github.com/repos/klzgrad/forwardproxy/releases/latest"
-CADDY_NAIVE_FALLBACK_URL="https://github.com/klzgrad/forwardproxy/releases/download/v2.10.0-naive/caddy-forwardproxy-naive.tar.xz"
+# Reviewed amd64-only caddy-forwardproxy-naive artifact. Never resolve `latest`:
+# a release change must update both the version and checksum in review.
+CADDY_NAIVE_VERSION="v2.10.0-naive"
+CADDY_NAIVE_URL="https://github.com/klzgrad/forwardproxy/releases/download/${CADDY_NAIVE_VERSION}/caddy-forwardproxy-naive.tar.xz"
+CADDY_NAIVE_SHA256="598b34841ac88b66f5b0b3a7bb371a02682915e92916e4e017d27be5399cd389"
 MIERU_VERSION="3.38.0"
 MIERU_RELEASE_BASE="https://github.com/enfein/mieru/releases/download/v${MIERU_VERSION}"
 MIERU_MITA_SHA256_AMD64="5170555aace38f76862541587b632d61848bba12f2e845b057977c9f9257e59a"
@@ -301,50 +303,22 @@ install_nodejs() {
 }
 
 # ── Bug 1: Install caddy-forwardproxy-naive (amd64 only) ──────────────────────
-# Downloads from https://github.com/klzgrad/forwardproxy/releases/latest
-# Validates binary and sets file capabilities for binding privileged ports.
+# Downloads the reviewed release, verifies it, then sets file capabilities for
+# binding privileged ports.
 install_caddy_naive() {
   log_step "$(t 'Установка caddy-forwardproxy-naive' 'Installing caddy-forwardproxy-naive')"
 
   local tmp_dir; tmp_dir=$(mktemp -d)
   local archive_path="${tmp_dir}/caddy-forwardproxy-naive.tar.xz"
 
-  log_info "$(t 'Запрос последнего релиза из GitHub...' 'Fetching latest release from GitHub...')"
-  local asset_url=""
-  local release_tag="unknown"
-
-  # Try GitHub API first
-  local release_json=""
-  release_json=$(curl -fsSL --connect-timeout 10 "$CADDY_NAIVE_RELEASES" 2>/dev/null) || true
-
-  if [[ -n "$release_json" ]]; then
-    release_tag=$(echo "$release_json" | jq -r '.tag_name // "unknown"')
-    log_info "$(t "Последняя версия: $release_tag" "Latest release: $release_tag")"
-
-    # Look for .tar.xz asset (the release contains one tarball for linux-amd64)
-    asset_url=$(echo "$release_json" | jq -r \
-      '.assets[] | select(.name | test("caddy.*forwardproxy.*naive.*\\.tar\\.xz$|caddy-forwardproxy-naive.*\\.tar\\.xz$"; "i")) | .browser_download_url' \
-      | head -1)
-
-    # Broader fallback: any .tar.xz
-    if [[ -z "$asset_url" ]]; then
-      asset_url=$(echo "$release_json" | jq -r \
-        '.assets[] | select(.name | endswith(".tar.xz")) | .browser_download_url' | head -1)
-    fi
+  log_info "$(t "Загрузка закреплённого Caddy ${CADDY_NAIVE_VERSION}" "Downloading pinned Caddy ${CADDY_NAIVE_VERSION}")"
+  wget -q --show-progress --connect-timeout 30 -O "$archive_path" "$CADDY_NAIVE_URL" || \
+    { rm -rf "$tmp_dir"; die "$(t 'Ошибка загрузки caddy-forwardproxy-naive' 'Failed to download caddy-forwardproxy-naive')"; }
+  local actual_sha; actual_sha=$(sha256sum "$archive_path" | awk '{print $1}')
+  if [[ "$actual_sha" != "$CADDY_NAIVE_SHA256" ]]; then
+    rm -rf "$tmp_dir"
+    die "$(t 'Контрольная сумма Caddy не совпала' 'Caddy SHA-256 mismatch')"
   fi
-
-  # Fallback to pinned v2.10.0 URL if GitHub API failed or no asset found
-  if [[ -z "$asset_url" ]]; then
-    log_warn "$(t \
-      'GitHub API недоступен — использую резервный URL (v2.10.0)' \
-      'GitHub API unavailable — using fallback URL (v2.10.0)')"
-    asset_url="$CADDY_NAIVE_FALLBACK_URL"
-    release_tag="v2.10.0-naive"
-  fi
-
-  log_info "$(t "Загрузка: $asset_url" "Downloading: $asset_url")"
-  wget -q --show-progress --connect-timeout 30 -O "$archive_path" "$asset_url" || \
-    die "$(t 'Ошибка загрузки caddy-forwardproxy-naive' 'Failed to download caddy-forwardproxy-naive')"
 
   # Extract without changing the caller's working directory. install_panel()
   # deliberately discovers a bundled private-repository checkout relative to
@@ -373,7 +347,7 @@ install_caddy_naive() {
 
   # Verify
   CADDY_VERSION=$("$CADDY_BIN" version 2>/dev/null | head -1 || \
-                  "$CADDY_BIN" --version 2>/dev/null | head -1 || echo "$release_tag")
+                  "$CADDY_BIN" --version 2>/dev/null | head -1 || echo "$CADDY_NAIVE_VERSION")
   log_info "caddy-naive $(t 'установлен' 'installed') → $CADDY_BIN  ($CADDY_VERSION) ✓"
   export CADDY_VERSION
 

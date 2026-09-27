@@ -88,8 +88,9 @@ FAKE_SITE_DIR="/var/www/fake-site"
 LEGACY_NAIVE_BIN="/usr/local/bin/naive"
 LEGACY_NAIVE_CONFIG_DIR="/etc/naive"
 
-CADDY_NAIVE_RELEASES="https://api.github.com/repos/klzgrad/forwardproxy/releases/latest"
-CADDY_NAIVE_FALLBACK_URL="https://github.com/klzgrad/forwardproxy/releases/download/v2.10.0-naive/caddy-forwardproxy-naive.tar.xz"
+CADDY_NAIVE_VERSION="v2.10.0-naive"
+CADDY_NAIVE_URL="https://github.com/klzgrad/forwardproxy/releases/download/${CADDY_NAIVE_VERSION}/caddy-forwardproxy-naive.tar.xz"
+CADDY_NAIVE_SHA256="598b34841ac88b66f5b0b3a7bb371a02682915e92916e4e017d27be5399cd389"
 MIERU_VERSION="3.38.0"
 MIERU_RELEASE_BASE="https://github.com/enfein/mieru/releases/download/v${MIERU_VERSION}"
 MIERU_MITA_SHA256_AMD64="5170555aace38f76862541587b632d61848bba12f2e845b057977c9f9257e59a"
@@ -1494,35 +1495,13 @@ update_caddy_naive() {
     return
   fi
 
-  local release_json=""
-  release_json=$(curl -fsSL --connect-timeout 10 "$CADDY_NAIVE_RELEASES" 2>/dev/null) || true
-
-  local remote_tag="unknown"
-  local asset_url=""
-
-  if [[ -n "$release_json" ]]; then
-    remote_tag=$(echo "$release_json" | jq -r '.tag_name // "unknown"')
-
-    asset_url=$(echo "$release_json" | jq -r \
-      '.assets[] | select(.name | test("caddy.*forwardproxy.*naive.*\\.tar\\.xz$|caddy-forwardproxy-naive.*\\.tar\\.xz$"; "i")) | .browser_download_url' \
-      | head -1)
-
-    if [[ -z "$asset_url" ]]; then
-      asset_url=$(echo "$release_json" | jq -r \
-        '.assets[] | select(.name | endswith(".tar.xz")) | .browser_download_url' | head -1)
-    fi
-  fi
-
-  if [[ -z "$asset_url" ]]; then
-    log_warn "GitHub API unavailable — using fallback URL (v2.10.0)"
-    asset_url="$CADDY_NAIVE_FALLBACK_URL"
-    remote_tag="v2.10.0-naive"
-  fi
+  local remote_tag="$CADDY_NAIVE_VERSION"
+  local asset_url="$CADDY_NAIVE_URL"
 
   local current_ver; current_ver=$("$CADDY_BIN" version 2>/dev/null | head -1 || \
                                    "$CADDY_BIN" --version 2>/dev/null | head -1 || \
                                    get_caddy_version_file)
-  log_info "Current: $current_ver  |  Latest: $remote_tag"
+  log_info "Current: $current_ver  |  Pinned: $remote_tag"
 
   if ! $FORCE && echo "$current_ver" | grep -qF "${remote_tag#v}"; then
     log_info "caddy-forwardproxy-naive already up-to-date ✓"
@@ -1535,10 +1514,15 @@ update_caddy_naive() {
   log_info "Downloading: $asset_url"
   wget -q --show-progress --connect-timeout 30 -O "$tmp_dir/caddy.tar.xz" "$asset_url" || \
     { log_warn "Download failed — skipping Caddy update"; rm -rf "$tmp_dir"; return; }
+  local actual_sha; actual_sha=$(sha256sum "$tmp_dir/caddy.tar.xz" | awk '{print $1}')
+  if [[ "$actual_sha" != "$CADDY_NAIVE_SHA256" ]]; then
+    rm -rf "$tmp_dir"
+    die "Caddy SHA-256 mismatch; existing installation was not changed"
+  fi
 
-  cd "$tmp_dir"
-  tar -xJf caddy.tar.xz 2>/dev/null || tar -xf caddy.tar.xz 2>/dev/null || \
-    { log_warn "Extract failed — skipping"; rm -rf "$tmp_dir"; cd /; return; }
+  tar -C "$tmp_dir" -xJf "$tmp_dir/caddy.tar.xz" 2>/dev/null || \
+    tar -C "$tmp_dir" -xf "$tmp_dir/caddy.tar.xz" 2>/dev/null || \
+    { log_warn "Extract failed — skipping"; rm -rf "$tmp_dir"; return; }
 
   local caddy_found
   caddy_found=$(find "$tmp_dir" -maxdepth 3 -type f \
@@ -1562,7 +1546,7 @@ update_caddy_naive() {
     log_warn "caddy binary not found in archive — skipping"
   fi
 
-  rm -rf "$tmp_dir"; cd /
+  rm -rf "$tmp_dir"
 
   # Update version file
   local new_ver; new_ver=$("$CADDY_BIN" version 2>/dev/null | head -1 || echo "$remote_tag")

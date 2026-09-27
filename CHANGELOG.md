@@ -23,6 +23,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Pinned Mita and the optional Mieru cascade client to release 3.38.0 with
   architecture-specific SHA-256 verification in clean install, update and lazy
   cascade setup paths. A mismatch now aborts before `dpkg` or service shutdown.
+- Pinned caddy-forwardproxy-naive to the reviewed `v2.10.0-naive` archive and
+  verify its SHA-256 before extraction or service shutdown. Install and update
+  no longer select an unreviewed GitHub `latest` asset.
 
 - Began VLESS XHTTP stage F with an opt-in config adapter: a loopback-only
   XHTTP `mode=auto` inbound, TLS client link, and path-scoped unbuffered Caddy

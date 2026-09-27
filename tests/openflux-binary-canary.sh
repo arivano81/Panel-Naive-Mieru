@@ -85,7 +85,12 @@ for _ in $(seq 1 40); do
   [[ "$RESULT" != "openflux-canary-ok" ]] || break
   sleep 0.25
 done
-[[ "$RESULT" == "openflux-canary-ok" ]] || { echo "encrypted Direct tunnel failed" >&2; exit 1; }
+if [[ "$RESULT" != "openflux-canary-ok" ]]; then
+  echo "encrypted Direct tunnel failed" >&2
+  ss -ltnp 2>/dev/null | grep -E ':(11080|18445|19090)\b' >&2 || true
+  for pid in "${PIDS[@]}"; do ps -o pid=,stat=,cmd= -p "$pid" >&2 || true; done
+  exit 1
+fi
 
 "$WORK/openflux" --config="$WORK/wrong.conf" --negotiate > "$WORK/wrong.log" 2>&1 & PIDS+=("$!")
 sleep 1

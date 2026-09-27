@@ -65,6 +65,11 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Stabilized the pinned Xray REALITY binary canary by replacing its intermittent
   self-signed OpenSSL decoy with the field-tested public Cloudflare TLS target;
   the asserted HTTP origin remains local and reachable only through the tunnel.
+- Evaluated upstream OpenFlux `v0.1.0`, including its official SHA256SUMS and new
+  `openflux://v1/` share format. The candidate was rejected because the existing
+  negotiated encrypted L4/Direct canary opened neither exit nor SOCKS listeners;
+  production remains pinned to verified `0.0.5`. Canary failures now print the
+  relevant listeners and process states for release qualification.
 
 - Began VLESS XHTTP stage F with an opt-in config adapter: a loopback-only
   XHTTP `mode=auto` inbound, TLS client link, and path-scoped unbuffered Caddy

@@ -8,6 +8,7 @@ UNINSTALLER="$ROOT/panel/scripts/uninstall_openflux.sh"
 STATE=/root/rixxx-openflux-systemd-canary.json
 PROFILE=systemd-canary
 CORE_SERVICES=(caddy-naive mita hysteria-server xray panel-naive-mieru)
+PREPARE_COMMITTED=0
 
 die() { printf '[OPENFLUX CANARY] ERROR: %s\n' "$*" >&2; exit 1; }
 log() { printf '[OPENFLUX CANARY] %s\n' "$*"; }
@@ -42,7 +43,8 @@ assert_core_unchanged() {
 
 prepare() {
   [[ $# -eq 2 || $# -eq 3 ]] || die 'prepare requires <public-host> [port]'
-  local host=$2 port=${3:-18445} boot_id machine_id baseline status committed=0
+  local host=$2 port=${3:-18445} boot_id machine_id baseline status
+  PREPARE_COMMITTED=0
   [[ "$port" =~ ^[0-9]+$ ]] && (( port >= 1024 && port <= 65535 )) || die 'port must be 1024..65535'
   [[ ! -e "$STATE" ]] || die "remove stale state only after auditing it: $STATE"
   [[ ! -e /usr/local/bin/openflux && ! -e /etc/systemd/system/openflux-exit@.service &&
@@ -53,7 +55,7 @@ prepare() {
   rollback_prepare() {
     local rc=$?
     trap - EXIT
-    if (( rc != 0 && committed == 0 )); then
+    if (( rc != 0 && PREPARE_COMMITTED == 0 )); then
       bash "$UNINSTALLER" --purge >/dev/null 2>&1 || true
       rm -f "$STATE"
     fi
@@ -72,7 +74,7 @@ prepare() {
       coreServices:$coreServices,verifiedAfterReboot:false}' > "${STATE}.new"
   chmod 0600 "${STATE}.new"; mv "${STATE}.new" "$STATE"
   assert_core_unchanged
-  committed=1
+  PREPARE_COMMITTED=1
   log "prepared healthy profile $PROFILE on TCP $port"
   log 'reboot now, then run: sudo bash tests/openflux-systemd-canary.sh verify'
 }

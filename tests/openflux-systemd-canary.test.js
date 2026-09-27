@@ -19,6 +19,9 @@ ok(source.includes("existing OpenFlux installation found") && source.includes("e
   'prepare refuses a server with existing OpenFlux state');
 ok(source.includes('/proc/sys/kernel/random/boot_id') && source.includes('the server has not rebooted since prepare'),
   'verify requires evidence of a real reboot');
+ok(source.includes('PREPARE_COMMITTED=0') && source.includes('PREPARE_COMMITTED=1') &&
+   !source.includes('status committed=0'),
+  'prepare rollback state survives function-scope unwinding under set -u');
 ok(source.includes(".active == true and .enabled == true and .listening == true and .healthy == true"),
   'prepare and verify require the full profile health contract');
 ok(source.includes("length == 1 and .[0].id == $id") && source.includes('refusing broad cleanup'),

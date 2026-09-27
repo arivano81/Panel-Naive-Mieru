@@ -69,3 +69,37 @@ sudo XRAY_PORT=8443 \
 4. Временный пользователь удалён, WARP штатно выключен, а конфиги, `ip rule` и UFW возвращены к исходному состоянию.
 
 Тест закрывает WARP-часть этапа D. Reboot-canary каскада должен быть выполнен отдельно на паре Entry/Exit.
+
+## Двухузловой reboot-canary каскада
+
+`tests/cascade-systemd-canary.sh` превращает оставшийся внешний gate в повторяемый
+трёхфазный сценарий. Он запускается на чистой Entry-ноде Debian 13, где VLESS REALITY
+уже установлен, а Exit-нода имеет отдельного пользователя Mieru. Скрипт отказывается
+работать поверх существующего каскада и никогда не перезагружает сервер самостоятельно.
+
+Подготовьте root-only Xray client JSON с VLESS outbound к Entry и локальным SOCKS inbound
+`127.0.0.1:19090`; проверьте права `0600`. Пароль Exit не помещайте в командную строку:
+
+```bash
+read -rsp 'Exit Mieru password: ' EXIT_PASS; echo
+printf '%s\n' "$EXIT_PASS" | sudo bash tests/cascade-systemd-canary.sh prepare \
+  exit.example.com 2012 2022 cascade-canary 203.0.113.20 /root/vless-canary-client.json
+unset EXIT_PASS
+```
+
+Замените `203.0.113.20` на ожидаемый публичный IP Exit. `prepare` валидирует клиентский
+конфиг реальным Xray, поднимает production-каскад, проводит HTTPS-запрос через VLESS и
+требует совпадения egress-IP. После успешной подготовки перезагрузите только Entry:
+
+```bash
+sudo reboot
+# После повторного входа:
+sudo bash tests/cascade-systemd-canary.sh verify
+sudo bash tests/cascade-systemd-canary.sh cleanup
+```
+
+`verify` требует новый kernel boot ID, активные и enabled Mieru/redsocks/client units,
+восстановленные scoped iptables-правила и повторный настоящий VLESS-запрос через Exit.
+`cleanup` разрешён только после успешной проверки и использует штатный `teardown`, не
+останавливая Caddy, Mita, Hysteria2, Xray или панель. Состояние canary имеет режим `0600`
+и не содержит пароль Exit.

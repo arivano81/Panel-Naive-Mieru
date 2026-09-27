@@ -604,7 +604,7 @@ Entry: hysteria-server ── iptables ──▶ redsocks ──▶ mieru-client
 - **Mieru и Hysteria2 — прозрачный relay (redsocks + iptables + mieru-client)**. Exit-нода — это полноценный сервер Mieru (`mita`), а не «сырой» SOCKS5:
   1. `mieru-client` поднимает локальный SOCKS5 на `127.0.0.1:1080`, подключаясь к Exit-mita по протоколу Mieru (весь диапазон портов).
   2. `redsocks` (`127.0.0.1:12345`) превращает SOCKS5 в прозрачный редирект.
-  3. `iptables` (цепочка `REDSOCKS`, owner-match по uid пользователей `mita` и `hysteria`) заворачивает TCP-выход Mieru и Hy2 в redsocks. RETURN-правило для IP Exit-ноды защищает от петли.
+  3. `iptables` (цепочка `REDSOCKS`, owner-match по uid пользователей `mita`, `hysteria` и установленного `xray`) заворачивает TCP-выход Mieru, Hy2 и VLESS в redsocks. RETURN-правило для IP Exit-ноды защищает от петли.
   4. `watchdog` (cron) перезапускает `mieru-client` после 3 подряд неудачных проверок.
 
   Entry-`mita` остаётся обычным сервером — в `mita-state.json` ничего не дописывается. Всю цепочку настраивает и сносит скрипт `panel/scripts/cascade_mieru.sh` (`setup` / `teardown` / `status`), который панель вызывает из API. `mieru-client` и `redsocks` ставятся **лениво** при первом включении каскада.
@@ -638,7 +638,12 @@ Entry: hysteria-server ── iptables ──▶ redsocks ──▶ mieru-client
 
 > 💡 Каскад можно включать/выключать без удаления настроек — снимите галочку и нажмите «Применить»: relay будет аккуратно демонтирован (`teardown`), а пароль Exit-ноды сохранится для повторного включения.
 
-> 🔒 Пароль Exit-ноды никогда не возвращается в браузер (`/api/config` отдаёт только флаг «задан/нет»).
+> 🔒 Пароль Exit-ноды никогда не возвращается в браузер (`/api/config` отдаёт только флаг «задан/нет»). Панель передаёт его оркестратору через stdin, поэтому пароль не появляется в списке процессов.
+
+Для приёмки автозапуска на двух тестовых VPS используйте трёхфазный
+`tests/cascade-systemd-canary.sh`. Он проводит настоящий VLESS-запрос через Exit до и после
+ручной перезагрузки Entry и затем проверяет штатную очистку. Полная безопасная процедура
+приведена в [спецификации VLESS](docs/vless-stage-b.md#двухузловой-reboot-canary-каскада).
 
 ---
 

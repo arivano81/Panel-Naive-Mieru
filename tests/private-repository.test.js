@@ -77,6 +77,9 @@ ok(vlessLifecycle.status === 0, 'VLESS access lifecycle regression suite passes'
 const vlessEgress = spawnSync(process.execPath, [path.join(__dirname, 'vless-egress-routing.test.js')],
   { stdio: 'inherit' });
 ok(vlessEgress.status === 0, 'VLESS egress routing regression suite passes');
+const cascadeCanary = spawnSync(process.execPath, [path.join(__dirname, 'cascade-systemd-canary.test.js')],
+  { stdio: 'inherit' });
+ok(cascadeCanary.status === 0, 'two-node VLESS cascade reboot canary contract passes');
 const vlessFederation = spawnSync(process.execPath, [path.join(__dirname, 'vless-federation.test.js')],
   { stdio: 'inherit' });
 ok(vlessFederation.status === 0, 'VLESS federation regression suite passes');

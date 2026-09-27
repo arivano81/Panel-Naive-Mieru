@@ -58,6 +58,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   it to the cascade orchestrator over stdin, and the generated-client-config
   helper receives it through an anonymous file descriptor rather than argv or
   the environment.
+- Added a guarded Debian 13 two-node cascade canary with prepare, post-reboot
+  verification and cleanup phases. It validates a real Xray VLESS client,
+  expected Exit egress, restored systemd/iptables state, unchanged primary
+  services and production teardown without persisting the Exit password.
 
 - Began VLESS XHTTP stage F with an opt-in config adapter: a loopback-only
   XHTTP `mode=auto` inbound, TLS client link, and path-scoped unbuffered Caddy

@@ -50,6 +50,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The Go vulnerability job now pins Go 1.26.4 and `govulncheck v1.8.0`, avoiding
   an SSA crash caused when the previous scanner was run by a moving Go 1.27
   `stable` toolchain.
+- The 1.x release policy now explicitly keeps current checksum-pinned upstream
+  binaries and visible vulnerability findings; reproducible project-owned
+  security builds are deferred to the 2.0/3.0 development line.
 - Pinned wgcf 2.2.22 checksums for every supported Linux architecture. WARP
   setup now rejects unknown architectures and checksum mismatches and no longer
   falls back to an unreviewed `latest` download.

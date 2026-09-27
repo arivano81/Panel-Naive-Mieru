@@ -439,6 +439,10 @@ L3 не включается, пока не будут готовы изолир
   либо документированного VEX по каждому конкретному finding. Manifest теперь
   также закрепляет полный upstream commit, а второй source-mode проход строит
   call graph всех Go modules для обоснованного VEX;
+- [ ] собственные воспроизводимые security-сборки Caddy, Mieru, Hysteria2,
+  Xray, wgcf и OpenFlux перенесены в ветку 2.0/3.0. Линейка 1.x использует
+  последние доступные checksum-pinned upstream assets; красный audit gate
+  остаётся видимым и не подменяется широким VEX-исключением;
 - [x] SBOM для релиза: offline SPDX 2.3 охватывает production npm lockfile и
   архитектурные assets внешних компонентов; CI сверяет manifest с установщиками,
   а tag workflow публикует SBOM, source archive и SHA256SUMS без замены файлов;

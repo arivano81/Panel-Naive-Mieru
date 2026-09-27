@@ -22,6 +22,11 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added authenticated XHTTP enable/disable controls, safe path generation,
   panel-config rollback, per-user link/QR, and conditional base64 and universal
   JSON subscription entries. The loopback listener never adds a firewall port.
+- Completed the Debian 13 XHTTP acceptance gate with two implementations:
+  official Xray 26.3.27 on an external Windows client and official Mihomo
+  1.19.31. Both carried traffic through TLS/Caddy/XHTTP, a wrong secret path
+  was rejected with HTTP 403, and cleanup restored the four baseline config
+  files byte-for-byte before a 12/12 doctor result.
 
 - Added the first OpenFlux Experimental isolation layer: a pure pinned-release
   L4/Direct adapter, matching client config, hardened unit template, validation

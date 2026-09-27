@@ -43,6 +43,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   upstream binary contains known-vulnerability symbols. Caddy findings dropped
   from 112 to 67 and wgcf from 85 to 2 after safe upstream upgrades; unresolved
   results are documented without a wildcard allowlist or misleading green gate.
+- Supply-chain metadata now pins the full upstream source commit behind every
+  release asset. The audit also runs source-mode `govulncheck` across every Go
+  module at those exact commits, even after a binary finding, so VEX decisions
+  can be based on call paths rather than presence-only binary symbols.
 - Pinned wgcf 2.2.22 checksums for every supported Linux architecture. WARP
   setup now rejects unknown architectures and checksum mismatches and no longer
   falls back to an unreviewed `latest` download.

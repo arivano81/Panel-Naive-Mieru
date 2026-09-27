@@ -5,6 +5,8 @@
       "name": "caddy-forwardproxy-naive",
       "version": "v2.11.2-naive",
       "source": "https://github.com/klzgrad/forwardproxy",
+      "sourceRef": "v2.11.2-naive",
+      "sourceCommit": "d62c80d3dd2c706b6b87579844d2397bddd18317",
       "license": "NOASSERTION",
       "artifacts": [
         {
@@ -18,6 +20,8 @@
       "name": "mita",
       "version": "3.38.0",
       "source": "https://github.com/enfein/mieru",
+      "sourceRef": "v3.38.0",
+      "sourceCommit": "b961978c3be9dd26b94158487c760858e19d1db2",
       "license": "NOASSERTION",
       "artifacts": [
         {
@@ -36,6 +40,8 @@
       "name": "mieru-client",
       "version": "3.38.0",
       "source": "https://github.com/enfein/mieru",
+      "sourceRef": "v3.38.0",
+      "sourceCommit": "b961978c3be9dd26b94158487c760858e19d1db2",
       "license": "NOASSERTION",
       "artifacts": [
         {
@@ -54,6 +60,8 @@
       "name": "hysteria2",
       "version": "app/v2.12.3",
       "source": "https://github.com/apernet/hysteria",
+      "sourceRef": "app/v2.12.3",
+      "sourceCommit": "e1366b173ccf5706e1e4630fe8aa654a4b574085",
       "license": "NOASSERTION",
       "artifacts": [
         {
@@ -77,6 +85,8 @@
       "name": "xray-core",
       "version": "v26.3.27",
       "source": "https://github.com/XTLS/Xray-core",
+      "sourceRef": "v26.3.27",
+      "sourceCommit": "d2758a023cd7f4174a5a5fa4ff66e487d4342ba0",
       "license": "NOASSERTION",
       "artifacts": [
         {
@@ -90,6 +100,8 @@
       "name": "wgcf",
       "version": "2.3.0",
       "source": "https://github.com/ViRb3/wgcf",
+      "sourceRef": "v2.3.0",
+      "sourceCommit": "ace873cbaa618365beebde5790a7fb3481e5a211",
       "license": "NOASSERTION",
       "artifacts": [
         {
@@ -113,6 +125,8 @@
       "name": "openflux",
       "version": "0.0.5",
       "source": "https://github.com/p1neappleXpress/OpenFlux",
+      "sourceRef": "0.0.5",
+      "sourceCommit": "ea52949d45c0284c532cb8295abadced58b3a389",
       "license": "GPL-3.0-only",
       "artifacts": [
         {

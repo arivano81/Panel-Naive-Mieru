@@ -73,7 +73,8 @@ try {
   }
   ok(pinsMatch, 'supply-chain manifest versions and checksums match production installers');
   ok(!JSON.stringify(manifest).includes('/latest/') &&
-     manifest.components.every(item => item.source.startsWith('https://github.com/')),
+     manifest.components.every(item => item.source.startsWith('https://github.com/') &&
+       /^[a-f0-9]{40}$/.test(item.sourceCommit || '') && item.sourceRef),
     'manifest has immutable release URLs and source provenance');
   const releaseWorkflow = fs.readFileSync(path.join(root, '.github/workflows/release.yml'), 'utf8');
   ok(releaseWorkflow.includes("tags: ['v*']") &&

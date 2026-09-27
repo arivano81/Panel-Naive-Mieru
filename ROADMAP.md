@@ -436,7 +436,9 @@ L3 не включается, пока не будут готовы изолир
   наличии символов с известной уязвимостью. Gate реализован, но его первый
   production-запуск выявил findings во всех семи бинарниках; пункт останется
   открытым до обновления upstream, собственных воспроизводимых security-builds
-  либо документированного VEX по каждому конкретному finding;
+  либо документированного VEX по каждому конкретному finding. Manifest теперь
+  также закрепляет полный upstream commit, а второй source-mode проход строит
+  call graph всех Go modules для обоснованного VEX;
 - [x] SBOM для релиза: offline SPDX 2.3 охватывает production npm lockfile и
   архитектурные assets внешних компонентов; CI сверяет manifest с установщиками,
   а tag workflow публикует SBOM, source archive и SHA256SUMS без замены файлов;

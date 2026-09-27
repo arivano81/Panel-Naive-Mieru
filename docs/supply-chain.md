@@ -60,6 +60,12 @@ SHA-256 из `supply-chain/components.json`; архивы распаковыва
 бинарник проверяется закреплённым `govulncheck v1.1.4` в binary mode. Это охватывает Caddy,
 Mita, Mieru client, Hysteria2, Xray, wgcf и OpenFlux и не доверяет текущей ветке upstream.
 
+Для каждого release manifest также хранит полный 40-символьный upstream commit. Второй проход
+скачивает именно этот commit, сверяет `HEAD` и запускает source-mode `govulncheck ./...` для
+каждого Go module. Он строит call graph и помогает отличить достижимый путь от символа, который
+лишь присутствует в скомпилированном файле. Source scan выполняется даже после красного binary
+scan; оба набора отчётов попадают в один audit artifact.
+
 Отчёты с embedded Go build metadata и результатом проверки сохраняются в GitHub Actions на
 30 дней даже при ошибке. Наличие уязвимого символа делает job красным: обновление версии или
 документированный VEX должны пройти обычные checksum, SBOM и canary gate. Binary mode не строит

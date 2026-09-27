@@ -135,6 +135,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Fixed two additional Debian 13 acceptance findings: the Caddy unit heredoc
   no longer executes a command shown in a comment, and transactional Xray
   candidates with a `.json.new` suffix are validated with explicit JSON format.
+- Transactional service files now receive their requested mode explicitly
+  after creation, so the panel's secure `umask 077` cannot silently turn an
+  intended `root:xray` mode-0640 config into an unreadable mode-0600 file.
 - Fixed clean installation from a bundled/private checkout: Caddy archive
   extraction no longer changes the process working directory to `/`, so the
   following panel step cannot unexpectedly prompt for an interactive GitHub

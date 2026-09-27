@@ -95,7 +95,19 @@ ok(fs.readFileSync(retained, 'utf8') === 'v4', 'latest content is active');
 ok(fs.readFileSync(retained + '.last-good', 'utf8') === 'v3', 'last-good keeps generation v3');
 ok(fs.readFileSync(retained + '.previous-good', 'utf8') === 'v2', 'previous-good keeps generation v2');
 
-console.log('\n[7] administrator apply report exposes rollback and backup details');
+console.log('\n[7] declared mode is not weakened by the panel umask');
+const modeTarget = path.join(tmp, 'group-readable.conf');
+const previousUmask = process.umask(0o077);
+try {
+  result = applyFileTransaction({ targetPath: modeTarget, content: 'secret', mode: 0o640 });
+} finally {
+  process.umask(previousUmask);
+}
+ok(result.ok, 'transaction under restrictive umask completed');
+ok(process.platform === 'win32' || (fs.statSync(modeTarget).mode & 0o777) === 0o640,
+  'requested group-readable mode is explicitly restored after creation');
+
+console.log('\n[8] administrator apply report exposes rollback and backup details');
 const serverSource = fs.readFileSync(path.join(__dirname, '../panel/server/index.js'), 'utf8');
 ok(/rolledBack:\s*\{[\s\S]{0,300}caddy:[\s\S]{0,300}mieru:[\s\S]{0,300}hysteria2:/.test(serverSource),
   'apply result contains rollback state for all managed services');

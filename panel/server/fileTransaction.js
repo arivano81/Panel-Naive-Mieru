@@ -51,6 +51,10 @@ function applyFileTransaction({
   io.mkdirSync(dir, { recursive: true });
   safeRemove(tmp, io);
   io.writeFileSync(tmp, content, { mode });
+  // writeFile's creation mode is filtered through the process umask. The
+  // panel intentionally runs with umask 077, while group-readable service
+  // configs (for example root:xray 0640) must retain their declared mode.
+  if (typeof io.chmodSync === 'function') io.chmodSync(tmp, mode);
 
   let check;
   try { check = normalizeResult(validate(tmp), 'validation failed'); }

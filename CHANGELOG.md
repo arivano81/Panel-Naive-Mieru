@@ -62,6 +62,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   verification and cleanup phases. It validates a real Xray VLESS client,
   expected Exit egress, restored systemd/iptables state, unchanged primary
   services and production teardown without persisting the Exit password.
+- Stabilized the pinned Xray REALITY binary canary by replacing its intermittent
+  self-signed OpenSSL decoy with the field-tested public Cloudflare TLS target;
+  the asserted HTTP origin remains local and reachable only through the tunnel.
 
 - Began VLESS XHTTP stage F with an opt-in config adapter: a loopback-only
   XHTTP `mode=auto` inbound, TLS client link, and path-scoped unbuffered Caddy

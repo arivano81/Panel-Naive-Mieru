@@ -51,15 +51,12 @@ fs.writeFileSync(process.env.XRAY_OUT, JSON.stringify(config, null, 2));
 NODE
 "$WORK/xray" run -test -config "$WORK/config.json"
 
-# End-to-end REALITY canary: a local TLS decoy satisfies the REALITY target,
-# the pinned binary runs both server and client, and curl reaches a separate
-# HTTP origin only through the client's SOCKS5 inbound and VLESS tunnel.
-command -v openssl >/dev/null || { echo "openssl is required for the REALITY canary" >&2; exit 1; }
-printf '127.0.0.1 canary.example.test\n' >> /etc/hosts
-openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj '/CN=canary.example.test' \
-  -keyout "$WORK/decoy.key" -out "$WORK/decoy.crt" >/dev/null 2>&1
-openssl s_server -quiet -accept 127.0.0.1:443 -key "$WORK/decoy.key" -cert "$WORK/decoy.crt" \
-  >"$WORK/decoy.log" 2>&1 & PIDS+=("$!")
+# End-to-end REALITY canary: use the same real, publicly trusted TLS target as
+# the field-tested installer default. A local self-signed openssl decoy is not a
+# valid stability substitute: TLS 1.3 compatibility varies and previously made
+# this canary flap with `unexpected ccs message`. The HTTP origin remains local,
+# so a successful body still proves that traffic traversed client → REALITY
+# server → freedom outbound rather than reaching an external test endpoint.
 node -e "require('http').createServer((q,r)=>r.end('vless-reality-canary')).listen(19080,'127.0.0.1')" \
   >"$WORK/origin.log" 2>&1 & PIDS+=("$!")
 
@@ -69,7 +66,7 @@ const fs = require('fs');
 const { buildXrayRealityConfig } = require(process.env.XRAY_ADAPTER);
 const id = '11111111-1111-4111-8111-111111111111';
 const settings = {
-  port: 18443, serverName: 'canary.example.test', target: 'canary.example.test:443',
+  port: 18443, serverName: 'www.cloudflare.com', target: 'www.cloudflare.com:443',
   privateKey: process.env.XRAY_PRIVATE_KEY, publicKey: process.env.XRAY_PUBLIC_KEY,
   shortId: '0123456789abcdef',
 };
@@ -103,7 +100,7 @@ for _ in $(seq 1 40); do
 done
 if [[ "$CANARY_OK" != 1 ]]; then
   echo 'REALITY end-to-end client canary failed' >&2
-  tail -n 50 "$WORK/server.log" "$WORK/client.log" "$WORK/decoy.log" "$WORK/origin.log" >&2 || true
+  tail -n 50 "$WORK/server.log" "$WORK/client.log" "$WORK/origin.log" >&2 || true
   exit 1
 fi
 echo "Pinned Xray binary canary passed: $VERSION on $(. /etc/os-release; echo "$PRETTY_NAME")"

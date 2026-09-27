@@ -9,8 +9,9 @@
 #          → redsocks (:12345) → iptables REDSOCKS → Exit node (mita) → internet
 #
 # This script is invoked by the panel backend (panel/server/index.js):
-#   bash cascade_mieru.sh setup    --exit-host H --exit-port-start P --exit-port-end P \
-#                                  --exit-user U --exit-pass PW
+#   printf '%s\n' "$EXIT_PASSWORD" | bash cascade_mieru.sh setup --exit-pass-stdin \
+#                                  --exit-host H --exit-port-start P --exit-port-end P \
+#                                  --exit-user U
 #   bash cascade_mieru.sh teardown
 #   bash cascade_mieru.sh status
 #
@@ -66,6 +67,7 @@ EXIT_PORT_START="2012"
 EXIT_PORT_END="2022"
 EXIT_USER=""
 EXIT_PASS=""
+EXIT_PASS_STDIN=0
 EXIT_MTU="1400"          # Bug 95: must match the exit (mita) mtu; default 1400.
 EXIT_MUX="MULTIPLEXING_LOW"   # Bug 95: mieru client default; explicit for clarity.
 
@@ -75,12 +77,16 @@ while [[ $# -gt 0 ]]; do
     --exit-port-start)  EXIT_PORT_START="${2:-}";  shift 2 ;;
     --exit-port-end)    EXIT_PORT_END="${2:-}";    shift 2 ;;
     --exit-user)        EXIT_USER="${2:-}";        shift 2 ;;
-    --exit-pass)        EXIT_PASS="${2:-}";        shift 2 ;;
+    --exit-pass-stdin)  EXIT_PASS_STDIN=1;          shift ;;
     --exit-mtu)         EXIT_MTU="${2:-1400}";     shift 2 ;;
     --exit-mux)         EXIT_MUX="${2:-MULTIPLEXING_LOW}"; shift 2 ;;
     *) shift ;;
   esac
 done
+
+if [[ "$EXIT_PASS_STDIN" == "1" ]]; then
+  IFS= read -r EXIT_PASS || [[ -n "$EXIT_PASS" ]] || die "failed to read exit password from stdin"
+fi
 
 [[ $EUID -ne 0 ]] && die "must run as root"
 
@@ -189,10 +195,14 @@ print(json.dumps([{"port": p, "protocol": "TCP"} for p in range(s, e + 1)]))
 PYEOF
 )
 
-  python3 - "$EXIT_HOST" "$EXIT_USER" "$EXIT_PASS" "$port_bindings" "$RPC_PORT" "$SOCKS5_PORT" "$EXIT_MTU" "$EXIT_MUX" \
-    > "$MIERU_CLIENT_CONFIG" <<'PYEOF'
-import json, sys
-host, user, pw, pb_json, rpc, socks5, mtu, mux = sys.argv[1:9]
+  # Keep the password out of argv and the environment. Python receives it over
+  # an inherited, anonymous file descriptor while its source remains on stdin.
+  python3 - "$EXIT_HOST" "$EXIT_USER" "$port_bindings" "$RPC_PORT" "$SOCKS5_PORT" "$EXIT_MTU" "$EXIT_MUX" \
+    3<<<"$EXIT_PASS" > "$MIERU_CLIENT_CONFIG" <<'PYEOF'
+import json, os, sys
+host, user, pb_json, rpc, socks5, mtu, mux = sys.argv[1:8]
+with os.fdopen(3, "r", encoding="utf-8") as secret_pipe:
+    pw = secret_pipe.read().rstrip("\n")
 try:
     mtu_i = int(mtu)
 except (TypeError, ValueError):
@@ -497,7 +507,7 @@ remove_redsocks_dropin() {
 do_setup() {
   [[ -z "$EXIT_HOST" ]] && die "--exit-host is required"
   [[ -z "$EXIT_USER" ]] && die "--exit-user is required"
-  [[ -z "$EXIT_PASS" ]] && die "--exit-pass is required"
+  [[ "$EXIT_PASS_STDIN" != "1" || -z "$EXIT_PASS" ]] && die "--exit-pass-stdin is required"
 
   local uid; uid=$(mita_uid)
   [[ -z "$uid" ]] && die "mita user not found — is Mieru (mita) installed?"
@@ -686,5 +696,5 @@ case "$ACTION" in
   setup)    do_setup ;;
   teardown) do_teardown ;;
   status)   do_status ;;
-  *) die "usage: cascade_mieru.sh {setup|teardown|status} [--exit-host H --exit-port-start P --exit-port-end P --exit-user U --exit-pass PW]" ;;
+  *) die "usage: cascade_mieru.sh {setup|teardown|status} [--exit-pass-stdin --exit-host H --exit-port-start P --exit-port-end P --exit-user U]" ;;
 esac

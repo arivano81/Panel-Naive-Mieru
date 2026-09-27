@@ -31,6 +31,11 @@ ok(/-d "\$\{exit_ip\}\/32" -j RETURN/.test(cascade),
   'cascade keeps the shared Exit address anti-loop bypass');
 ok(/-D OUTPUT -p tcp -m owner --uid-owner "\$xuid" -j REDSOCKS/.test(cascade),
   'cascade teardown removes the Xray owner rule');
+ok(!/--exit-pass["']?,\s*String\(opts\.pass/.test(server) &&
+   server.includes("'--exit-pass-stdin'") && /execOptions\.input/.test(server),
+  'cascade passes the Exit password over stdin instead of process argv');
+ok(/3<<<"\$EXIT_PASS"/.test(cascade) && /os\.fdopen\(3/.test(cascade),
+  'cascade keeps the password out of the Python child argv and environment');
 ok(/-A PREROUTING ! -i "\$dev" -p tcp .*--set-mark "\$MARK_CONN"/.test(warp),
   'WARP marks inbound VLESS TCP connections for native replies');
 ok(/-A OUTPUT -p tcp -j CONNMARK --restore-mark/.test(warp),

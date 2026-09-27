@@ -54,6 +54,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Corrected the legacy E2E cascade contract: it now requires the profile-scoped
   Mieru MTU/multiplexing settings and the non-blocking, non-fatal redsocks
   restart hook used by the current systemd unit.
+- Removed the Mieru Exit password from process arguments. The panel now supplies
+  it to the cascade orchestrator over stdin, and the generated-client-config
+  helper receives it through an anonymous file descriptor rather than argv or
+  the environment.
 
 - Began VLESS XHTTP stage F with an opt-in config adapter: a loopback-only
   XHTTP `mode=auto` inbound, TLS client link, and path-scoped unbuffered Caddy

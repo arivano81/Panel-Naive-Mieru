@@ -1190,8 +1190,8 @@ function restartMieru() {
 const CASCADE_SCRIPT = path.join(__dirname, '../scripts/cascade_mieru.sh');
 
 // Run cascade_mieru.sh {setup|teardown|status}. Returns { ok, output }.
-// Uses execFileSync (no shell) so the exit credentials are passed as argv and
-// never interpolated into a shell string.
+// Uses execFileSync (no shell) and sends the exit password over stdin, keeping
+// it out of both shell interpolation and the process list.
 function runCascadeMieru(action, opts = {}) {
   try {
     const args = [CASCADE_SCRIPT, action];
@@ -1201,14 +1201,16 @@ function runCascadeMieru(action, opts = {}) {
         '--exit-port-start', String(opts.portStart || ''),
         '--exit-port-end',   String(opts.portEnd || ''),
         '--exit-user',       String(opts.user || ''),
-        '--exit-pass',       String(opts.pass || ''),
+        '--exit-pass-stdin',
         // Bug 95: mtu MUST match the exit (mita) mtu. Operators normally keep the
         // panel default (1400) on both nodes; allow an override via cascadeMieru.mtu.
         '--exit-mtu',        String(opts.mtu || cfg.mtu || 1400),
         '--exit-mux',        String(opts.mux || 'MULTIPLEXING_LOW')
       );
     }
-    const out = execFileSync('bash', args, { timeout: 120000 }).toString();
+    const execOptions = { timeout: 120000 };
+    if (action === 'setup') execOptions.input = `${String(opts.pass || '')}\n`;
+    const out = execFileSync('bash', args, execOptions).toString();
     return { ok: true, output: out };
   } catch (e) {
     return { ok: false, output: (e.stdout ? e.stdout.toString() : '') + (e.stderr ? e.stderr.toString() : e.message) };

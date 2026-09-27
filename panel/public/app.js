@@ -1555,24 +1555,49 @@ async function savePanelStub() {
 }
 
 // ── v1.6.0: Backup export / import ───────────────────────────────────────────
-// Export: privileged download of the full backup JSON (users incl. passwords +
-// full config). Uses fetch (not api()) so we can stream the blob download.
+// Export: encrypt the full backup server-side after explicit administrator
+// re-authentication. The encryption passphrase is never retained by the panel.
 async function backupExport() {
   const btn = document.querySelector('[data-action="backup-export"]');
+  const adminPassword = el('backup-admin-password')?.value || '';
+  const passphrase = el('backup-passphrase')?.value || '';
+  const confirmation = el('backup-passphrase-confirm')?.value || '';
+  if (!adminPassword) {
+    toast(t('settings.backupAdminPasswordRequired') || 'Enter the current administrator password', 'error');
+    return;
+  }
+  if (passphrase.length < 12) {
+    toast(t('settings.backupPassphraseShort') || 'Backup passphrase must contain at least 12 characters', 'error');
+    return;
+  }
+  if (confirmation !== passphrase) {
+    toast(t('settings.backupPassphraseMismatch') || 'Backup passphrases do not match', 'error');
+    return;
+  }
   if (btn) btn.disabled = true;
   try {
-    const res = await fetch(apiUrl('/api/backup/export'), { credentials: 'include' });
+    const res = await fetch(apiUrl('/api/backup/export/encrypted'), {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': state.csrfToken },
+      body: JSON.stringify({ adminPassword, passphrase }),
+    });
     if (res.status === 401) { redirectToLogin(); return; }
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(error.error || res.statusText);
+    }
     const blob = await res.blob();
     const cd   = res.headers.get('Content-Disposition') || '';
-    const fn   = cd.match(/filename="(.+)"/)?.[1] || 'rixxx-backup.json';
+    const fn   = cd.match(/filename="(.+)"/)?.[1] || 'rixxx-backup.rixxx.enc.json';
     downloadBlob(blob, fn);
     toast(t('settings.backupExported') || 'Backup downloaded', 'success');
   } catch (err) {
     toast(err.message, 'error');
   } finally {
     if (btn) btn.disabled = false;
+    for (const id of ['backup-admin-password', 'backup-passphrase', 'backup-passphrase-confirm']) {
+      if (el(id)) el(id).value = '';
+    }
   }
 }
 
@@ -1591,12 +1616,33 @@ async function backupImportFile(file) {
     show(t('settings.backupBadFile') || 'Not a valid backup file (JSON parse failed)', false);
     return;
   }
-  if (!backup || backup.format !== 'rixxx-panel-backup') {
+  if (!backup || !['rixxx-panel-backup', 'rixxx-panel-backup-encrypted'].includes(backup.format)) {
     show(t('settings.backupBadFile') || 'Not a RIXXX panel backup file', false);
     return;
   }
-  const nUsers = Array.isArray(backup.users) ? backup.users.length : 0;
-  const bDomain = (backup.config && backup.config.domain) || '—';
+  let passphrase;
+  let nUsers;
+  let bDomain;
+  if (backup.format === 'rixxx-panel-backup-encrypted') {
+    passphrase = el('backup-unlock-passphrase')?.value || '';
+    if (!passphrase) {
+      show(t('settings.backupUnlockRequired') || 'Enter the backup passphrase before selecting the file', false);
+      return;
+    }
+    try {
+      const preview = await api('POST', '/api/backup/inspect', { backup, passphrase });
+      nUsers = preview.users;
+      bDomain = preview.domain || '—';
+    } catch (err) {
+      show(err.message, false);
+      if (el('backup-file-input')) el('backup-file-input').value = '';
+      if (el('backup-unlock-passphrase')) el('backup-unlock-passphrase').value = '';
+      return;
+    }
+  } else {
+    nUsers = Array.isArray(backup.users) ? backup.users.length : 0;
+    bDomain = (backup.config && backup.config.domain) || '—';
+  }
 
   // Ask which domain to use. OK = keep backup domain (same-DNS move, clients
   // unaffected); Cancel = keep current server's domain (clients need new keys).
@@ -1608,13 +1654,17 @@ async function backupImportFile(file) {
   const domainMode = useBackupDomain ? 'backup' : 'current';
 
   if (!confirm(t('settings.backupImportConfirm') ||
-      'This will OVERWRITE the current users and settings with the backup. Continue?')) return;
+      'This will OVERWRITE the current users and settings with the backup. Continue?')) {
+    if (el('backup-file-input')) el('backup-file-input').value = '';
+    if (el('backup-unlock-passphrase')) el('backup-unlock-passphrase').value = '';
+    return;
+  }
 
   const btn = document.querySelector('[data-action="backup-import-pick"]');
   if (btn) btn.disabled = true;
   show(t('settings.backupImporting') || 'Restoring…', true);
   try {
-    const r = await api('POST', '/api/backup/import', { backup, domainMode });
+    const r = await api('POST', '/api/backup/import', { backup, domainMode, passphrase });
     show((r.message || 'Restore complete') +
       (r.servicesReloaded ? '' : ' ⚠ services may need a manual restart'), true);
     toast((t('settings.backupImported') || 'Backup restored') + ` (${r.restoredUsers})`, 'success');
@@ -1627,6 +1677,7 @@ async function backupImportFile(file) {
     if (btn) btn.disabled = false;
     const input = el('backup-file-input');
     if (input) input.value = '';   // allow re-picking the same file
+    if (el('backup-unlock-passphrase')) el('backup-unlock-passphrase').value = '';
   }
 }
 

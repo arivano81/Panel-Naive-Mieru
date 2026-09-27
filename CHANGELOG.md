@@ -11,6 +11,12 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Backup export is now encrypted by default and no longer exposes a plaintext
+  export endpoint. AES-256-GCM authenticates the complete backup, `scrypt`
+  derives its key from a separate 12+ character passphrase, and export requires
+  administrator password re-authentication under a dedicated rate limit. Import
+  accepts both the new versioned envelope and legacy plaintext JSON backups;
+  wrong passwords, tampering and KDF downgrades fail before state changes.
 - Pinned wgcf 2.2.22 checksums for every supported Linux architecture. WARP
   setup now rejects unknown architectures and checksum mismatches and no longer
   falls back to an unreviewed `latest` download.

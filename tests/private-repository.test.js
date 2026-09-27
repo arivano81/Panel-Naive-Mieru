@@ -59,6 +59,9 @@ ok(multiFileTransaction.status === 0, 'coupled config transaction regression sui
 const backupRestore = spawnSync(process.execPath, [path.join(__dirname, 'backup-restore.test.js')],
   { stdio: 'inherit' });
 ok(backupRestore.status === 0, 'clean-install backup restore regression suite passes');
+const backupCrypto = spawnSync(process.execPath, [path.join(__dirname, 'backup-crypto.test.js')],
+  { stdio: 'inherit' });
+ok(backupCrypto.status === 0, 'encrypted backup regression suite passes');
 const vlessAdapter = spawnSync(process.execPath, [path.join(__dirname, 'vless-reality-adapter.test.js')],
   { stdio: 'inherit' });
 ok(vlessAdapter.status === 0, 'VLESS REALITY adapter regression suite passes');

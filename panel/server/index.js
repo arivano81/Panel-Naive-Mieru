@@ -45,6 +45,7 @@ const { applyMultiFileTransaction } = require('./multiFileTransaction');
 const { runDatabaseMigrations } = require('./databaseMigrations');
 const { runConfigMigrations } = require('./configMigrations');
 const { BACKUP_FORMAT, BACKUP_SCHEMA, validateBackup, restoreBackupState } = require('./backupRestore');
+const { ENCRYPTED_BACKUP_FORMAT, encryptBackup, decryptBackup } = require('./backupCrypto');
 const { buildXrayRealityConfig, buildVlessRealityLink, buildVlessXhttpLink,
   buildCaddyXhttpRoute, normalizeXhttpSettings } = require('./xrayConfig');
 const { parseXrayStats, accumulateXrayStats } = require('./xrayStats');
@@ -1910,6 +1911,8 @@ const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20,  message: { 
 const apiLimiter   = rateLimit({ windowMs:      60 * 1000, max: 300, message: { error: 'Rate limit exceeded' } });
 const openFluxSecretLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10,
   message: { error: 'Too many secret export attempts' } });
+const backupSecretLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10,
+  message: { error: 'Too many backup password attempts' } });
 const totpLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10,
   message: { error: 'Too many two-factor attempts' } });
 app.use('/api/', apiLimiter);
@@ -2260,19 +2263,19 @@ app.post('/api/config/password', requireAuth, (req, res) => {
 // hashes, which are what regenerate the SAME working keys) and the full panel
 // config (domains, ports, protocols, cascade/WARP, admin credentials).
 //
-// Why plaintext passwords are in the backup: a NaiveProxy/Mieru key is
+// Why plaintext passwords are inside the encrypted payload: a NaiveProxy/Mieru key is
 // `…://<user>:<pass>@…`. To make an existing client keep working after a
 // server move, the restored server MUST reissue the identical user/pass. The
 // bcrypt `passHash` alone cannot reproduce the plaintext, so we carry both.
-// The file is therefore SECRET — the UI warns the operator to store it safely.
+// New exports wrap that payload in authenticated encryption; only legacy JSON
+// imports may still contain these values directly.
 //
 // Restore is idempotent and non-destructive to the mechanism: it upserts users
 // by id, writes the config, then rebuilds the Caddyfile + mita config and
 // restarts the services — the very same code path used by every normal
 // add/delete, so nothing bespoke can drift.
-app.get('/api/backup/export', requireAuth, (req, res) => {
-  try {
-    const users = getAllUsers().map(u => ({
+function buildPortableBackup() {
+  const users = getAllUsers().map(u => ({
       id:        u.id,
       email:     u.email || null,
       username:  u.username,
@@ -2292,39 +2295,69 @@ app.get('/api/backup/export', requireAuth, (req, res) => {
       vlessDownloadBytes: u.vlessDownloadBytes || 0,
       vlessLastUploadBytes: u.vlessLastUploadBytes || 0,
       vlessLastDownloadBytes: u.vlessLastDownloadBytes || 0
-    }));
+  }));
+  return {
+    format: BACKUP_FORMAT,
+    schema: BACKUP_SCHEMA,
+    version: readPanelVersion(),
+    exportedAt: new Date().toISOString(),
+    config: cfg,
+    users,
+  };
+}
 
-    // Full config incl. admin credentials — this is a privileged, auth-gated
-    // download (never exposed via /api/config, which masks secrets).
-    const backup = {
-      format:    BACKUP_FORMAT,
-      schema:    BACKUP_SCHEMA,
-      version:   readPanelVersion(),
-      exportedAt: new Date().toISOString(),
-      config:    cfg,
-      users
-    };
+function backupFilename(suffix) {
+  const domainTag = (cfg.domain || 'server').replace(/[^A-Za-z0-9._-]/g, '_');
+  const dateTag = new Date().toISOString().slice(0, 10);
+  return `rixxx-backup-${domainTag}-${dateTag}.${suffix}`;
+}
 
-    const domainTag = (cfg.domain || 'server').replace(/[^A-Za-z0-9._-]/g, '_');
-    const dateTag   = new Date().toISOString().slice(0, 10);
-    const filename  = `rixxx-backup-${domainTag}-${dateTag}.json`;
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+app.post('/api/backup/export/encrypted', requireAuth, backupSecretLimiter, (req, res) => {
+  const input = req.body || {};
+  if (typeof input.adminPassword !== 'string' || !cfg.adminPassHash ||
+      !bcrypt.compareSync(input.adminPassword, cfg.adminPassHash))
+    return res.status(403).json({ error: 'Administrator password confirmation failed' });
+  try {
+    const envelope = encryptBackup(buildPortableBackup(), input.passphrase);
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Content-Disposition',
+      `attachment; filename="${backupFilename('rixxx.enc.json')}"`);
     res.setHeader('Content-Type', 'application/json');
-    res.json(backup);
+    res.json(envelope);
   } catch (e) {
-    console.error('[BACKUP] export failed:', e && e.message);
-    res.status(500).json({ error: 'Backup export failed: ' + (e && e.message) });
+    console.error('[BACKUP] encrypted export failed:', e && e.message);
+    res.status(400).json({ error: 'Encrypted backup export failed: ' + (e && e.message) });
+  }
+});
+
+app.post('/api/backup/inspect', requireAuth, backupSecretLimiter, (req, res) => {
+  try {
+    let backup = req.body && req.body.backup;
+    if (backup && backup.format === ENCRYPTED_BACKUP_FORMAT)
+      backup = decryptBackup(backup, req.body && req.body.passphrase);
+    validateBackup(backup);
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({
+      encrypted: (req.body && req.body.backup && req.body.backup.format) === ENCRYPTED_BACKUP_FORMAT,
+      users: backup.users.length,
+      domain: backup.config.domain || '',
+      exportedAt: backup.exportedAt || null,
+    });
+  } catch (e) {
+    res.status(400).json({ error: 'Backup inspection failed: ' + (e && e.message) });
   }
 });
 
 // Import/restore. Body: { backup: <parsed backup object>, domainMode: 'backup'|'current' }
 //   domainMode 'backup'  → keep domains/IP/ports from the backup (same-DNS move; clients unaffected)
 //   domainMode 'current' → keep THIS server's current domain/IP/ports (new DNS; clients need new keys)
-app.post('/api/backup/import', requireAuth, (req, res) => {
-  const backup     = req.body && req.body.backup;
+app.post('/api/backup/import', requireAuth, backupSecretLimiter, (req, res) => {
+  let backup       = req.body && req.body.backup;
   const domainMode = (req.body && req.body.domainMode) === 'current' ? 'current' : 'backup';
 
   try {
+    if (backup && backup.format === ENCRYPTED_BACKUP_FORMAT)
+      backup = decryptBackup(backup, req.body && req.body.passphrase);
     validateBackup(backup);
     let transaction;
     let memorySnapshot;
@@ -2368,7 +2401,7 @@ app.post('/api/backup/import', requireAuth, (req, res) => {
     });
   } catch (e) {
     console.error('[BACKUP] import failed:', e && e.message);
-    const validationError = /No backup|bad format|Unsupported backup schema|missing its|malformed user/.test(e && e.message);
+    const validationError = /No backup|bad format|Unsupported backup schema|missing its|malformed user|Backup passphrase|Encrypted backup|supported encrypted/.test(e && e.message);
     res.status(validationError ? 400 : 500).json({
       error: 'Backup import failed: ' + (e && e.message),
       previousStateRestored: validationError ? undefined : !!e.recoverySucceeded,

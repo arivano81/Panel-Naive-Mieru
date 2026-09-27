@@ -23,12 +23,31 @@ const SERVER = path.join(__dirname, '..', 'panel', 'server', 'index.js');
 const src = fs.readFileSync(SERVER, 'utf8');
 const backupRestoreSrc = fs.readFileSync(
   path.join(__dirname, '..', 'panel', 'server', 'backupRestore.js'), 'utf8');
+const backupCryptoSrc = fs.readFileSync(
+  path.join(__dirname, '..', 'panel', 'server', 'backupCrypto.js'), 'utf8');
+const ui = fs.readFileSync(path.join(__dirname, '..', 'panel', 'public', 'app.js'), 'utf8');
+const html = fs.readFileSync(path.join(__dirname, '..', 'panel', 'public', 'index.html'), 'utf8');
 
 // ── (a) Structural checks ────────────────────────────────────────────────────
-ok(/app\.get\(\s*['"]\/api\/backup\/export['"]\s*,\s*requireAuth/.test(src),
-   'GET /api/backup/export is registered and auth-gated');
+ok(!/app\.get\(\s*['"]\/api\/backup\/export['"]/.test(src),
+   'plaintext backup export endpoint is removed');
 ok(/app\.post\(\s*['"]\/api\/backup\/import['"]\s*,\s*requireAuth/.test(src),
    'POST /api/backup/import is registered and auth-gated');
+ok(/app\.post\(\s*['"]\/api\/backup\/export\/encrypted['"]\s*,\s*requireAuth\s*,\s*backupSecretLimiter/.test(src),
+   'encrypted export requires authentication and a dedicated rate limit');
+ok((src.match(/app\.post\(\s*['"]\/api\/backup\/export\/encrypted['"]/g) || []).length === 1,
+   'encrypted export route is registered exactly once');
+ok(/bcrypt\.compareSync\(input\.adminPassword, cfg\.adminPassHash\)/.test(src),
+   'encrypted export requires administrator password confirmation');
+ok(/decryptBackup\(backup, req\.body && req\.body\.passphrase\)/.test(src),
+   'encrypted import authenticates and decrypts before validation or mutation');
+ok(/aes-256-gcm/.test(backupCryptoSrc) && /scryptSync/.test(backupCryptoSrc) && /setAAD/.test(backupCryptoSrc),
+   'backup envelope uses scrypt and authenticated AES-256-GCM');
+ok(!/async function backupExport\(\)[\s\S]{0,1200}prompt\(/.test(ui),
+   'backup export never collects secrets through a visible browser prompt');
+ok(['backup-admin-password', 'backup-passphrase', 'backup-passphrase-confirm', 'backup-unlock-passphrase']
+  .every(id => new RegExp(`type="password" id="${id}"`).test(html)),
+   'every backup secret is collected in a masked password field');
 ok(/const BACKUP_FORMAT\s*=\s*'rixxx-panel-backup'/.test(backupRestoreSrc),
    'backup format tag is "rixxx-panel-backup"');
 ok(/const BACKUP_SCHEMA\s*=\s*4/.test(backupRestoreSrc),
@@ -49,13 +68,13 @@ ok(/applyAllConfigs\(\)/.test(backupRestoreSrc),
 ok(/upsertUser\(/.test(backupRestoreSrc),
    'import restores users via upsertUser (idempotent, non-destructive)');
 
-// Export must carry the plaintext password (needed to regenerate keys) and the
-// bcrypt passHash, plus the full config.
-const exportBody = src.slice(src.indexOf("'/api/backup/export'"),
+// The in-memory payload must carry the plaintext password (needed to regenerate
+// keys), bcrypt passHash and full config before the complete object is encrypted.
+const exportBody = src.slice(src.indexOf('function buildPortableBackup()'),
                              src.indexOf("'/api/backup/import'"));
-ok(/password:\s*u\.password/.test(exportBody), 'export includes plaintext password (key regen)');
-ok(/passHash:\s*u\.passHash/.test(exportBody), 'export includes bcrypt passHash');
-ok(/config:\s*cfg/.test(exportBody),           'export includes the full config');
+ok(/password:\s*u\.password/.test(exportBody), 'encrypted payload includes client password (key regen)');
+ok(/passHash:\s*u\.passHash/.test(exportBody), 'encrypted payload includes bcrypt passHash');
+ok(/config:\s*cfg/.test(exportBody),           'encrypted payload includes the full config');
 ok(/Content-Disposition/.test(exportBody),     'export sends a file download header');
 
 // Body limit lifted so large backups import.

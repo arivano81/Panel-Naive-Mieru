@@ -20,6 +20,14 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Diagnostics no longer expose raw `mita describe config` output. The panel now
   builds a versioned allowlist-only report from service states, port checks and
   aggregate config metadata, and offers it as a non-cacheable JSON download.
+- Added an offline SPDX 2.3 release SBOM covering the panel, every production
+  npm dependency and each architecture-specific pinned binary. CI rejects drift
+  between the supply-chain manifest and production installers; version tags
+  publish the SBOM, deterministic source archive and SHA256SUMS without silently
+  replacing existing release files.
+- Corrected the Hysteria2 `app/v2.12.3` ARMv7 checksum, whose previous 65-digit
+  value could never match. The replacement equals the official GitHub asset
+  digest and is now length-checked through the SBOM gate.
 - Pinned wgcf 2.2.22 checksums for every supported Linux architecture. WARP
   setup now rejects unknown architectures and checksum mismatches and no longer
   falls back to an unreviewed `latest` download.

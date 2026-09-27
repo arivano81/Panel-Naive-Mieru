@@ -27,8 +27,11 @@ ok(script.includes('8c7a68a906998b747a0db87586e364f995fbfddb95693ae6e2fdb68a6e92
   'amd64 checksum is pinned');
 ok(script.includes('c8dc653c3ba0a28d29a26b8fa52d2086f27c0927afddce95c09965e7174e78b0'),
   'arm64 checksum is pinned');
-ok(script.includes('cc4bc596c2db473dd7ec1bbcc3cd10e0cb60302759facd95e0be733bc8751e110'),
+ok(script.includes('cc4bc596c2db473dd7ec1bbcc3cd10e0cb60302759facd95e0be73bc8751e110'),
   'armv7 checksum is pinned');
+const pinnedChecksums = [...script.matchAll(/HY_SHA256="([0-9a-f]+)"/g)].map(match => match[1]);
+ok(pinnedChecksums.length === 3 && pinnedChecksums.every(checksum => /^[0-9a-f]{64}$/.test(checksum)),
+  'every architecture checksum is exactly 64 lowercase hexadecimal characters');
 ok(script.includes('unsupported architecture for Hysteria2'), 'unknown architectures fail closed');
 
 const downloadAt = script.indexOf('wget -q --timeout=120');

@@ -60,7 +60,7 @@ case "$(uname -m)" in
     ;;
   armv7l|armv7)
     HY_ARCH="arm"
-    HY_SHA256="cc4bc596c2db473dd7ec1bbcc3cd10e0cb60302759facd95e0be733bc8751e110"
+    HY_SHA256="cc4bc596c2db473dd7ec1bbcc3cd10e0cb60302759facd95e0be73bc8751e110"
     ;;
   *)
     log "ERROR: unsupported architecture for Hysteria2: $(uname -m)"

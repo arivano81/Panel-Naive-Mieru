@@ -65,6 +65,9 @@ ok(backupCrypto.status === 0, 'encrypted backup regression suite passes');
 const diagnosticsExport = spawnSync(process.execPath, [path.join(__dirname, 'diagnostics-export.test.js')],
   { stdio: 'inherit' });
 ok(diagnosticsExport.status === 0, 'secret-free diagnostic export regression suite passes');
+const sbom = spawnSync(process.execPath, [path.join(__dirname, 'sbom.test.js')],
+  { stdio: 'inherit' });
+ok(sbom.status === 0, 'SPDX release SBOM regression suite passes');
 const vlessAdapter = spawnSync(process.execPath, [path.join(__dirname, 'vless-reality-adapter.test.js')],
   { stdio: 'inherit' });
 ok(vlessAdapter.status === 0, 'VLESS REALITY adapter regression suite passes');

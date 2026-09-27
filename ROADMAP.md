@@ -431,7 +431,9 @@ L3 не включается, пока не будут готовы изолир
 - [x] logrotate и лимиты файловых журналов панели, установщика и cascade-watchdog;
 - [x] npm audit для production-зависимостей с CI-блокировкой от moderate и выше;
 - проверка Go-зависимостей внешних Caddy/Mieru/Xray/OpenFlux компонентов;
-- SBOM для релиза;
+- [x] SBOM для релиза: offline SPDX 2.3 охватывает production npm lockfile и
+  архитектурные assets внешних компонентов; CI сверяет manifest с установщиками,
+  а tag workflow публикует SBOM, source archive и SHA256SUMS без замены файлов;
 - подпись release artifacts;
 - [x] security contact через private GitHub Security Advisory и документированная процедура отзыва релиза.
 

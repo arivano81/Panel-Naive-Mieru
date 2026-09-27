@@ -10,3 +10,4 @@ db.sqlite
 /tmp/
 *.tmp
 *.new
+dist/

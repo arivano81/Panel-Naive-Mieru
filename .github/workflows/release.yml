@@ -1,0 +1,42 @@
+name: Release artifacts
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+      - name: Validate tag and generate immutable artifacts
+        run: |
+          set -euo pipefail
+          version=$(tr -d '[:space:]' < VERSION)
+          test "$GITHUB_REF_NAME" = "v${version}"
+          created=$(date -u -d "$(git show -s --format=%cI HEAD)" +%Y-%m-%dT%H:%M:%SZ)
+          mkdir -p dist
+          SBOM_CREATED="$created" node tools/generate-sbom.js "dist/rixxx-panel-${version}.spdx.json"
+          node tests/sbom.test.js
+          git archive --format=tar.gz --prefix="Panel-Naive-Mieru-${version}/" \
+            -o "dist/Panel-Naive-Mieru-${version}.tar.gz" HEAD
+          cd dist
+          sha256sum "Panel-Naive-Mieru-${version}.tar.gz" "rixxx-panel-${version}.spdx.json" > SHA256SUMS
+      - name: Create release and upload without replacement
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --title "$GITHUB_REF_NAME"
+          fi
+          gh release upload "$GITHUB_REF_NAME" dist/*

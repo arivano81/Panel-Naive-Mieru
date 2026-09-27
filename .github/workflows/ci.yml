@@ -27,6 +27,13 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm audit --omit=dev --audit-level=moderate
+      - name: Generate and validate release SBOM
+        working-directory: .
+        env:
+          SBOM_CREATED: '2026-01-01T00:00:00Z'
+        run: |
+          node tools/generate-sbom.js dist/rixxx-panel.spdx.json
+          node tests/sbom.test.js
 
   debian:
     name: Debian ${{ matrix.release }}

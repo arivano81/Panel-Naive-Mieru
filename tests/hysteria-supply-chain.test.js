@@ -51,6 +51,9 @@ ok(script.includes('systemctl is-active --quiet hysteria-server') &&
    script.includes('.components.hysteria2 = {installed:true,version:$version') &&
    script.includes('${COMPONENT_REGISTRY}.hysteria-new'),
   'successful install requires active service and atomically records canonical component state');
+ok(script.includes('PASSWORD=$(openssl rand -hex 24)') &&
+   !script.includes('echo "    {}" >> /etc/hysteria/config.yaml'),
+  'empty user pools receive a one-time bootstrap credential instead of an invalid empty map');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

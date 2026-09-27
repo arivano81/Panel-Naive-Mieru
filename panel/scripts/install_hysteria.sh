@@ -173,7 +173,7 @@ chown -R "$HY_USER":"$HY_USER" /etc/hysteria 2>/dev/null || true
 
 # Bootstrap config. The panel backend (writeHysteriaConfig) OWNS the
 # `auth.userpass` map and rewrites it from the SQLite users table on every
-# add/delete/edit. We seed it with an OPTIONAL bootstrap password so the
+# add/delete/edit. We seed it with a bootstrap password so the
 # service can start immediately even before the first panel apply.
 cat > /etc/hysteria/config.yaml << HYCFGEOF
 # ═══════════════════════════════════════════════
@@ -191,13 +191,14 @@ auth:
   userpass:
 HYCFGEOF
 
-# Seed a bootstrap credential only if provided (so the service is valid on
-# first boot). The panel replaces the whole map on first apply.
-if [[ -n "$PASSWORD" ]]; then
-  echo "    bootstrap: \"${PASSWORD}\"" >> /etc/hysteria/config.yaml
-else
-  echo "    {}" >> /etc/hysteria/config.yaml
+# Hysteria rejects an empty userpass map. Generate an inaccessible one-time
+# credential for CLI/API bootstrap when the operator did not provide one. The
+# panel replaces the entire map on its first apply, so this value is never
+# returned to clients or persisted in the administrator report.
+if [[ -z "$PASSWORD" ]]; then
+  PASSWORD=$(openssl rand -hex 24)
 fi
+echo "    bootstrap: \"${PASSWORD}\"" >> /etc/hysteria/config.yaml
 
 cat >> /etc/hysteria/config.yaml << 'HYMASQEOF'
 

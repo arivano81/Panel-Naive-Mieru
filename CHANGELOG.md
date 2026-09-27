@@ -59,6 +59,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Hysteria2 installation now fails if the service is not active and atomically
   records the installed version in the canonical component registry, including
   direct CLI installs.
+- Hysteria2 no longer boots with an invalid empty `auth.userpass` map when the
+  panel has no users; a random one-time bootstrap credential keeps the service
+  valid until the panel replaces the complete map.
 - Pinned wgcf 2.2.22 checksums for every supported Linux architecture. WARP
   setup now rejects unknown architectures and checksum mismatches and no longer
   falls back to an unreviewed `latest` download.

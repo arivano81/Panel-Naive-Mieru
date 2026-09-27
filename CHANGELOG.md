@@ -34,6 +34,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The external panel decoy directory is now explicitly mode 755 on install and
   repair, preventing Caddy's unprivileged user from returning 403 at the panel
   domain root; uninstall also removes this project-owned artifact.
+- Re-ran a destructive clean-install canary on an external Debian 13 VPS. After
+  a real reboot Caddy, Mita and `pm2-root` were active and enabled, doctor passed
+  10/10, the public TLS panel path enforced Basic Auth, and the decoy root served
+  its expected local page.
 
 - Began VLESS XHTTP stage F with an opt-in config adapter: a loopback-only
   XHTTP `mode=auto` inbound, TLS client link, and path-scoped unbuffered Caddy

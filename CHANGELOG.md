@@ -11,6 +11,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Pinned wgcf 2.2.22 checksums for every supported Linux architecture. WARP
+  setup now rejects unknown architectures and checksum mismatches and no longer
+  falls back to an unreviewed `latest` download.
+
 - Began VLESS XHTTP stage F with an opt-in config adapter: a loopback-only
   XHTTP `mode=auto` inbound, TLS client link, and path-scoped unbuffered Caddy
   h2c route. Disabled XHTTP leaves the existing REALITY config unchanged, and

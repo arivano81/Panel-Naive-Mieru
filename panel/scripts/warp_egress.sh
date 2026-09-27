@@ -58,6 +58,7 @@ WGCF_DIR="/etc/rixxx-panel/warp"
 WGCF_ACCOUNT="${WGCF_DIR}/wgcf-account.toml"
 WGCF_PROFILE="${WGCF_DIR}/wgcf-profile.conf"
 WARP_ENDPOINT_HOST="engage.cloudflareclient.com"
+WGCF_VERSION="2.2.22"
 
 # BUG-164: WARP over Cloudflare needs a reduced MTU (1280). With the default
 #   1420/1500 the encrypted reply packets get dropped on the return path, so the
@@ -143,7 +144,16 @@ wgcf_arch() {
     x86_64|amd64)  echo "linux_amd64" ;;
     aarch64|arm64) echo "linux_arm64" ;;
     armv7l|armv7)  echo "linux_armv7" ;;
-    *)             echo "linux_amd64" ;;
+    *)             return 1 ;;
+  esac
+}
+
+wgcf_sha256() {
+  case "${1:-}" in
+    linux_amd64) echo "268d187e649870b603ad2e5c1b74a696251f6c2f6f075c726a174a0039b0b1e2" ;;
+    linux_arm64) echo "e5ff08d3aae5374935211053b2d64d96daaa3f1aec8e9a1dab7418125585a011" ;;
+    linux_armv7) echo "bd40e55dae299acfa20446973ff4fc5a9a116ecaa41431aeff5f86034391f900" ;;
+    *) return 1 ;;
   esac
 }
 
@@ -162,18 +172,25 @@ ensure_packages() {
 
   if ! command -v wgcf &>/dev/null; then
     log "installing wgcf…"
-    local arch ver url tmp
-    arch="$(wgcf_arch)"
-    # Pin to a known wgcf release; fall back to 'latest' redirect if the API is reachable.
-    ver="2.2.22"
+    local arch ver url tmp expected actual
+    arch="$(wgcf_arch)" || die "unsupported architecture for wgcf: $(uname -m)"
+    expected="$(wgcf_sha256 "$arch")" || die "no pinned wgcf checksum for architecture: $arch"
+    ver="$WGCF_VERSION"
     url="https://github.com/ViRb3/wgcf/releases/download/v${ver}/wgcf_${ver}_${arch}"
     tmp="$(mktemp)"
     if ! curl -fsSL --max-time 60 -o "$tmp" "$url" 2>/dev/null; then
-      # Try latest as a fallback.
-      url="https://github.com/ViRb3/wgcf/releases/latest/download/wgcf_${ver}_${arch}"
-      curl -fsSL --max-time 60 -o "$tmp" "$url" 2>/dev/null || die "failed to download wgcf"
+      rm -f "$tmp"
+      die "failed to download pinned wgcf ${ver}"
     fi
-    install -m 0755 "$tmp" /usr/local/bin/wgcf || die "failed to install wgcf binary"
+    actual="$(sha256sum "$tmp" 2>/dev/null | awk '{print $1}')"
+    if [[ "$actual" != "$expected" ]]; then
+      rm -f "$tmp"
+      die "wgcf SHA-256 mismatch for ${arch}"
+    fi
+    if ! install -m 0755 "$tmp" /usr/local/bin/wgcf; then
+      rm -f "$tmp"
+      die "failed to install wgcf binary"
+    fi
     rm -f "$tmp"
   fi
 }

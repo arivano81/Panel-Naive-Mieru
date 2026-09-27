@@ -882,6 +882,12 @@ ${probe_line}"
   fi
 
   # Write atomically
+  if [[ "${EXPOSE_PANEL_BOOL:-0}" == "1" ]] && \
+     ! grep -Fq "${PANEL_DOMAIN} {" <<<"$caddyfile_content"; then
+    die "$(t \
+      'Блок внешней панели не сгенерирован — Caddyfile не будет заменён' \
+      'External panel block was not generated — Caddyfile will not be replaced')"
+  fi
   local tmp_file="${CADDY_FILE}.new"
   printf '%s\n' "$caddyfile_content" > "$tmp_file"
   mv "$tmp_file" "$CADDY_FILE"
@@ -1421,6 +1427,11 @@ start_services() {
     pm2 start server/index.js --name panel-naive-mieru --time
   pm2 save
   pm2 startup systemd -u root --hp /root 2>/dev/null | tail -1 | bash 2>/dev/null || true
+  systemctl daemon-reload
+  systemctl enable --now pm2-root >/dev/null 2>&1 || \
+    die "$(t 'Не удалось запустить автозапуск панели (pm2-root)' 'Failed to activate panel autostart (pm2-root)')"
+  [[ "$(systemctl is-active pm2-root 2>/dev/null)" == "active" ]] || \
+    die "$(t 'pm2-root не перешёл в active' 'pm2-root did not reach active state')"
   log_info "$(t 'Панель запущена через PM2 ✓' 'Panel started via PM2 ✓')"
   cd /
 }
@@ -1809,12 +1820,16 @@ main() {
   write_admin_report "installation in progress"
   setup_fake_site
   setup_panel_stub
+  # The canonical Caddy renderer lives in panel/server/caddyTemplate.js.
+  # Install panel sources before generating Caddyfile so a clean install with
+  # --expose cannot silently fall back to the legacy inline template that has
+  # no external panel block.
+  install_panel
   write_mita_state
   write_caddyfile
   write_caddy_service
-  # Bug 41: install_panel BEFORE write_config_json so that bcryptjs (from
-  # panel/node_modules) is available when we call  node -e "require('bcryptjs')"
-  install_panel
+  # install_panel remains before write_config_json so bcryptjs is available
+  # when the administrator password hash is generated.
   bash "$PANEL_DIR/scripts/install_logrotate.sh"
   write_config_json
   write_version

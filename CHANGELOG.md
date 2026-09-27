@@ -26,6 +26,11 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Pinned caddy-forwardproxy-naive to the reviewed `v2.10.0-naive` archive and
   verify its SHA-256 before extraction or service shutdown. Install and update
   no longer select an unreviewed GitHub `latest` asset.
+- Fixed clean `--expose` installs silently omitting the external panel Caddy
+  block: panel sources now land before the canonical template is rendered, and
+  the installer refuses success when the requested host block is absent.
+- Clean installs now start and verify the enabled `pm2-root` systemd unit, so a
+  running panel is also proven to have a working reboot path before success.
 
 - Began VLESS XHTTP stage F with an opt-in config adapter: a loopback-only
   XHTTP `mode=auto` inbound, TLS client link, and path-scoped unbuffered Caddy

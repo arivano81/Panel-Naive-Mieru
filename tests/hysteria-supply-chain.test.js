@@ -47,6 +47,10 @@ ok(!/wget[^\n]+-O \/usr\/local\/bin\/hysteria\b/.test(script),
 ok(!fs.existsSync(path.join(root, 'panel', 'scripts', 'install_naiveproxy.sh')) &&
    !fs.existsSync(path.join(root, 'panel', 'scripts', 'install_mieru.sh')),
   'unused duplicate unverified installers are absent');
+ok(script.includes('systemctl is-active --quiet hysteria-server') &&
+   script.includes('.components.hysteria2 = {installed:true,version:$version') &&
+   script.includes('${COMPONENT_REGISTRY}.hysteria-new'),
+  'successful install requires active service and atomically records canonical component state');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

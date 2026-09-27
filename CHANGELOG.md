@@ -56,6 +56,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Fixed the clean-install client-config smoke test after global CSRF enforcement:
   it now extracts the session token from login and sends it on temporary-user
   creation and cleanup instead of reporting a false failure.
+- Hysteria2 installation now fails if the service is not active and atomically
+  records the installed version in the canonical component registry, including
+  direct CLI installs.
 - Pinned wgcf 2.2.22 checksums for every supported Linux architecture. WARP
   setup now rejects unknown architectures and checksum mismatches and no longer
   falls back to an unreviewed `latest` download.

@@ -33,6 +33,7 @@ HY_PORT="${HY_PORT:-443}"
 EMAIL="${HY_EMAIL:-admin@example.com}"
 PASSWORD="${HY_PASSWORD:-}"
 USE_CADDY_CERT="${USE_CADDY_CERT:-1}"
+COMPONENT_REGISTRY="/etc/rixxx-panel/components.json"
 
 if [[ -z "$DOMAIN" ]]; then
   echo "ERROR: missing env HY_DOMAIN"
@@ -612,6 +613,27 @@ for i in $(seq 1 20); do
     log "  journalctl -u hysteria-server -n 50 --no-pager"
   fi
 done
+
+if ! systemctl is-active --quiet hysteria-server; then
+  log "ERROR: hysteria-server is not active after installation"
+  journalctl -u hysteria-server -n 50 --no-pager 2>/dev/null || true
+  exit 1
+fi
+
+# Keep the canonical component registry consistent for direct CLI installs as
+# well as installs initiated through the panel API. Write a validated candidate
+# and rename it atomically so an interrupted update cannot truncate the file.
+if [[ -f "$COMPONENT_REGISTRY" ]]; then
+  jq --arg version "$HY_VERSION" \
+    '.components.hysteria2 = {installed:true,version:$version,path:"/usr/local/bin/hysteria",service:"hysteria-server.service"}' \
+    "$COMPONENT_REGISTRY" > "${COMPONENT_REGISTRY}.hysteria-new" || {
+      rm -f "${COMPONENT_REGISTRY}.hysteria-new"
+      log "ERROR: could not update component registry"
+      exit 1
+    }
+  chmod 0644 "${COMPONENT_REGISTRY}.hysteria-new"
+  mv "${COMPONENT_REGISTRY}.hysteria-new" "$COMPONENT_REGISTRY"
+fi
 
 step DONE
 log ""

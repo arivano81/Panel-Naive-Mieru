@@ -15,7 +15,7 @@ COMPONENT_REGISTRY="/etc/rixxx-panel/components.json"
 REPORT="/root/rixxx-xray-install-report.txt"
 
 PORT="${XRAY_PORT:-8443}"
-SERVER_NAME="${XRAY_SERVER_NAME:-www.microsoft.com}"
+SERVER_NAME="${XRAY_SERVER_NAME:-www.cloudflare.com}"
 TARGET="${XRAY_TARGET:-${SERVER_NAME}:443}"
 FORCE="${XRAY_FORCE:-0}"
 

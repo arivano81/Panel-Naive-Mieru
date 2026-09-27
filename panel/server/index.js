@@ -3092,7 +3092,7 @@ app.post('/api/settings/vless/rebuild', requireAuth, (_req, res) => {
 app.post('/api/settings/vless/install', requireAuth, (req, res) => {
   if (xrayInstalled()) return res.status(409).json({ error: 'Xray is already installed' });
   const port = Number(req.body && req.body.port || 8443);
-  const serverName = String(req.body && req.body.serverName || 'www.microsoft.com').trim().toLowerCase();
+  const serverName = String(req.body && req.body.serverName || 'www.cloudflare.com').trim().toLowerCase();
   if (!Number.isInteger(port) || port < 1024 || port > 65535)
     return res.status(400).json({ error: 'VLESS port must be 1024..65535' });
   if (!/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i.test(serverName))

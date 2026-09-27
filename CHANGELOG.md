@@ -138,6 +138,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Transactional service files now receive their requested mode explicitly
   after creation, so the panel's secure `umask 077` cannot silently turn an
   intended `root:xray` mode-0640 config into an unreadable mode-0600 file.
+- Changed the default REALITY target from `www.microsoft.com` to the
+  real-VPS-tested `www.cloudflare.com`: Xray 26.3.27 could authenticate the
+  client but failed to complete Microsoft's currently fragmented TLS chain.
 - Fixed clean installation from a bundled/private checkout: Caddy archive
   extraction no longer changes the process working directory to `/`, so the
   following panel step cannot unexpectedly prompt for an interactive GitHub

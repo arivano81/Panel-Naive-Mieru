@@ -30,6 +30,8 @@ for (const [name, source] of [['installer', script], ['binary canary', binaryCan
     `${name} accepts the current and legacy X25519 labels`);
 }
 ok(/XRAY_ASSET="Xray-linux-64\.zip"/.test(script), 'amd64 release asset is pinned');
+ok(/SERVER_NAME="\$\{XRAY_SERVER_NAME:-www\.cloudflare\.com\}"/.test(script),
+  'real-VPS-tested Cloudflare TLS target is the installer default');
 ok(script.includes('23cd9af937744d97776ee35ecad4972cf4b2109d1e0fe6be9930467608f7c8ae'),
   'official SHA-256 is pinned');
 ok(!/releases\/latest|api\.github\.com\/repos\/XTLS/.test(script), 'installer never resolves latest');

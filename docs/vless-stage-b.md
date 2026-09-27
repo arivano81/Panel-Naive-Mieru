@@ -46,7 +46,7 @@ production-пользователей. Запуск является явным 
 
 ```bash
 sudo XRAY_PORT=8443 \
-  XRAY_SERVER_NAME=www.microsoft.com \
+  XRAY_SERVER_NAME=www.cloudflare.com \
   bash panel/scripts/install_xray.sh
 ```
 

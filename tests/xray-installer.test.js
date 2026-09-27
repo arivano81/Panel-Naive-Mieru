@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const script = fs.readFileSync(path.join(__dirname, '../panel/scripts/install_xray.sh'), 'utf8');
 const configMigrations = fs.readFileSync(path.join(__dirname, '../panel/server/configMigrations.js'), 'utf8');
+const server = fs.readFileSync(path.join(__dirname, '../panel/server/index.js'), 'utf8');
 const install = fs.readFileSync(path.join(__dirname, '../install.sh'), 'utf8');
 const update = fs.readFileSync(path.join(__dirname, '../update.sh'), 'utf8');
 const workflow = fs.readFileSync(path.join(__dirname, '../.github/workflows/ci.yml'), 'utf8');
@@ -37,7 +38,10 @@ ok(verifyAt > 0 && verifyAt < script.indexOf('unzip -q'), 'checksum is verified 
 ok(verifyAt < script.indexOf('install -m 0755'), 'checksum is verified before binary installation');
 ok(script.includes('run -test -config "$WORK/config.json"'), 'candidate config is tested by Xray');
 ok(/User=xray/.test(script) && /NoNewPrivileges=true/.test(script), 'service uses dedicated user and hardening');
-ok(/systemctl is-active --quiet xray/.test(script), 'service health is verified');
+ok(/chown root:xray "\$XRAY_DIR"/.test(script) && /chmod 0750 "\$XRAY_DIR"/.test(script),
+  'service user can traverse the protected config directory');
+ok(/service_stable=0/.test(script) && /systemctl is-active xray/.test(script),
+  'service health requires a stable exact active state');
 ok(script.includes('loopback Stats API port 10085 is already in use'),
   'installer refuses a Stats API port collision');
 ok(/activation failed; restoring previous Xray state/.test(script), 'failed activation rolls back');
@@ -48,6 +52,8 @@ ok(/config\.stack\.vless == null\) config\.stack\.vless = false/.test(configMigr
 ok(update.includes('/usr/local/bin/xray run -test -config /etc/xray/config.json'),
   'doctor validates installed Xray config read-only');
 ok(update.includes('systemctl is-active --quiet xray'), 'doctor checks Xray service health');
+ok(server.includes("execFileSync('sleep', ['1']") && server.includes("state !== 'active'"),
+  'panel apply rejects an immediate systemd restart loop');
 for (const [name, source] of [['installer', install], ['updater', update]]) {
   ok(source.includes('xray_installed=true') && source.includes('installed:$xrayInstalled'),
     `${name} preserves installed Xray state in the component registry`);

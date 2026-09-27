@@ -24,8 +24,10 @@ ok(source.includes("execFileSync(XRAY_BIN, ['run', '-test', '-config', file]"),
   'candidate Xray config is tested before activation');
 ok(source.includes('targetPath: XRAY_CONFIG') && source.includes('applyFileTransaction({'),
   'Xray uses the common transactional config writer');
-ok(source.includes("execFileSync('systemctl', ['is-active', '--quiet', 'xray']"),
-  'Xray restart has an active-service health check');
+ok(source.includes("execFileSync('sleep', ['1']") &&
+   source.includes("execFileSync('systemctl', ['is-active', 'xray']") &&
+   source.includes("state !== 'active'"),
+  'Xray restart requires a stable exact active-service state');
 ok(source.includes('xray: !!(xrayResult && xrayResult.rolledBack)'),
   'rollback state is exposed to apply-status');
 ok(source.includes('applyXhttpStackTransaction()') && source.includes('applyMultiFileTransaction({ items:'),

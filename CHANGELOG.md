@@ -128,6 +128,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Updated direct `uuid` and `node-cron` dependencies to patched releases,
   removing both moderate npm advisories found during the real Debian 13 VPS
   acceptance run. CI now fails on moderate production advisories, not only high.
+- Fixed the real VLESS installation path on Debian 13: `/etc/xray` is now
+  `root:xray` mode 0750 so the unprivileged service can read its mode-0640
+  config. Installer and panel health checks also reject transient `activating`
+  states and immediate systemd restart loops.
 - Fixed clean installation from a bundled/private checkout: Caddy archive
   extraction no longer changes the process working directory to `/`, so the
   following panel step cannot unexpectedly prompt for an interactive GitHub

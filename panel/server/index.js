@@ -1701,7 +1701,12 @@ function validateXrayConfig(file) {
 function applyXrayService() {
   try {
     execFileSync('systemctl', ['restart', 'xray'], { timeout: 20000 });
-    execFileSync('systemctl', ['is-active', '--quiet', 'xray'], { timeout: 5000 });
+    // A process that crashes immediately can briefly be reported as active
+    // before systemd enters its restart loop. Require an exact, stable state.
+    execFileSync('sleep', ['1'], { timeout: 2000 });
+    const state = execFileSync('systemctl', ['is-active', 'xray'], { timeout: 5000 })
+      .toString().trim();
+    if (state !== 'active') throw new Error(`xray.service is ${state || 'not active'}`);
     return { ok: true };
   } catch (error) { return { ok: false, error: error.message }; }
 }

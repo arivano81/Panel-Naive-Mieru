@@ -37,13 +37,19 @@ if [[ -e "$XRAY_CONFIG" && "$FORCE" != "1" ]]; then
 fi
 [[ ! -f "$PANEL_CONFIG" ]] || jq empty "$PANEL_CONFIG" >/dev/null 2>&1 || die "panel config is invalid JSON"
 [[ ! -f "$COMPONENT_REGISTRY" ]] || jq empty "$COMPONENT_REGISTRY" >/dev/null 2>&1 || die "component registry is invalid JSON"
-HAD_BIN=0; HAD_CONFIG=0; HAD_PUBLIC=0; HAD_UNIT=0; HAD_PANEL_CONFIG=0; HAD_REGISTRY=0
+HAD_BIN=0; HAD_CONFIG=0; HAD_PUBLIC=0; HAD_UNIT=0; HAD_PANEL_CONFIG=0; HAD_REGISTRY=0; HAD_DIR=0
 [[ ! -e "$XRAY_BIN" ]] || HAD_BIN=1
 [[ ! -e "$XRAY_CONFIG" ]] || HAD_CONFIG=1
 [[ ! -e "$XRAY_PUBLIC" ]] || HAD_PUBLIC=1
 [[ ! -e "$XRAY_UNIT" ]] || HAD_UNIT=1
 [[ ! -e "$PANEL_CONFIG" ]] || HAD_PANEL_CONFIG=1
 [[ ! -e "$COMPONENT_REGISTRY" ]] || HAD_REGISTRY=1
+if [[ -d "$XRAY_DIR" ]]; then
+  HAD_DIR=1
+  XRAY_DIR_MODE=$(stat -c '%a' "$XRAY_DIR")
+  XRAY_DIR_UID=$(stat -c '%u' "$XRAY_DIR")
+  XRAY_DIR_GID=$(stat -c '%g' "$XRAY_DIR")
+fi
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ADAPTER="$SCRIPT_DIR/../server/xrayConfig.js"
@@ -95,6 +101,11 @@ NODE
 "$WORK/unpacked/xray" run -test -config "$WORK/config.json" >/dev/null
 
 id xray >/dev/null 2>&1 || useradd --system --home-dir /var/lib/xray --shell /usr/sbin/nologin xray
+# The service runs as xray and config.json is root:xray 0640. The directory
+# therefore needs group traversal; 0700 root:root makes a valid config
+# unreadable and leaves systemd in a restart loop.
+chown root:xray "$XRAY_DIR"
+chmod 0750 "$XRAY_DIR"
 install -m 0755 "$WORK/unpacked/xray" "${XRAY_BIN}.new"
 mv "${XRAY_BIN}.new" "$XRAY_BIN"
 install -o root -g xray -m 0640 "$WORK/config.json" "${XRAY_CONFIG}.new"
@@ -155,6 +166,13 @@ rollback() {
   (( HAD_UNIT == 1 )) || rm -f "$XRAY_UNIT"
   (( HAD_PANEL_CONFIG == 1 )) || rm -f "$PANEL_CONFIG"
   (( HAD_REGISTRY == 1 )) || rm -f "$COMPONENT_REGISTRY"
+  if (( HAD_DIR == 1 )); then
+    chown "$XRAY_DIR_UID:$XRAY_DIR_GID" "$XRAY_DIR" 2>/dev/null || true
+    chmod "$XRAY_DIR_MODE" "$XRAY_DIR" 2>/dev/null || true
+  else
+    chown root:root "$XRAY_DIR" 2>/dev/null || true
+    chmod 0700 "$XRAY_DIR" 2>/dev/null || true
+  fi
   systemctl daemon-reload
   if (( HAD_BIN == 1 && HAD_CONFIG == 1 && HAD_UNIT == 1 )); then
     systemctl restart xray >/dev/null 2>&1 || true
@@ -162,7 +180,15 @@ rollback() {
 }
 
 systemctl daemon-reload
-if ! systemctl enable --now xray >/dev/null 2>&1 || ! systemctl is-active --quiet xray; then
+service_stable=0
+if systemctl enable --now xray >/dev/null 2>&1; then
+  for _ in $(seq 1 15); do
+    [[ "$(systemctl is-active xray 2>/dev/null || true)" == "active" ]] || { sleep 0.2; continue; }
+    sleep 0.2
+    [[ "$(systemctl is-active xray 2>/dev/null || true)" == "active" ]] && { service_stable=1; break; }
+  done
+fi
+if (( service_stable != 1 )); then
   rollback
   die "xray.service failed health check; previous state restored"
 fi

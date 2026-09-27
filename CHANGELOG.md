@@ -144,6 +144,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Fixed the guarded OpenFlux Debian 13 canary rollback trap so an early
   `prepare` failure can clean up safely under `set -u` instead of losing its
   commit state when the function scope unwinds.
+- Completed the external OpenFlux Debian 13 acceptance run: encrypted Direct
+  traffic, wrong-key rejection, reboot persistence and scoped uninstall all
+  passed while core config hashes, firewall rules and service states stayed
+  unchanged. Documentation now records this release evidence.
 - Fixed clean installation from a bundled/private checkout: Caddy archive
   extraction no longer changes the process working directory to `/`, so the
   following panel step cannot unexpectedly prompt for an interactive GitHub

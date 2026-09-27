@@ -90,7 +90,10 @@ LEGACY_NAIVE_CONFIG_DIR="/etc/naive"
 
 CADDY_NAIVE_RELEASES="https://api.github.com/repos/klzgrad/forwardproxy/releases/latest"
 CADDY_NAIVE_FALLBACK_URL="https://github.com/klzgrad/forwardproxy/releases/download/v2.10.0-naive/caddy-forwardproxy-naive.tar.xz"
-MIERU_RELEASES="https://api.github.com/repos/enfein/mieru/releases/latest"
+MIERU_VERSION="3.38.0"
+MIERU_RELEASE_BASE="https://github.com/enfein/mieru/releases/download/v${MIERU_VERSION}"
+MIERU_MITA_SHA256_AMD64="5170555aace38f76862541587b632d61848bba12f2e845b057977c9f9257e59a"
+MIERU_MITA_SHA256_ARM64="63f377deb6355682a0b5e060c5ee3e0838a5f879afa4c2905bd20a692728903c"
 
 # This fork is private. A locally configured Git credential helper may be
 # enough; unattended servers can provide a fine-grained read-only token through
@@ -1577,15 +1580,12 @@ update_caddy_naive() {
 
 # ── Update Mieru ──────────────────────────────────────────────────────────────
 update_mieru() {
-  log_step "Checking Mieru update"
+  log_step "Checking pinned Mieru release"
   detect_arch
 
-  local release_json
-  release_json=$(curl -fsSL "$MIERU_RELEASES") || { log_warn "Cannot reach GitHub API for Mieru"; return; }
-
-  local remote_tag; remote_tag=$(echo "$release_json" | jq -r '.tag_name')
+  local remote_tag="v${MIERU_VERSION}"
   local current_ver; current_ver=$(mita version 2>/dev/null | grep -oP 'v[\d.]+' | head -1 || echo "none")
-  log_info "Current: $current_ver  |  Latest: $remote_tag"
+  log_info "Current: $current_ver  |  Pinned: $remote_tag"
 
   if ! $FORCE && [[ "$current_ver" == "$remote_tag" ]]; then
     log_info "Mieru already up-to-date ✓"
@@ -1594,14 +1594,21 @@ update_mieru() {
 
   $DRY_RUN && { log_dry "Would update mita to $remote_tag"; return; }
 
-  local asset_url
-  asset_url=$(echo "$release_json" | jq -r \
-    --arg arch "$DEB_ARCH" \
-    '.assets[] | select(.name | test("mita.*" + $arch + "\\.deb")) | .browser_download_url' | head -1)
-  [[ -z "$asset_url" ]] && { log_warn "No Mieru .deb for $DEB_ARCH"; return; }
+  local expected_sha
+  case "$DEB_ARCH" in
+    amd64) expected_sha="$MIERU_MITA_SHA256_AMD64" ;;
+    arm64) expected_sha="$MIERU_MITA_SHA256_ARM64" ;;
+    *) log_warn "No pinned Mita asset for $DEB_ARCH; keeping the installed version"; return ;;
+  esac
+  local asset_url="${MIERU_RELEASE_BASE}/mita_${MIERU_VERSION}_${DEB_ARCH}.deb"
 
   local deb; deb=$(mktemp /tmp/mieru-XXXXXX.deb)
-  wget -q -O "$deb" "$asset_url"
+  wget -q -O "$deb" "$asset_url" || { rm -f "$deb"; log_warn "Failed to download pinned Mieru $remote_tag"; return; }
+  local actual_sha; actual_sha=$(sha256sum "$deb" | awk '{print $1}')
+  if [[ "$actual_sha" != "$expected_sha" ]]; then
+    rm -f "$deb"
+    die "Mieru SHA-256 mismatch; existing installation was not changed"
+  fi
   systemctl stop mita 2>/dev/null || true
   dpkg -i "$deb" 2>/dev/null || apt-get install -f -y
   rm -f "$deb"

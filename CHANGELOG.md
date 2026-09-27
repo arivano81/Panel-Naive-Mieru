@@ -20,6 +20,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   official Xray 26.3.27 VLESS client reached the Internet through the measured
   Cloudflare egress IP, while SSH remained reachable; teardown restored the
   original routing, firewall and core configuration state.
+- Pinned Mita and the optional Mieru cascade client to release 3.38.0 with
+  architecture-specific SHA-256 verification in clean install, update and lazy
+  cascade setup paths. A mismatch now aborts before `dpkg` or service shutdown.
 
 - Began VLESS XHTTP stage F with an opt-in config adapter: a loopback-only
   XHTTP `mode=auto` inbound, TLS client link, and path-scoped unbuffered Caddy

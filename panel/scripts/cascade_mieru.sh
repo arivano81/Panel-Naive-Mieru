@@ -49,7 +49,10 @@ SOCKS5_PORT=1080          # mieru-client local SOCKS5 listener (127.0.0.1 only)
 REDSOCKS_PORT=12345       # redsocks transparent redirector (127.0.0.1 only)
 RPC_PORT=8964             # mieru-client RPC port
 
-MIERU_RELEASES="https://api.github.com/repos/enfein/mieru/releases/latest"
+MIERU_VERSION="3.38.0"
+MIERU_RELEASE_BASE="https://github.com/enfein/mieru/releases/download/v${MIERU_VERSION}"
+MIERU_CLIENT_SHA256_AMD64="648e382183eb87480c5ac52726f0417a2fd970cf79831d00137bf7bc4798abae"
+MIERU_CLIENT_SHA256_ARM64="7dc6dcd8f1dca9ee97c71dbc98d28d87d25b3e6c3dd0562c64614f0d95001be9"
 
 log()  { echo "[cascade] $*"; }
 err()  { echo "[cascade][ERROR] $*" >&2; }
@@ -142,24 +145,21 @@ ensure_packages() {
   # not be present. Install it from the same GitHub release as mita.
   if [[ ! -x "$MIERU_CLIENT_BIN" ]] || ! "$MIERU_CLIENT_BIN" version &>/dev/null; then
     log "installing mieru client…"
-    local arch deb_arch
+    local deb_arch expected_sha
     case "$(uname -m)" in
-      x86_64|amd64)  deb_arch="amd64" ;;
-      aarch64|arm64) deb_arch="arm64" ;;
-      armv7l)        deb_arch="armhf" ;;
+      x86_64|amd64)  deb_arch="amd64"; expected_sha="$MIERU_CLIENT_SHA256_AMD64" ;;
+      aarch64|arm64) deb_arch="arm64"; expected_sha="$MIERU_CLIENT_SHA256_ARM64" ;;
       *) die "unsupported arch: $(uname -m)" ;;
     esac
-    local rel url deb
-    rel=$(curl -fsSL "$MIERU_RELEASES" 2>/dev/null) || die "cannot reach GitHub API for mieru"
-    url=$(echo "$rel" | jq -r --arg a "$deb_arch" \
-      '.assets[] | select(.name | test("mieru_.*" + $a + "\\.deb")) | .browser_download_url' | head -1)
-    [[ -z "$url" || "$url" == "null" ]] && \
-      url=$(echo "$rel" | jq -r --arg a "$deb_arch" \
-        '.assets[] | select(.name | test("^mieru.*" + $a + "\\.deb")) | .browser_download_url' | head -1)
-    [[ -z "$url" || "$url" == "null" ]] && die "no mieru client .deb for $deb_arch"
+    local url="${MIERU_RELEASE_BASE}/mieru_${MIERU_VERSION}_${deb_arch}.deb" deb actual_sha
     deb=$(mktemp /tmp/mieru-client-XXXXXX.deb)
-    log "downloading $url"
+    log "downloading pinned mieru client ${MIERU_VERSION}"
     wget -q -O "$deb" "$url" || die "failed to download mieru client"
+    actual_sha=$(sha256sum "$deb" | awk '{print $1}')
+    if [[ "$actual_sha" != "$expected_sha" ]]; then
+      rm -f "$deb"
+      die "mieru client SHA-256 mismatch"
+    fi
     dpkg -i "$deb" 2>/dev/null || apt-get install -f -y
     rm -f "$deb"
   fi

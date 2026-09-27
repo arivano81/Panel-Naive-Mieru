@@ -99,7 +99,9 @@ REPO_RAW="https://raw.githubusercontent.com/arivano81/Panel-Naive-Mieru/main"
 # Bug 1: direct download URL for caddy-forwardproxy-naive (amd64 only)
 CADDY_NAIVE_RELEASES="https://api.github.com/repos/klzgrad/forwardproxy/releases/latest"
 CADDY_NAIVE_FALLBACK_URL="https://github.com/klzgrad/forwardproxy/releases/download/v2.10.0-naive/caddy-forwardproxy-naive.tar.xz"
-MIERU_RELEASES="https://api.github.com/repos/enfein/mieru/releases/latest"
+MIERU_VERSION="3.38.0"
+MIERU_RELEASE_BASE="https://github.com/enfein/mieru/releases/download/v${MIERU_VERSION}"
+MIERU_MITA_SHA256_AMD64="5170555aace38f76862541587b632d61848bba12f2e845b057977c9f9257e59a"
 
 github_read_token() {
   printf '%s' "${PANEL_GITHUB_TOKEN:-${GH_TOKEN:-${GITHUB_TOKEN:-}}}"
@@ -385,31 +387,24 @@ install_caddy_naive() {
 # ── Mieru (mita) via .deb ─────────────────────────────────────────────────────
 install_mieru() {
   log_step "$(t 'Установка Mieru (mita)' 'Installing Mieru (mita)')"
-  log_info "$(t 'Запрос последнего релиза...' 'Fetching latest release...')"
-  local release_json
-  release_json=$(curl -fsSL "$MIERU_RELEASES") || \
-    die "$(t 'Ошибка запроса GitHub API для Mieru' 'Cannot fetch Mieru releases')"
-  local tag; tag=$(echo "$release_json" | jq -r '.tag_name')
-  log_info "$(t "Последняя версия Mieru: $tag" "Latest Mieru: $tag")"
-
-  local asset_url
-  asset_url=$(echo "$release_json" | jq -r \
-    --arg arch "$DEB_ARCH" \
-    '.assets[] | select(.name | test("mita.*" + $arch + "\\.deb")) | .browser_download_url' | head -1)
-  [[ -z "$asset_url" ]] && \
-    asset_url=$(echo "$release_json" | jq -r \
-      --arg arch "$DEB_ARCH" \
-      '.assets[] | select(.name | test($arch + "\\.deb")) | .browser_download_url' | head -1)
-  [[ -z "$asset_url" ]] && die "$(t "Не найден .deb Mieru для $DEB_ARCH" "No Mieru .deb for $DEB_ARCH")"
+  [[ "$DEB_ARCH" == "amd64" ]] || \
+    die "$(t "Нет закреплённого Mita для $DEB_ARCH" "No pinned Mita asset for $DEB_ARCH")"
+  local asset_url="${MIERU_RELEASE_BASE}/mita_${MIERU_VERSION}_${DEB_ARCH}.deb"
+  local expected_sha="$MIERU_MITA_SHA256_AMD64"
 
   local deb_file; deb_file=$(mktemp /tmp/mieru-XXXXXX.deb)
-  log_info "$(t "Загрузка: $asset_url" "Downloading: $asset_url")"
+  log_info "$(t "Загрузка закреплённого Mieru ${MIERU_VERSION}" "Downloading pinned Mieru ${MIERU_VERSION}")"
   wget -q --show-progress -O "$deb_file" "$asset_url" || \
     die "$(t 'Ошибка загрузки Mieru .deb' 'Failed to download Mieru .deb')"
+  local actual_sha; actual_sha=$(sha256sum "$deb_file" | awk '{print $1}')
+  if [[ "$actual_sha" != "$expected_sha" ]]; then
+    rm -f "$deb_file"
+    die "$(t 'Контрольная сумма Mieru не совпала' 'Mieru SHA-256 mismatch')"
+  fi
   dpkg -i "$deb_file" 2>/dev/null || apt-get install -f -y
   rm -f "$deb_file"
-  MIERU_VERSION=$(mita version 2>/dev/null | grep -oP 'v[\d.]+' | head -1 || echo "$tag")
-  log_info "mita $(t 'установлен' 'installed') ($MIERU_VERSION) ✓"
+  local installed_version; installed_version=$(mita version 2>/dev/null | grep -oP 'v[\d.]+' | head -1 || echo "v${MIERU_VERSION}")
+  log_info "mita $(t 'установлен' 'installed') ($installed_version) ✓"
 }
 
 # ── Interactive / non-interactive config gathering ────────────────────────────

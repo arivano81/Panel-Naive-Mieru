@@ -148,6 +148,12 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   traffic, wrong-key rejection, reboot persistence and scoped uninstall all
   passed while core config hashes, firewall rules and service states stayed
   unchanged. Documentation now records this release evidence.
+- Migrated universal client configs to the sing-box 1.14 schema: typed DNS
+  servers replace removed legacy addresses, the removed DNS outbound and
+  GeoIP/Geosite fields are gone, and private-address bypass uses a route action.
+  The official sing-box 1.14.2 binary accepted the generated JSON and carried
+  an HTTPS request through the production Debian 13 REALITY profile; a CI
+  regression now rejects reintroduction of removed schema fields.
 - Fixed clean installation from a bundled/private checkout: Caddy archive
   extraction no longer changes the process working directory to `/`, so the
   following panel step cannot unexpectedly prompt for an interactive GitHub

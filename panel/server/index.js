@@ -4356,25 +4356,22 @@ function buildSingboxConfig(user, opts = {}) {
   }
   outbounds.push(...proxyOutbounds);
   outbounds.push({ type: 'direct', tag: 'direct' });
-  outbounds.push({ type: 'dns',    tag: 'dns-out' });
 
   return {
     log: { level: 'info', timestamp: true },
     dns: {
-      servers: [
-        { tag: 'remote', address: 'tls://8.8.8.8',              detour: hasProxies ? 'select' : 'direct' },
-        { tag: 'local',  address: 'https://223.5.5.5/dns-query', detour: 'direct' }
-      ],
-      rules:  [{ outbound: 'any', server: 'local' }],
-      final:  'remote'
+      // sing-box 1.14 removed the legacy `address` DNS server form. Use the
+      // typed local resolver so proxy hostnames can be resolved without a
+      // circular dependency on the not-yet-connected proxy outbound.
+      servers: [{ type: 'local', tag: 'local' }],
+      final: 'local'
     },
     outbounds,
     route: {
-      rules: [
-        { protocol: 'dns', outbound: 'dns-out' },
-        { geoip: 'cn',     outbound: 'direct'  },
-        { geosite: 'cn',   outbound: 'direct'  }
-      ],
+      // Built-in GeoIP/Geosite databases were removed in sing-box 1.12.
+      // Keep only the dependency-free private-address safety bypass; regional
+      // routing belongs in explicitly managed rule-sets in a later feature.
+      rules: [{ ip_is_private: true, action: 'route', outbound: 'direct' }],
       final: hasProxies ? 'select' : 'direct',
       auto_detect_interface: true
     }

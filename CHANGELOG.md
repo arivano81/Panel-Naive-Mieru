@@ -42,6 +42,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   per-architecture SHA-256, candidate version smoke-test and atomic binary
   replacement. Removed two unused legacy Naive/Mieru installers that still
   selected `latest` and duplicated the protected production paths.
+- Verified the pinned Hysteria2 on the external Debian 13 VPS through the real
+  authenticated panel API and an official CLI client. UDP/443 carried an HTTP
+  request before and after a full reboot; the unprivileged service, certificate
+  watcher and primary Caddy/Mita/PM2 stack all returned active.
 
 - Began VLESS XHTTP stage F with an opt-in config adapter: a loopback-only
   XHTTP `mode=auto` inbound, TLS client link, and path-scoped unbuffered Caddy

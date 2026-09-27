@@ -515,12 +515,14 @@ assert "cascade_mieru.sh has setup/teardown/status" \
   "grep -q 'do_setup'  '$CASC' && grep -q 'do_teardown' '$CASC' && grep -q 'do_status' '$CASC'"
 assert "cascade uses 'profiles' (plural, not bare 'profile')" \
   "grep -q '\"profiles\"' '$CASC'"
-assert "cascade client config has NO mtu JSON key" \
-  "! grep -qE '\"mtu\"[[:space:]]*:' '$CASC'"
+assert "cascade client profile carries the Exit-compatible mtu" \
+  "grep -qE '\"mtu\"[[:space:]]*:' '$CASC'"
+assert "cascade client profile carries an explicit multiplexing level" \
+  "grep -qE '\"multiplexing\"[[:space:]]*:' '$CASC' && grep -q 'MULTIPLEXING_LOW' '$CASC'"
 assert "cascade mieru.service uses Type=forking" \
   "grep -q 'Type=forking' '$CASC'"
-assert "cascade restarts redsocks via ExecStartPost" \
-  "grep -q 'ExecStartPost=/bin/systemctl restart redsocks' '$CASC'"
+assert "cascade restarts redsocks asynchronously without failing mieru startup" \
+  "grep -q 'ExecStartPost=-/bin/systemctl --no-block restart redsocks' '$CASC'"
 assert "cascade has anti-loop RETURN for exit IP" \
   "grep -q 'exit_ip.*-j RETURN' '$CASC'"
 assert "cascade iptables owner-match mita uid" \

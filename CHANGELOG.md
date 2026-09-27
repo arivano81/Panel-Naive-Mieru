@@ -51,6 +51,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   per-user lifecycle isolation and UUID/server-setting backup restore are now
   explicitly recorded as complete. The separate two-VPS cascade reboot canary
   and Karing/Shadowrocket UI checks remain open gates.
+- Corrected the legacy E2E cascade contract: it now requires the profile-scoped
+  Mieru MTU/multiplexing settings and the non-blocking, non-fatal redsocks
+  restart hook used by the current systemd unit.
 
 - Began VLESS XHTTP stage F with an opt-in config adapter: a loopback-only
   XHTTP `mode=auto` inbound, TLS client link, and path-scoped unbuffered Caddy

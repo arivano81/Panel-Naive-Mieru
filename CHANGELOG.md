@@ -132,6 +132,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `root:xray` mode 0750 so the unprivileged service can read its mode-0640
   config. Installer and panel health checks also reject transient `activating`
   states and immediate systemd restart loops.
+- Fixed two additional Debian 13 acceptance findings: the Caddy unit heredoc
+  no longer executes a command shown in a comment, and transactional Xray
+  candidates with a `.json.new` suffix are validated with explicit JSON format.
 - Fixed clean installation from a bundled/private checkout: Caddy archive
   extraction no longer changes the process working directory to `/`, so the
   following panel step cannot unexpectedly prompt for an interactive GitHub

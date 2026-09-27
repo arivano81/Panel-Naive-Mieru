@@ -30,6 +30,11 @@ ok(!/\(\(\s*[A-Za-z_][A-Za-z0-9_]*\+\+\s*\)\)/.test(install + update),
   'set -e production scripts contain no zero-valued postfix increments');
 ok(/curl wget git ufw unzip tar xz-utils jq sqlite3/.test(install),
   'clean install provides the SQLite CLI required by doctor diagnostics');
+const caddyUnitStart = install.indexOf('cat > /etc/systemd/system/caddy-naive.service <<SVCCADDY');
+const caddyUnitEnd = install.indexOf('\nSVCCADDY', caddyUnitStart);
+const caddyUnit = install.slice(caddyUnitStart, caddyUnitEnd);
+ok(caddyUnitStart > 0 && !/`[^`]+`/.test(caddyUnit),
+  'unquoted Caddy unit heredoc cannot execute command substitutions from comments');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

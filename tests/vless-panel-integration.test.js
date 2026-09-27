@@ -20,8 +20,8 @@ ok(source.includes('vless_uuid: uuidv4()'), 'new users receive a separate VLESS 
 ok(source.includes('vless_uuid=COALESCE(excluded.vless_uuid, users.vless_uuid)'),
   'user updates preserve the existing VLESS UUID');
 ok(/function applyXrayConfig\(\)/.test(source), 'panel has a dedicated Xray apply path');
-ok(source.includes("execFileSync(XRAY_BIN, ['run', '-test', '-config', file]"),
-  'candidate Xray config is tested before activation');
+ok(source.includes("execFileSync(XRAY_BIN, ['run', '-test', '-format', 'json', '-config', file]"),
+  'extension-neutral candidate Xray config is tested as explicit JSON before activation');
 ok(source.includes('targetPath: XRAY_CONFIG') && source.includes('applyFileTransaction({'),
   'Xray uses the common transactional config writer');
 ok(source.includes("execFileSync('sleep', ['1']") &&

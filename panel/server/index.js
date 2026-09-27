@@ -1691,7 +1691,11 @@ function buildManagedXrayConfig() {
 
 function validateXrayConfig(file) {
   try {
-    execFileSync(XRAY_BIN, ['run', '-test', '-config', file], { timeout: 15000 });
+    // Transaction candidates end in `.json.new`; recent Xray releases infer
+    // the config format from the final extension and otherwise reject the
+    // valid JSON before parsing it. Pin the format explicitly.
+    execFileSync(XRAY_BIN, ['run', '-test', '-format', 'json', '-config', file],
+      { timeout: 15000 });
     return { ok: true };
   } catch (error) {
     return { ok: false, error: (error.stderr || error.stdout || error.message).toString().trim() };

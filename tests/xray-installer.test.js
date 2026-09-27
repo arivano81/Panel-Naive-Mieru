@@ -54,6 +54,8 @@ ok(update.includes('/usr/local/bin/xray run -test -config /etc/xray/config.json'
 ok(update.includes('systemctl is-active --quiet xray'), 'doctor checks Xray service health');
 ok(server.includes("execFileSync('sleep', ['1']") && server.includes("state !== 'active'"),
   'panel apply rejects an immediate systemd restart loop');
+ok(server.includes("['run', '-test', '-format', 'json', '-config', file]"),
+  'panel validates the transaction .json.new candidate with an explicit format');
 for (const [name, source] of [['installer', install], ['updater', update]]) {
   ok(source.includes('xray_installed=true') && source.includes('installed:$xrayInstalled'),
     `${name} preserves installed Xray state in the component registry`);

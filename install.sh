@@ -999,7 +999,7 @@ AmbientCapabilities=CAP_NET_BIND_SERVICE
 # byte volume (bytes_read/size = 0, and successful tunnels are not logged at
 # all). The only reliable source for Naive traffic is the kernel: systemd's
 # per-unit IP accounting (cgroup net counters). The panel reads
-# IPIngressBytes / IPEgressBytes from `systemctl show caddy-naive`.
+# IPIngressBytes / IPEgressBytes from systemctl show caddy-naive.
 IPAccounting=yes
 
 [Install]

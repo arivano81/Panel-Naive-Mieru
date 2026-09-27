@@ -58,7 +58,7 @@ WGCF_DIR="/etc/rixxx-panel/warp"
 WGCF_ACCOUNT="${WGCF_DIR}/wgcf-account.toml"
 WGCF_PROFILE="${WGCF_DIR}/wgcf-profile.conf"
 WARP_ENDPOINT_HOST="engage.cloudflareclient.com"
-WGCF_VERSION="2.2.22"
+WGCF_VERSION="2.3.0"
 
 # BUG-164: WARP over Cloudflare needs a reduced MTU (1280). With the default
 #   1420/1500 the encrypted reply packets get dropped on the return path, so the
@@ -150,9 +150,9 @@ wgcf_arch() {
 
 wgcf_sha256() {
   case "${1:-}" in
-    linux_amd64) echo "268d187e649870b603ad2e5c1b74a696251f6c2f6f075c726a174a0039b0b1e2" ;;
-    linux_arm64) echo "e5ff08d3aae5374935211053b2d64d96daaa3f1aec8e9a1dab7418125585a011" ;;
-    linux_armv7) echo "bd40e55dae299acfa20446973ff4fc5a9a116ecaa41431aeff5f86034391f900" ;;
+    linux_amd64) echo "01614e38c0eb5f3405232e71cfaf02d64d4809e4988ad8f5a8071af16d193405" ;;
+    linux_arm64) echo "dcadadc42bcc410a4032a6d1c0490ea510e199f0aaaee397dc1aa0fbd27038e8" ;;
+    linux_armv7) echo "903d18ed2a17c78652fa9b73c0a90e94f30e98c007f8db04b95c76941f9d73bf" ;;
     *) return 1 ;;
   esac
 }

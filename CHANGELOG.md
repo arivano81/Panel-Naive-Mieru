@@ -36,6 +36,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   linux-amd64 binaries shipped by every external Go component. It verifies each
   download before binary-mode analysis and retains build metadata plus scan output
   even when a reachable known vulnerability fails the job.
+- Updated caddy-forwardproxy-naive from `v2.10.0-naive` to the checksum-pinned
+  `v2.11.2-naive` release and wgcf from 2.2.22 to checksum-pinned 2.3.0 assets for
+  amd64, arm64 and armv7 after the initial Go binary audit exposed stale builds.
 - Pinned wgcf 2.2.22 checksums for every supported Linux architecture. WARP
   setup now rejects unknown architectures and checksum mismatches and no longer
   falls back to an unreviewed `latest` download.

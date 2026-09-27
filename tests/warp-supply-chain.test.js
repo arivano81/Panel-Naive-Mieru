@@ -12,11 +12,11 @@ function ok(value, message) {
 }
 
 console.log('WARP dependency supply-chain regression test');
-ok(source.includes('WGCF_VERSION="2.2.22"'), 'wgcf release is pinned');
-ok(source.includes('268d187e649870b603ad2e5c1b74a696251f6c2f6f075c726a174a0039b0b1e2'),
+ok(source.includes('WGCF_VERSION="2.3.0"'), 'wgcf release is pinned');
+ok(source.includes('01614e38c0eb5f3405232e71cfaf02d64d4809e4988ad8f5a8071af16d193405'),
   'amd64 checksum from the official release is pinned');
-ok(source.includes('e5ff08d3aae5374935211053b2d64d96daaa3f1aec8e9a1dab7418125585a011') &&
-   source.includes('bd40e55dae299acfa20446973ff4fc5a9a116ecaa41431aeff5f86034391f900'),
+ok(source.includes('dcadadc42bcc410a4032a6d1c0490ea510e199f0aaaee397dc1aa0fbd27038e8') &&
+   source.includes('903d18ed2a17c78652fa9b73c0a90e94f30e98c007f8db04b95c76941f9d73bf'),
   'supported ARM checksums are pinned');
 ok(!source.includes('releases/latest'), 'installer never falls back to an unreviewed latest asset');
 const checksumAt = source.indexOf('actual="$(sha256sum');

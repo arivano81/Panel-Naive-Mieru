@@ -3,14 +3,14 @@
   "components": [
     {
       "name": "caddy-forwardproxy-naive",
-      "version": "v2.10.0-naive",
+      "version": "v2.11.2-naive",
       "source": "https://github.com/klzgrad/forwardproxy",
       "license": "NOASSERTION",
       "artifacts": [
         {
           "arch": "linux-amd64",
-          "url": "https://github.com/klzgrad/forwardproxy/releases/download/v2.10.0-naive/caddy-forwardproxy-naive.tar.xz",
-          "sha256": "598b34841ac88b66f5b0b3a7bb371a02682915e92916e4e017d27be5399cd389"
+          "url": "https://github.com/klzgrad/forwardproxy/releases/download/v2.11.2-naive/caddy-forwardproxy-naive.tar.xz",
+          "sha256": "19eccb7321dd877a5fb4a3dba6ef1b745185188b616c96cc6201f1a1fc0380a8"
         }
       ]
     },
@@ -88,24 +88,24 @@
     },
     {
       "name": "wgcf",
-      "version": "2.2.22",
+      "version": "2.3.0",
       "source": "https://github.com/ViRb3/wgcf",
       "license": "NOASSERTION",
       "artifacts": [
         {
           "arch": "linux-amd64",
-          "url": "https://github.com/ViRb3/wgcf/releases/download/v2.2.22/wgcf_2.2.22_linux_amd64",
-          "sha256": "268d187e649870b603ad2e5c1b74a696251f6c2f6f075c726a174a0039b0b1e2"
+          "url": "https://github.com/ViRb3/wgcf/releases/download/v2.3.0/wgcf_2.3.0_linux_amd64",
+          "sha256": "01614e38c0eb5f3405232e71cfaf02d64d4809e4988ad8f5a8071af16d193405"
         },
         {
           "arch": "linux-arm64",
-          "url": "https://github.com/ViRb3/wgcf/releases/download/v2.2.22/wgcf_2.2.22_linux_arm64",
-          "sha256": "e5ff08d3aae5374935211053b2d64d96daaa3f1aec8e9a1dab7418125585a011"
+          "url": "https://github.com/ViRb3/wgcf/releases/download/v2.3.0/wgcf_2.3.0_linux_arm64",
+          "sha256": "dcadadc42bcc410a4032a6d1c0490ea510e199f0aaaee397dc1aa0fbd27038e8"
         },
         {
           "arch": "linux-armv7",
-          "url": "https://github.com/ViRb3/wgcf/releases/download/v2.2.22/wgcf_2.2.22_linux_armv7",
-          "sha256": "bd40e55dae299acfa20446973ff4fc5a9a116ecaa41431aeff5f86034391f900"
+          "url": "https://github.com/ViRb3/wgcf/releases/download/v2.3.0/wgcf_2.3.0_linux_armv7",
+          "sha256": "903d18ed2a17c78652fa9b73c0a90e94f30e98c007f8db04b95c76941f9d73bf"
         }
       ]
     },

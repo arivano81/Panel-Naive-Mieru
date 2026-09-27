@@ -23,8 +23,11 @@ ok(workflow.includes("if: matrix.release == '13'") && workflow.includes('bash te
 ok(binaryCanary.includes('run -test -config "$WORK/config.json"'),
   'binary canary validates the generated config with real Xray');
 ok(binaryCanary.includes('--socks5-hostname 127.0.0.1:18080') &&
-   binaryCanary.includes('vless-reality-canary') && binaryCanary.includes('openssl s_server'),
-  'Debian 13 canary carries HTTP through a real local VLESS REALITY client and server');
+   binaryCanary.includes('vless-reality-canary') &&
+   binaryCanary.includes("serverName: 'www.cloudflare.com'") &&
+   binaryCanary.includes("target: 'www.cloudflare.com:443'") &&
+   !binaryCanary.includes('openssl s_server'),
+  'Debian 13 canary carries a local HTTP origin through a real VLESS REALITY client/server and trusted TLS target');
 for (const [name, source] of [['installer', script], ['binary canary', binaryCanary]]) {
   ok(source.includes('(PrivateKey|Private key)') && source.includes('Password \\(PublicKey\\)'),
     `${name} accepts the current and legacy X25519 labels`);

@@ -57,7 +57,7 @@ GitHub-проекта не подтверждает происхождение �
 Workflow `Pinned Go binary vulnerability audit` раз в неделю, вручную и при изменении manifest
 скачивает точные linux-amd64 assets всех внешних Go-компонентов. До анализа каждый файл проходит
 SHA-256 из `supply-chain/components.json`; архивы распаковываются, а фактически поставляемый
-бинарник проверяется закреплённым `govulncheck v1.1.4` в binary mode. Это охватывает Caddy,
+бинарник проверяется закреплённым `govulncheck v1.8.0` на Go 1.26.4 в binary mode. Это охватывает Caddy,
 Mita, Mieru client, Hysteria2, Xray, wgcf и OpenFlux и не доверяет текущей ветке upstream.
 
 Для каждого release manifest также хранит полный 40-символьный upstream commit. Второй проход

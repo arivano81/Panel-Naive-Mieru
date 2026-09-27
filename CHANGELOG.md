@@ -47,6 +47,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   release asset. The audit also runs source-mode `govulncheck` across every Go
   module at those exact commits, even after a binary finding, so VEX decisions
   can be based on call paths rather than presence-only binary symbols.
+- The Go vulnerability job now pins Go 1.26.4 and `govulncheck v1.8.0`, avoiding
+  an SSA crash caused when the previous scanner was run by a moving Go 1.27
+  `stable` toolchain.
 - Pinned wgcf 2.2.22 checksums for every supported Linux architecture. WARP
   setup now rejects unknown architectures and checksum mismatches and no longer
   falls back to an unreviewed `latest` download.

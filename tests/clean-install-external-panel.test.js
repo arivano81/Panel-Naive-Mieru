@@ -4,6 +4,8 @@ const fs = require('fs');
 const path = require('path');
 
 const install = fs.readFileSync(path.join(__dirname, '..', 'install.sh'), 'utf8');
+const update = fs.readFileSync(path.join(__dirname, '..', 'update.sh'), 'utf8');
+const uninstall = fs.readFileSync(path.join(__dirname, '..', 'uninstall.sh'), 'utf8');
 
 let passed = 0;
 let failed = 0;
@@ -33,6 +35,12 @@ ok(install.includes('systemctl enable --now pm2-root'),
   'installer starts and enables the PM2 systemd unit');
 ok(install.includes('systemctl is-active pm2-root'),
   'installer verifies the PM2 systemd unit reached active');
+ok(/setup_panel_stub\(\)[\s\S]*?chmod 755 "\$PANEL_STUB_DIR"/.test(install),
+  'clean install makes the panel stub directory traversable by Caddy');
+ok(/ensure_panel_stub\(\)[\s\S]*?chmod 755 "\$dir"/.test(update),
+  'repair fixes existing restrictive panel stub directory permissions');
+ok(uninstall.includes('rm -rf /var/www/panel-stub'),
+  'uninstall removes the panel stub artifact');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

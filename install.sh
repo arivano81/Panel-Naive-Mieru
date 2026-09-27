@@ -604,6 +604,8 @@ PANEL_STUB_PAGE="${PANEL_STUB_DIR}/index.html"
 setup_panel_stub() {
   log_step "$(t 'Создание заглушки панели (panel-stub)' 'Setting up panel stub page (panel-stub)')"
   mkdir -p "$PANEL_STUB_DIR"
+  chown root:root "$PANEL_STUB_DIR"
+  chmod 755 "$PANEL_STUB_DIR"
   local asset="${PANEL_DIR}/assets/panel-stub.html"
   if [[ -f "$asset" ]]; then
     cp "$asset" "$PANEL_STUB_PAGE"

@@ -31,6 +31,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the installer refuses success when the requested host block is absent.
 - Clean installs now start and verify the enabled `pm2-root` systemd unit, so a
   running panel is also proven to have a working reboot path before success.
+- The external panel decoy directory is now explicitly mode 755 on install and
+  repair, preventing Caddy's unprivileged user from returning 403 at the panel
+  domain root; uninstall also removes this project-owned artifact.
 
 - Began VLESS XHTTP stage F with an opt-in config adapter: a loopback-only
   XHTTP `mode=auto` inbound, TLS client link, and path-scoped unbuffered Caddy

@@ -146,6 +146,10 @@ if [[ -d /var/www/fake-site ]]; then
 else
   log_info "Fake site directory not found (skipped)"
 fi
+if [[ -d /var/www/panel-stub ]]; then
+  rm -rf /var/www/panel-stub
+  log_info "/var/www/panel-stub removed ✓"
+fi
 
 # ── Remove panel directory ────────────────────────────────────────────────────
 log_step "Removing panel files"

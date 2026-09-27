@@ -46,6 +46,11 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   authenticated panel API and an official CLI client. UDP/443 carried an HTTP
   request before and after a full reboot; the unprivileged service, certificate
   watcher and primary Caddy/Mita/PM2 stack all returned active.
+- Reconciled the VLESS readiness checklist with executable evidence: bonus-node
+  de-duplication, secret-safe logs, transactional invalid-config rejection,
+  per-user lifecycle isolation and UUID/server-setting backup restore are now
+  explicitly recorded as complete. The separate two-VPS cascade reboot canary
+  and Karing/Shadowrocket UI checks remain open gates.
 
 - Began VLESS XHTTP stage F with an opt-in config adapter: a loopback-only
   XHTTP `mode=auto` inbound, TLS client link, and path-scoped unbuffered Caddy

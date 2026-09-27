@@ -32,6 +32,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Sigstore using the exact GitHub Actions workflow identity. The pinned signing
   action verifies every transparency-log bundle before immutable release upload;
   no long-lived private key or repository signing secret is stored.
+- Added a scheduled and on-demand `govulncheck` gate for the exact checksum-pinned
+  linux-amd64 binaries shipped by every external Go component. It verifies each
+  download before binary-mode analysis and retains build metadata plus scan output
+  even when a reachable known vulnerability fails the job.
 - Pinned wgcf 2.2.22 checksums for every supported Linux architecture. WARP
   setup now rejects unknown architectures and checksum mismatches and no longer
   falls back to an unreviewed `latest` download.

@@ -52,6 +52,18 @@ sha256sum -c SHA256SUMS
 Проверяйте точное имя workflow и tag в `--cert-identity`: одна лишь валидная подпись другого
 GitHub-проекта не подтверждает происхождение нашего релиза.
 
+## Аудит Go-бинарников
+
+Workflow `Pinned Go binary vulnerability audit` раз в неделю, вручную и при изменении manifest
+скачивает точные linux-amd64 assets всех внешних Go-компонентов. До анализа каждый файл проходит
+SHA-256 из `supply-chain/components.json`; архивы распаковываются, а фактически поставляемый
+бинарник проверяется закреплённым `govulncheck v1.1.4` в binary mode. Это охватывает Caddy,
+Mita, Mieru client, Hysteria2, Xray, wgcf и OpenFlux и не доверяет текущей ветке upstream.
+
+Отчёты с embedded Go build metadata и результатом проверки сохраняются в GitHub Actions на
+30 дней даже при ошибке. Найденная достижимая уязвимость делает job красным: обновление версии
+или документированный отказ должны пройти обычные checksum, SBOM и canary gate.
+
 ## Откат
 
 SBOM не участвует в runtime и не меняет сервер. Ошибка генерации блокирует только release job.

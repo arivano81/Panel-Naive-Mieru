@@ -430,7 +430,10 @@ L3 не включается, пока не будут готовы изолир
   нового plaintext-экспорта;
 - [x] logrotate и лимиты файловых журналов панели, установщика и cascade-watchdog;
 - [x] npm audit для production-зависимостей с CI-блокировкой от moderate и выше;
-- проверка Go-зависимостей внешних Caddy/Mieru/Xray/OpenFlux компонентов;
+- [x] проверка Go-зависимостей внешних компонентов: еженедельный и ручной
+  `govulncheck -mode binary` скачивает exact checksum-pinned amd64 assets Caddy,
+  Mita/Mieru, Hysteria2, Xray, wgcf и OpenFlux, сохраняет отчёты и падает при
+  достижимой известной уязвимости;
 - [x] SBOM для релиза: offline SPDX 2.3 охватывает production npm lockfile и
   архитектурные assets внешних компонентов; CI сверяет manifest с установщиками,
   а tag workflow публикует SBOM, source archive и SHA256SUMS без замены файлов;

@@ -68,6 +68,9 @@ ok(diagnosticsExport.status === 0, 'secret-free diagnostic export regression sui
 const sbom = spawnSync(process.execPath, [path.join(__dirname, 'sbom.test.js')],
   { stdio: 'inherit' });
 ok(sbom.status === 0, 'SPDX release SBOM regression suite passes');
+const goVulnAudit = spawnSync(process.execPath, [path.join(__dirname, 'go-vulnerability-audit.test.js')],
+  { stdio: 'inherit' });
+ok(goVulnAudit.status === 0, 'pinned Go binary vulnerability audit contract passes');
 const vlessAdapter = spawnSync(process.execPath, [path.join(__dirname, 'vless-reality-adapter.test.js')],
   { stdio: 'inherit' });
 ok(vlessAdapter.status === 0, 'VLESS REALITY adapter regression suite passes');

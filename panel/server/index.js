@@ -1,5 +1,5 @@
 /**
- * Panel Naive + Mieru by RIXXX — Express backend  v1.2.6
+ * VertaFlux — Universal Proxy Control backend
  * Node.js 20 LTS + Express + better-sqlite3 + WebSocket + node-cron
  *
  * v1.2.3: Migrated from standalone naive binary to caddy-forwardproxy-naive.
@@ -601,7 +601,9 @@ function buildCaddyfile(config, users) {
     if (expose && panelDomain && webBasePath) {
       const stubDir = stubFile.replace(/\/[^/]*$/, '') || '/var/www/panel-stub';
       let ba = '';
-      if (baUser && baHash) ba = `    basic_auth {\n      ${baUser} ${baHash}\n    }\n`;
+      // Keep the emergency inline renderer aligned with caddyTemplate.js.
+      // A VertaFlux-specific realm prevents browser credential-cache collisions.
+      if (baUser && baHash) ba = `    basic_auth bcrypt "VertaFlux Panel" {\n      ${baUser} ${baHash}\n    }\n`;
       panelBlock =
 `\n\n# ── v1.4.0: panel external access (TLS + basic_auth + webBasePath) ────────────\n${panelDomain} {\n  tls ${config.adminEmail || ''}\n\n  # BUG-140: normalize bare base path to trailing slash (relative-asset resolve)\n  redir /${webBasePath} /${webBasePath}/ 301\n\n  handle_path /${webBasePath}/* {\n${ba}    reverse_proxy 127.0.0.1:${panelPort}\n  }\n\n  # Root and any path outside the secret base path → static stub (not a redirect)\n  handle {\n    root * ${stubDir}\n    file_server\n  }\n}\n`;
     }
@@ -6114,7 +6116,7 @@ server.listen(PORT, HOST, () => {
     '  ██║  ██║ ██║ ██╔╝ ██╗ ██╔╝ ██╗ ██╔╝ ██╗',
     '  ╚═╝  ╚═╝ ╚═╝ ╚═╝  ╚═╝ ╚═╝  ╚═╝ ╚═╝  ╚═╝',
     '',
-    `  Panel Naive + Mieru v${readPanelVersion()} by RIXXX  (Caddy-forwardproxy-naive)`,
+    `  VertaFlux v${readPanelVersion()}  (universal proxy control)`,
     `  http://${HOST}:${PORT}/`,
     HOST === '127.0.0.1' ? `  ⚠  SSH-only: ssh -L 3000:127.0.0.1:3000 root@<server>` : '',
     ''

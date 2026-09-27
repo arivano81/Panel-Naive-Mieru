@@ -1,4 +1,4 @@
-# Changelog — Panel Naive + Mieru by RIXXX
+# Changelog — VertaFlux
 
 All notable changes to this project will be documented in this file.
 
@@ -10,6 +10,13 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+
+- **VertaFlux identity:** responsive black/blue/green interface, a new
+  network-gateway mark, favicon, login experience and Russian/English product
+  copy. Protocol behavior and configuration compatibility are unchanged.
+- External panel access now uses the dedicated HTTP Basic realm
+  `VertaFlux Panel` instead of Caddy's generic `restricted` realm, preventing
+  browser credential-cache collisions without removing either login layer.
 
 - Backup export is now encrypted by default and no longer exposes a plaintext
   export endpoint. AES-256-GCM authenticates the complete backup, `scrypt`

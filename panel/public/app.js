@@ -1,5 +1,5 @@
 /**
- * Panel Naive + Mieru — Frontend Application v1.5.0
+ * VertaFlux — Universal Proxy Control frontend
  * Bug 1 fix: ALL inline event handlers removed; wired via delegated addEventListener
  * Bug 10 fix: 401 auto-redirect to login; toast on every API error
  * v1.2.5: probe-secret setting, disabled-button+spinner on all submit handlers,
@@ -1618,7 +1618,7 @@ async function backupImportFile(file) {
     return;
   }
   if (!backup || !['rixxx-panel-backup', 'rixxx-panel-backup-encrypted'].includes(backup.format)) {
-    show(t('settings.backupBadFile') || 'Not a RIXXX panel backup file', false);
+    show(t('settings.backupBadFile') || 'Not a valid VertaFlux backup file', false);
     return;
   }
   let passphrase;

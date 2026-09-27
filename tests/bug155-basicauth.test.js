@@ -49,9 +49,9 @@ console.log('\n[1] polluted hash (the exact field dump) → single clean basic_a
   check('basic_auth directive appears exactly once', baDirectives(block) === 1);
   check('clean bcrypt hash is present', block.includes(CLEAN));
   check('no apt/needrestart garbage leaked', !/Unpacking|Selecting|Reading database|kernel|services need/.test(block));
-  // The basic_auth block must be exactly: basic_auth { \n  admin <hash> \n }
+  // The block uses a unique panel realm and contains one clean credential.
   check('basic_auth block is well-formed (user + single-line hash)',
-        /basic_auth \{\s*\n\s*admin \$2[aby]\$[0-9]{2}\$[./A-Za-z0-9]{53}\s*\n\s*\}/.test(block));
+        /basic_auth bcrypt "VertaFlux Panel" \{\s*\n\s*admin \$2[aby]\$[0-9]{2}\$[./A-Za-z0-9]{53}\s*\n\s*\}/.test(block));
 }
 
 console.log('\n[2] clean hash passes through unchanged');
@@ -59,6 +59,7 @@ console.log('\n[2] clean hash passes through unchanged');
   const block = tpl.renderPanelBlock({ ...baseCfg, panelBasicAuthHash: CLEAN });
   check('clean hash emitted verbatim', block.includes(`admin ${CLEAN}`));
   check('exactly one basic_auth directive', baDirectives(block) === 1);
+  check('panel-specific realm is emitted', block.includes('basic_auth bcrypt "VertaFlux Panel" {'));
 }
 
 console.log('\n[3] hash with no valid bcrypt → NO basic_auth line (valid Caddyfile, no auth)');

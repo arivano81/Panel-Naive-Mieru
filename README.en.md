@@ -4,18 +4,20 @@
 
 <div align="center">
 
-# 🛡 Panel Naive + Mieru (+Hysteria2) by RIXXX
+# ◈ VertaFlux
 
-**v1.12.0** — Web management panel for a personal VPN server on Ubuntu or Debian
+**v1.12.0** — Universal control panel for a personal proxy server on Ubuntu or Debian
 
 [![Telegram](https://img.shields.io/badge/Telegram-@russian__paradice__vpn-2CA5E0?logo=telegram&logoColor=white)](https://t.me/russian_paradice_vpn)
 [![GitHub](https://img.shields.io/badge/GitHub-arivano81-181717?logo=github)](https://github.com/arivano81/Panel-Naive-Mieru)
-[![License](https://img.shields.io/badge/License-MIT-bronze?color=c08552)](LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-blue?color=248cff)](LICENSE)
 
 > 💬 **Support & updates:** [t.me/russian_paradice_vpn](https://t.me/russian_paradice_vpn)  
 > ☕ **Support the project:** [app.lava.top/2107724612](https://app.lava.top/2107724612?tabId=donate)
 
-This version focuses on installation, reliability, documentation, and protocol support.
+VertaFlux brings NaiveProxy, Mieru, Hysteria2, VLESS, and experimental OpenFlux
+into one approachable interface: one gateway, multiple access technologies, and
+one user lifecycle.
 
 </div>
 
@@ -23,7 +25,7 @@ This version focuses on installation, reliability, documentation, and protocol s
 
 ## 🌿 About the project
 
-This version is maintained independently. Changes are released and tested in this repository.
+VertaFlux is maintained independently. Changes are released and tested in this repository.
 Use [`arivano81/Panel-Naive-Mieru`](https://github.com/arivano81/Panel-Naive-Mieru) for installation
 and updates.
 
@@ -391,7 +393,7 @@ ufw status
 
 ## 📝 Credits
 
-- **Author:** RIXXX
+- **Project:** VertaFlux (`arivano81/Panel-Naive-Mieru`)
 - **Parent project:** [cwash797-cmd/Panel-Naive-Mieru-by-RIXXX](https://github.com/cwash797-cmd/Panel-Naive-Mieru-by-RIXXX)
 - **Telegram:** [@russian_paradice_vpn](https://t.me/russian_paradice_vpn)
 - **Donate:** [app.lava.top/2107724612](https://app.lava.top/2107724612?tabId=donate)

@@ -4,18 +4,20 @@
 
 <div align="center">
 
-# 🛡 Panel Naive + Mieru (+Hysteria2) by RIXXX
+# ◈ VertaFlux
 
-**v1.12.0** — веб-панель для управления личным VPN-сервером на Ubuntu или Debian
+**v1.12.0** — универсальная панель управления личным прокси-сервером на Ubuntu или Debian
 
 [![Telegram](https://img.shields.io/badge/Telegram-@russian__paradice__vpn-2CA5E0?logo=telegram&logoColor=white)](https://t.me/russian_paradice_vpn)
 [![GitHub](https://img.shields.io/badge/GitHub-arivano81-181717?logo=github)](https://github.com/arivano81/Panel-Naive-Mieru)
-[![License](https://img.shields.io/badge/License-MIT-bronze?color=c08552)](LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-blue?color=248cff)](LICENSE)
 
 > 💬 **Поддержка и обновления:** [t.me/russian_paradice_vpn](https://t.me/russian_paradice_vpn)  
 > ☕ **Поддержать проект:** [app.lava.top/2107724612](https://app.lava.top/2107724612?tabId=donate)
 
-В этой версии мы развиваем установку, надёжность, документацию и поддержку протоколов.
+VertaFlux объединяет NaiveProxy, Mieru, Hysteria2, VLESS и экспериментальный OpenFlux
+в одном понятном интерфейсе. Название подчёркивает главную идею проекта: один шлюз,
+несколько технологий доступа и единый жизненный цикл пользователей.
 
 </div>
 
@@ -23,7 +25,7 @@
 
 ## 🌿 О проекте
 
-Это самостоятельно поддерживаемая версия панели. Изменения выпускаются и проверяются в этом
+VertaFlux — самостоятельно поддерживаемая версия панели. Изменения выпускаются и проверяются в этом
 репозитории. Для установки и обновления используйте
 [`arivano81/Panel-Naive-Mieru`](https://github.com/arivano81/Panel-Naive-Mieru).
 
@@ -818,7 +820,7 @@ ufw status
 
 ## 📝 Кредиты
 
-- **Автор:** RIXXX
+- **Проект:** VertaFlux (`arivano81/Panel-Naive-Mieru`)
 - **Родительский проект:** [cwash797-cmd/Panel-Naive-Mieru-by-RIXXX](https://github.com/cwash797-cmd/Panel-Naive-Mieru-by-RIXXX)
 - **Telegram:** [@russian_paradice_vpn](https://t.me/russian_paradice_vpn)
 - **Донат:** [app.lava.top/2107724612](https://app.lava.top/2107724612?tabId=donate)

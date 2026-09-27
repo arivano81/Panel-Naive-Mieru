@@ -151,12 +151,17 @@ function renderPanelBlock(cfg) {
   const stubDir = stubFile.replace(/\/[^/]*$/, '') || '/var/www/panel-stub';
 
   // basic_auth block — only emitted when a username + bcrypt hash are present.
-  // Caddy v2 syntax: `basic_auth { <user> <bcrypt-hash> }`. The hash must be a
+  // Give the panel its own realm instead of Caddy's generic "restricted" realm.
+  // Browsers scope cached HTTP Basic credentials by origin + realm; a stable,
+  // VertaFlux-specific realm avoids collisions with another protected service on
+  // the same host and lets existing installations escape stale credential
+  // retry loops without weakening either authentication layer.
+  // Caddy v2 syntax: `basic_auth bcrypt "<realm>" { ... }`. The hash must be a
   // bcrypt hash produced by `caddy hash-password`.
   let basicAuthBlock = '';
   if (baUser && baHash) {
     basicAuthBlock =
-`    basic_auth {
+`    basic_auth bcrypt "VertaFlux Panel" {
       ${baUser} ${baHash}
     }
 `;

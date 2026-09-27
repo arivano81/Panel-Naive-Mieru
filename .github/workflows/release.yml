@@ -6,16 +6,18 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   release:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v7
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 20
       - name: Validate tag and generate immutable artifacts
@@ -31,6 +33,17 @@ jobs:
             -o "dist/Panel-Naive-Mieru-${version}.tar.gz" HEAD
           cd dist
           sha256sum "Panel-Naive-Mieru-${version}.tar.gz" "rixxx-panel-${version}.spdx.json" > SHA256SUMS
+      - name: Sign and verify release artifacts with keyless Sigstore
+        uses: sigstore/gh-action-sigstore-python@5b79a39c381910c090341a2c9b0bf022c8b387e1 # v3.4.0
+        with:
+          inputs: |
+            dist/Panel-Naive-Mieru-*.tar.gz
+            dist/rixxx-panel-*.spdx.json
+            dist/SHA256SUMS
+          verify: true
+          verify-cert-identity: https://github.com/${{ github.workflow_ref }}
+          verify-oidc-issuer: https://token.actions.githubusercontent.com
+          release-signing-artifacts: false
       - name: Create release and upload without replacement
         env:
           GH_TOKEN: ${{ github.token }}

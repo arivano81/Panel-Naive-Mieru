@@ -32,7 +32,25 @@ node tests/sbom.test.js
 Workflow `Release artifacts` запускается только для tag `v*` и требует точного совпадения tag с
 `VERSION`. Он создаёт исходный tar.gz, SPDX SBOM и `SHA256SUMS`, затем прикладывает их к GitHub
 Release. Загрузка выполняется без `--clobber`: существующий файл той же версии не заменяется
-молча. Криптографическая подпись этих файлов является отдельным следующим gate ROADMAP.
+молча.
+
+Архив, SBOM и `SHA256SUMS` подписываются keyless-подписью Sigstore. Рядом с каждым файлом
+публикуется `<имя>.sigstore.json`: bundle содержит краткоживущий сертификат GitHub Actions,
+подпись и доказательство transparency log. Долгоживущий приватный ключ или repository secret
+проекту не нужен. Workflow сам проверяет созданные bundle до публикации.
+
+Пример проверки скачанного архива (подставьте фактическую версию вместо `<версия>`):
+
+```bash
+sigstore verify identity "Panel-Naive-Mieru-<версия>.tar.gz" \
+  --bundle "Panel-Naive-Mieru-<версия>.tar.gz.sigstore.json" \
+  --cert-identity "https://github.com/arivano81/Panel-Naive-Mieru/.github/workflows/release.yml@refs/tags/v<версия>" \
+  --cert-oidc-issuer "https://token.actions.githubusercontent.com"
+sha256sum -c SHA256SUMS
+```
+
+Проверяйте точное имя workflow и tag в `--cert-identity`: одна лишь валидная подпись другого
+GitHub-проекта не подтверждает происхождение нашего релиза.
 
 ## Откат
 

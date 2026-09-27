@@ -434,7 +434,9 @@ L3 не включается, пока не будут готовы изолир
 - [x] SBOM для релиза: offline SPDX 2.3 охватывает production npm lockfile и
   архитектурные assets внешних компонентов; CI сверяет manifest с установщиками,
   а tag workflow публикует SBOM, source archive и SHA256SUMS без замены файлов;
-- подпись release artifacts;
+- [x] keyless Sigstore-подпись release artifacts через OIDC GitHub Actions: archive,
+  SBOM и SHA256SUMS получают отдельные transparency-log bundle, проверяются самим
+  workflow до публикации и не требуют долгоживущего приватного ключа;
 - [x] security contact через private GitHub Security Advisory и документированная процедура отзыва релиза.
 
 ## 10. Эксплуатация и удобство

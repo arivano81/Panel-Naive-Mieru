@@ -28,6 +28,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Corrected the Hysteria2 `app/v2.12.3` ARMv7 checksum, whose previous 65-digit
   value could never match. The replacement equals the official GitHub asset
   digest and is now length-checked through the SBOM gate.
+- Release archives, SPDX SBOMs and checksum lists are now signed with keyless
+  Sigstore using the exact GitHub Actions workflow identity. The pinned signing
+  action verifies every transparency-log bundle before immutable release upload;
+  no long-lived private key or repository signing secret is stored.
 - Pinned wgcf 2.2.22 checksums for every supported Linux architecture. WARP
   setup now rejects unknown architectures and checksum mismatches and no longer
   falls back to an unreviewed `latest` download.

@@ -82,6 +82,19 @@ try {
   ok(releaseWorkflow.includes('sha256sum') && releaseWorkflow.includes('gh release upload') &&
      !releaseWorkflow.includes('--clobber'),
     'release publishes checksums and refuses silent artifact replacement');
+  ok(releaseWorkflow.includes('id-token: write') &&
+     /sigstore\/gh-action-sigstore-python@[a-f0-9]{40}/.test(releaseWorkflow) &&
+     releaseWorkflow.includes('verify: true') &&
+     releaseWorkflow.includes('https://github.com/${{ github.workflow_ref }}') &&
+     releaseWorkflow.includes('https://token.actions.githubusercontent.com'),
+    'release artifacts receive a pinned keyless Sigstore signature and identity verification');
+  ok(releaseWorkflow.includes('dist/SHA256SUMS') &&
+     releaseWorkflow.includes('dist/Panel-Naive-Mieru-*.tar.gz') &&
+     releaseWorkflow.includes('dist/rixxx-panel-*.spdx.json') &&
+     releaseWorkflow.includes('gh release upload "$GITHUB_REF_NAME" dist/*'),
+    'archive, SBOM, checksum list and generated signature bundles are all published');
+  ok(!/SIGSTORE_(?:PRIVATE|KEY)|COSIGN_(?:PRIVATE|KEY)|secrets\./.test(releaseWorkflow),
+    'release signing requires no stored private key or repository secret');
 } finally {
   fs.rmSync(temp, { recursive: true, force: true });
 }

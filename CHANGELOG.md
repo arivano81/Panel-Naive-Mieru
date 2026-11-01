@@ -19,6 +19,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Config API secret echo removed:** `POST /api/config` now returns only an
   acknowledgement. Its former response echoed stored Basic Auth, federation
   and cascade values even though the frontend never consumed that object.
+- **Production dependency advisories:** refreshed the compatible lockfile to
+  `body-parser 1.20.9`, `qs 6.16.2` and `systeminformation 5.33.19`, closing the
+  newly published DoS, path-traversal and command-injection audit findings.
 
 - **VertaFlux identity:** responsive black/blue/green interface, a new
   network-gateway mark, favicon, login experience and Russian/English product

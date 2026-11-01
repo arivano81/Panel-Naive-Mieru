@@ -20,6 +20,12 @@ ok(/^\^?4\.6\.0$/.test(pkg.dependencies['node-cron']), 'node-cron no longer pull
 ok(lock.packages['node_modules/uuid']?.version === '11.1.1', 'lockfile pins the reviewed uuid release');
 ok(lock.packages['node_modules/node-cron']?.version === '4.6.0', 'lockfile pins the reviewed node-cron release');
 ok(!lock.packages['node_modules/node-cron/node_modules/uuid'], 'vulnerable nested uuid is absent');
+ok(lock.packages['node_modules/body-parser']?.version === '1.20.9',
+  'body-parser includes the compressed-body DoS fix');
+ok(lock.packages['node_modules/qs']?.version === '6.16.2',
+  'qs includes the array stringify DoS fix');
+ok(lock.packages['node_modules/systeminformation']?.version === '5.33.19',
+  'systeminformation includes the reviewed path and command-injection fixes');
 ok(ci.includes('npm audit --omit=dev --audit-level=moderate'),
   'CI blocks moderate and higher production advisories');
 

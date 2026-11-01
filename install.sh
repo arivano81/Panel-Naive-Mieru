@@ -1262,6 +1262,7 @@ write_config_json() {
       mtu:            1400,
       udpEnabled:     false,
       language:       "ru",
+      onboardingComplete: false,
       version:        E.CFG_VERSION || "",
       installedAt:    E.CFG_INSTALLED_AT || ""
     };

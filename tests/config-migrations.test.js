@@ -23,6 +23,10 @@ ok(legacy.stack.vlessXhttp === false && legacy.vlessXhttpPort === 10443,
   'VLESS XHTTP remains opt-in on upgrade');
 ok(legacy.totpEnabled === false && legacy.totpSecret === '' && legacy.totpLastCounter === -1,
   'administrator TOTP remains opt-in on upgrade');
+ok(legacy.onboardingComplete === true, 'existing installs do not receive the first-run wizard');
+
+const fresh = runConfigMigrations({ onboardingComplete: false }, { logger: { log() {} } }).config;
+ok(fresh.onboardingComplete === false, 'fresh-install onboarding remains pending');
 
 const second = runConfigMigrations(legacy, { logger: { log() {} } });
 ok(!second.changed && second.applied.length === 0, 'migration is idempotent');

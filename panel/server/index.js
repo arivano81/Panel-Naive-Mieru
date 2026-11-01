@@ -2106,6 +2106,12 @@ app.post('/api/config', requireAuth, (req, res) => {
   const prevFake    = cfg.fakeSiteUrl || '';   // v1.9.3: watch the masquerade URL too
   const prevFedNodes = Array.isArray(cfg.federationNodes) ? cfg.federationNodes : []; // v1.9.5
 
+  // The first-run flag is deliberately one-way through the public API. A
+  // malformed value cannot suppress onboarding, and an authenticated client
+  // cannot make the wizard reappear for every subsequent login.
+  if (req.body.onboardingComplete !== undefined && req.body.onboardingComplete !== true)
+    return res.status(400).json({ error: 'onboardingComplete accepts only true' });
+
   // v1.9.3: validate fakeSiteUrl BEFORE mutating cfg, so a bad value can never
   // be persisted or fed to buildCaddyfile(). Empty string is allowed (= reset
   // to the built-in default fake site). Non-empty must be a plain http(s) URL.
@@ -2138,7 +2144,7 @@ app.post('/api/config', requireAuth, (req, res) => {
   ['domain','naivePort','mieruPortStart','mieruPortEnd',
    'trafficPattern','mtu','udpEnabled','adminEmail','language',
    'probeSecret','fakeSiteUrl','subBaseUrl','serverFlag',
-   'federationToken','federationNodes'].forEach(k => {
+   'federationToken','federationNodes','onboardingComplete'].forEach(k => {
     if (req.body[k] !== undefined) cfg[k] = req.body[k];
   });
   // v1.9.5: normalize federationToken (trim; empty allowed = node role off).
@@ -2234,8 +2240,10 @@ app.post('/api/config', requireAuth, (req, res) => {
       console.warn('[CONFIG] Caddy reload after config change failed:', e && e.message);
     }
   }
-  const { adminPassHash, totpSecret, totpLastCounter, ...safe } = cfg;
-  res.json({ ok: true, cfg: safe });
+  // No caller consumes a config echo here. Returning cfg used to expose stored
+  // Basic Auth, federation and cascade secrets after an otherwise harmless
+  // settings write. Keep mutation responses deliberately content-free.
+  res.json({ ok: true });
 });
 
 app.post('/api/config/password', requireAuth, (req, res) => {

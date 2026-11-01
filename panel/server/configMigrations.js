@@ -1,6 +1,6 @@
 'use strict';
 
-const LATEST_CONFIG_SCHEMA = 9;
+const LATEST_CONFIG_SCHEMA = 10;
 
 const CONFIG_MIGRATIONS = [
   { version: 1, name: 'probe mode', up(config) {
@@ -54,6 +54,11 @@ const CONFIG_MIGRATIONS = [
     if (config.totpEnabled == null) config.totpEnabled = false;
     if (config.totpSecret == null) config.totpSecret = '';
     if (!Number.isInteger(config.totpLastCounter)) config.totpLastCounter = -1;
+  } },
+  { version: 10, name: 'first-run onboarding', up(config) {
+    // Existing installations must not be interrupted by a new-product tour.
+    // The installer writes false explicitly for genuinely fresh deployments.
+    if (config.onboardingComplete == null) config.onboardingComplete = true;
   } },
 ];
 

@@ -180,6 +180,7 @@ const state = {
   config: {},
   users: [],
   currentPage: 'dashboard',
+  onboardingStep: 0,
   ws: null,
   wsReconnectTimer: null,
   selectedUserId: null,
@@ -255,6 +256,12 @@ function handleDelegatedClick(e) {
     case 'toggle-pw':        togglePw(btn.dataset.target); break;
     case 'cycle-lang':       cycleLang(); break;
     case 'toggle-theme':     toggleTheme(); break;
+
+    // ── First-run orientation
+    case 'onboarding-later': closeOnboarding(); break;
+    case 'onboarding-back':  setOnboardingStep(state.onboardingStep - 1); break;
+    case 'onboarding-next':  setOnboardingStep(state.onboardingStep + 1); break;
+    case 'onboarding-finish': finishOnboarding(); break;
 
     // ── Auth
     case 'logout':           logout(); break;
@@ -430,6 +437,7 @@ function enterApp() {
   loadConfig().then(() => {
     navigateTo('dashboard');
     connectWebSocket();
+    showOnboarding();
   });
 }
 
@@ -524,6 +532,57 @@ async function loadConfig() {
       });
     }
   } catch {}
+}
+
+// ══════════════════════════════════════════════════════════════
+// FIRST-RUN ORIENTATION
+// ══════════════════════════════════════════════════════════════
+
+function showOnboarding() {
+  if (state.config.onboardingComplete !== false) return;
+  const value = (id, text) => { const node = el(id); if (node) node.textContent = text || '—'; };
+  value('onboarding-domain', state.config.domain);
+  value('onboarding-panel-domain', state.config.panelDomain
+    ? `https://${state.config.panelDomain}` : t('onboarding.notConfigured'));
+  value('onboarding-sub-domain', state.config.subBaseUrl || t('onboarding.notConfigured'));
+  value('onboarding-access', state.config.exposePanel
+    ? t('onboarding.enabled') : t('onboarding.disabled'));
+  value('onboarding-totp', state.config.totpEnabled
+    ? t('onboarding.enabled') : t('onboarding.disabled'));
+  setOnboardingStep(0);
+  el('onboarding-modal').classList.remove('hidden');
+  el('onboarding-next')?.focus();
+}
+
+function setOnboardingStep(step) {
+  state.onboardingStep = Math.max(0, Math.min(2, step));
+  document.querySelectorAll('.onboarding-step').forEach(node => {
+    node.classList.toggle('active', Number(node.dataset.onboardingStep) === state.onboardingStep);
+  });
+  document.querySelectorAll('.onboarding-progress span').forEach((node, index) => {
+    node.classList.toggle('active', index <= state.onboardingStep);
+  });
+  el('onboarding-back')?.classList.toggle('hidden', state.onboardingStep === 0);
+  el('onboarding-next')?.classList.toggle('hidden', state.onboardingStep === 2);
+  el('onboarding-finish')?.classList.toggle('hidden', state.onboardingStep !== 2);
+}
+
+function closeOnboarding() {
+  el('onboarding-modal')?.classList.add('hidden');
+}
+
+async function finishOnboarding() {
+  const button = el('onboarding-finish');
+  if (button) button.disabled = true;
+  try {
+    await api('POST', '/api/config', { onboardingComplete: true });
+    state.config.onboardingComplete = true;
+    closeOnboarding();
+    navigateTo('dashboard');
+    toast(t('onboarding.completed'), 'success');
+  } finally {
+    if (button) button.disabled = false;
+  }
 }
 
 // ══════════════════════════════════════════════════════════════

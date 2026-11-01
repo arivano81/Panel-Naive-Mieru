@@ -35,6 +35,8 @@ GitHub token with **Contents: Read** permission only. Pass it as
 
 Project additions include:
 
+- a first-run wizard after the initial login that explains protocol boundaries,
+  shows the main, panel and subscription addresses, and highlights TOTP plus encrypted backups;
 - **Debian 13** installation support;
 - a protected post-installation report containing the panel address and administrator details;
 - an access recovery utility for lost panel credentials;

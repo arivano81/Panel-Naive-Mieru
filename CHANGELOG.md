@@ -11,6 +11,15 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **First-run wizard:** fresh installations now open a three-step orientation
+  after the first administrator login. It explains protocol boundaries, shows
+  the configured main/panel/subscription addresses and highlights TOTP plus an
+  encrypted backup. Existing installations are migrated as completed, and the
+  wizard never installs or enables an optional component.
+- **Config API secret echo removed:** `POST /api/config` now returns only an
+  acknowledgement. Its former response echoed stored Basic Auth, federation
+  and cascade values even though the frontend never consumed that object.
+
 - **VertaFlux identity:** responsive black/blue/green interface, a new
   network-gateway mark, favicon, login experience and Russian/English product
   copy. Protocol behavior and configuration compatibility are unchanged.

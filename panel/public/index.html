@@ -1257,6 +1257,60 @@
   </main>
 </div>
 
+<!-- First-run orientation. It never installs protocols or changes networking. -->
+<div class="modal-overlay hidden" id="onboarding-modal" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+  <div class="modal onboarding-modal">
+    <div class="modal-header">
+      <div>
+        <div class="onboarding-kicker" data-i18n="onboarding.kicker">FIRST RUN</div>
+        <h4 id="onboarding-title" data-i18n="onboarding.title">Welcome to VertaFlux</h4>
+      </div>
+      <button class="modal-close" data-action="onboarding-later" aria-label="Remind me later">✕</button>
+    </div>
+    <div class="onboarding-progress" aria-hidden="true">
+      <span class="active"></span><span></span><span></span>
+    </div>
+    <div class="modal-body">
+      <section class="onboarding-step active" data-onboarding-step="0">
+        <div class="onboarding-symbol">01</div>
+        <h3 data-i18n="onboarding.welcomeTitle">One panel, several connection methods</h3>
+        <p data-i18n="onboarding.welcomeText">NaiveProxy and Mieru are ready. Hysteria2, VLESS and OpenFlux remain opt-in and are never enabled automatically.</p>
+        <div class="onboarding-protocols">
+          <span>NaiveProxy</span><span>Mieru</span><span>Hysteria2</span><span>VLESS</span><span>OpenFlux</span>
+        </div>
+      </section>
+      <section class="onboarding-step" data-onboarding-step="1">
+        <div class="onboarding-symbol">02</div>
+        <h3 data-i18n="onboarding.addressesTitle">Check the three server addresses</h3>
+        <p data-i18n="onboarding.addressesText">The main domain carries proxy traffic, the panel domain opens administration, and the subscription domain distributes client configurations.</p>
+        <div class="onboarding-facts">
+          <div><span data-i18n="onboarding.mainDomain">Main domain</span><code id="onboarding-domain">—</code></div>
+          <div><span data-i18n="onboarding.panelDomain">Panel domain</span><code id="onboarding-panel-domain">—</code></div>
+          <div><span data-i18n="onboarding.subDomain">Subscription URL</span><code id="onboarding-sub-domain">—</code></div>
+        </div>
+      </section>
+      <section class="onboarding-step" data-onboarding-step="2">
+        <div class="onboarding-symbol">03</div>
+        <h3 data-i18n="onboarding.securityTitle">Finish the administrator checklist</h3>
+        <p data-i18n="onboarding.securityText">Keep the installation report offline, enable TOTP, create an encrypted backup, then add the first user.</p>
+        <div class="onboarding-checklist">
+          <div><span data-i18n="onboarding.protectedAccess">Protected external access</span><strong id="onboarding-access">—</strong></div>
+          <div><span data-i18n="onboarding.twoFactor">Two-factor authentication</span><strong id="onboarding-totp">—</strong></div>
+          <div><span data-i18n="onboarding.backup">Encrypted backup</span><strong data-i18n="onboarding.recommended">Recommended</strong></div>
+        </div>
+      </section>
+    </div>
+    <div class="modal-footer onboarding-footer">
+      <button class="btn btn-ghost" data-action="onboarding-later" data-i18n="onboarding.later">Remind me later</button>
+      <div class="onboarding-nav">
+        <button class="btn btn-secondary hidden" id="onboarding-back" data-action="onboarding-back" data-i18n="onboarding.back">Back</button>
+        <button class="btn btn-primary" id="onboarding-next" data-action="onboarding-next" data-i18n="onboarding.next">Next</button>
+        <button class="btn btn-primary hidden" id="onboarding-finish" data-action="onboarding-finish" data-i18n="onboarding.finish">Open dashboard</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Toast container -->
 <div id="toast-container"></div>
 

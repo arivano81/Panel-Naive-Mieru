@@ -11,6 +11,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Component health overview:** Diagnostics now presents one read-only status
+  list for the panel, NaiveProxy, Mieru, Hysteria2, VLESS/Xray, OpenFlux and
+  time synchronization. OpenFlux reports active and listener-healthy profiles
+  separately; the check never enables an optional component.
 - **First-run wizard:** fresh installations now open a three-step orientation
   after the first administrator login. It explains protocol boundaries, shows
   the configured main/panel/subscription addresses and highlights TOTP plus an

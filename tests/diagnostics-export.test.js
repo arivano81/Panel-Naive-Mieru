@@ -41,6 +41,15 @@ ok(/app\.get\('\/api\/diagnostics\/export', requireAuth/.test(server) &&
 ok(ui.includes("case 'export-diagnostics': exportDiagnostics()") &&
    html.includes('data-action="export-diagnostics"'),
   'diagnostics page exposes the safe report download');
+ok(html.includes('id="diag-health"') && ui.includes("healthRow('NaiveProxy / Caddy'") &&
+   ui.includes("healthRow('VLESS / Xray'") && ui.includes("healthRow('OpenFlux'"),
+  'diagnostics page presents one health overview for core and optional components');
+ok(collector.includes('healthyProfiles: profiles.filter(profile => profile.healthy).length') &&
+   ui.includes('openflux.activeProfiles === openflux.healthyProfiles'),
+  'OpenFlux health distinguishes active profiles from listener-healthy profiles');
+ok(ui.includes("data.services?.hysteria2 === 'not-installed' ? 'optional'") &&
+   ui.includes("data.services?.xray === 'not-installed' ? 'optional'"),
+  'missing optional protocols are informational rather than false failures');
 
 console.log(`\nResult: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

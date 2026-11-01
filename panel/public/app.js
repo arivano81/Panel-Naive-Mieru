@@ -2890,6 +2890,7 @@ async function loadLogs(service) {
 // ══════════════════════════════════════════════════════════════
 
 async function runDiagnostics() {
+  el('diag-health').innerHTML = `<p class="text-muted">${t('diagnostics.checking') || '…'}</p>`;
   el('diag-ports').innerHTML  = `<p class="text-muted">${t('diagnostics.checking') || '…'}</p>`;
   el('diag-config').innerHTML = `<p class="text-muted">${t('diagnostics.checking') || '…'}</p>`;
   el('diag-mita-status').textContent = t('logs.loading') || '…';
@@ -2897,6 +2898,28 @@ async function runDiagnostics() {
 
   try {
     const data = await api('GET', '/api/diagnostics');
+
+    const healthRow = (name, state, detail = '') => {
+      const labels = {
+        ok: [t('diagnostics.healthy'), 'badge-green'],
+        warn: [t('diagnostics.attention'), 'badge-red'],
+        optional: [t('diagnostics.notInstalled'), 'badge-gray'],
+      };
+      const [label, badgeClass] = labels[state] || labels.warn;
+      return `<div class="info-row"><span><strong>${esc(name)}</strong>${detail ? `<small style="display:block;color:var(--text-muted)">${esc(detail)}</small>` : ''}</span><span class="badge ${badgeClass}">${esc(label)}</span></div>`;
+    };
+    const serviceOk = name => data.services?.[name] === 'active';
+    const openflux = data.openflux || {};
+    const openfluxOk = openflux.installed && openflux.activeProfiles === openflux.healthyProfiles;
+    el('diag-health').innerHTML = [
+      healthRow(t('diagnostics.panel'), serviceOk('panel') ? 'ok' : 'warn'),
+      healthRow('NaiveProxy / Caddy', serviceOk('caddy') && data.ports?.naive && data.naiveVersionOk && data.naiveConfigExists ? 'ok' : 'warn'),
+      healthRow('Mieru', serviceOk('mieru') && data.ports?.mieru && data.mitaConfig?.validJson ? 'ok' : 'warn'),
+      healthRow('Hysteria2', data.services?.hysteria2 === 'not-installed' ? 'optional' : (serviceOk('hysteria2') && data.ports?.hy2 ? 'ok' : 'warn')),
+      healthRow('VLESS / Xray', data.services?.xray === 'not-installed' ? 'optional' : (serviceOk('xray') && data.xrayConfig?.validJson ? 'ok' : 'warn')),
+      healthRow('OpenFlux', !openflux.installed ? 'optional' : (openfluxOk ? 'ok' : 'warn'), openflux.installed ? t('diagnostics.openfluxProfiles', { healthy: openflux.healthyProfiles || 0, active: openflux.activeProfiles || 0, total: openflux.profiles || 0 }) : ''),
+      healthRow(t('diagnostics.timeSync'), data.timeSynced ? 'ok' : 'warn'),
+    ].join('');
 
     el('diag-ports').innerHTML = `
       <div class="info-list">

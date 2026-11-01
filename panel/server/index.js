@@ -5882,7 +5882,8 @@ function collectSafeDiagnostics() {
     if (openFluxService.installed()) {
       const profiles = openFluxService.list();
       openflux = { installed: true, profiles: profiles.length,
-        activeProfiles: profiles.filter(profile => profile.active).length };
+        activeProfiles: profiles.filter(profile => profile.active).length,
+        healthyProfiles: profiles.filter(profile => profile.healthy).length };
     }
   } catch { /* optional component must never break the main diagnostic report */ }
 

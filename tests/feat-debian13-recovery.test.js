@@ -18,7 +18,7 @@ function ok(condition, message) {
 console.log('Debian 13 + access recovery regression test');
 
 ok(/11\|12\|13\)\s+log_info/.test(install), 'installer accepts Debian 13');
-ok(/ADMIN_REPORT="\/root\/rixxx-panel-install-report\.txt"/.test(install), 'root-only report has a stable path');
+ok(/ADMIN_REPORT="\/root\/vertaflux-install-report\.txt"/.test(install), 'root-only report has a stable path');
 const mainBlock = install.slice(install.indexOf('main() {'));
 ok(mainBlock.indexOf('write_admin_report "installation in progress"') < mainBlock.indexOf('write_config_json'),
   'credentials are saved before service configuration can fail');

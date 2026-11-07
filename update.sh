@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Panel Naive + Mieru by RIXXX — update.sh  v1.2.5
+# VertaFlux updater
 # Usage: bash update.sh [--dry-run] [--force] [--expose <domain>] [--ssh-only]
 #                       [--status] [--repair] [--help] [-y]
 #
@@ -2131,7 +2131,7 @@ activate_rollback() {
 
 write_rollback_report() {
   local target="$1" safety="$2" outcome="$3"
-  local report=/root/rixxx-panel-rollback-report.txt
+  local report=/root/vertaflux-rollback-report.txt
   {
     echo "Panel rollback report"
     echo "Time (UTC): $(date -u +%Y-%m-%dT%H:%M:%SZ)"

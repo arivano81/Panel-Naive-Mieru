@@ -46,7 +46,7 @@ ok(install.includes('exec 3>&1') && install.includes('print_banner >&3') &&
    install.includes('secret_info()'),
   'installer secrets bypass the persistent tee log');
 ok(!e2e.includes('(?<=Generated password: )') &&
-   e2e.includes('/root/rixxx-panel-install-report.txt'),
+   e2e.includes('/root/vertaflux-install-report.txt'),
   'E2E recovery no longer depends on leaked log credentials');
 
 console.log(`\nResult: ${passed} passed, ${failed} failed`);

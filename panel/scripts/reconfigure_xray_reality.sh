@@ -5,7 +5,7 @@ PANEL_CONFIG="/etc/rixxx-panel/config.json"
 XRAY_CONFIG="/etc/xray/config.json"
 XRAY_PUBLIC="/etc/xray/reality-public.json"
 XRAY_BIN="/usr/local/bin/xray"
-REPORT="/root/rixxx-xray-reality-target-report.txt"
+REPORT="/root/vertaflux-xray-reality-target-report.txt"
 MODE="apply"
 if [[ "${1:-}" == "--check" ]]; then MODE="check"; shift; fi
 SERVER_NAME="${1:-}"

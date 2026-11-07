@@ -63,7 +63,7 @@ function verifyTotp(secret, code, { now = Date.now(), window = 1, lastCounter = 
   return null;
 }
 
-function otpauthUrl({ secret, account, issuer = 'RIXXX Panel' }) {
+function otpauthUrl({ secret, account, issuer = 'VertaFlux' }) {
   const label = `${issuer}:${account}`;
   return `otpauth://totp/${encodeURIComponent(label)}?secret=${encodeURIComponent(secret)}` +
     `&issuer=${encodeURIComponent(issuer)}&algorithm=SHA1&digits=6&period=30`;

@@ -2323,7 +2323,7 @@ function buildPortableBackup() {
 function backupFilename(suffix) {
   const domainTag = (cfg.domain || 'server').replace(/[^A-Za-z0-9._-]/g, '_');
   const dateTag = new Date().toISOString().slice(0, 10);
-  return `rixxx-backup-${domainTag}-${dateTag}.${suffix}`;
+  return `vertaflux-backup-${domainTag}-${dateTag}.${suffix}`;
 }
 
 app.post('/api/backup/export/encrypted', requireAuth, backupSecretLimiter, (req, res) => {
@@ -6040,7 +6040,7 @@ app.get('/api/diagnostics/export', requireAuth, (_req, res) => {
   const dateTag = report.generatedAt.slice(0, 10);
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Content-Type', 'application/json');
-  res.setHeader('Content-Disposition', `attachment; filename="rixxx-diagnostics-${dateTag}.json"`);
+  res.setHeader('Content-Disposition', `attachment; filename="vertaflux-diagnostics-${dateTag}.json"`);
   res.send(JSON.stringify(report, null, 2));
 });
 

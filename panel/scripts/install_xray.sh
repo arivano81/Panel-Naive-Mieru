@@ -12,7 +12,7 @@ XRAY_PUBLIC="${XRAY_DIR}/reality-public.json"
 XRAY_UNIT="/etc/systemd/system/xray.service"
 PANEL_CONFIG="/etc/rixxx-panel/config.json"
 COMPONENT_REGISTRY="/etc/rixxx-panel/components.json"
-REPORT="/root/rixxx-xray-install-report.txt"
+REPORT="/root/vertaflux-xray-install-report.txt"
 
 PORT="${XRAY_PORT:-8443}"
 SERVER_NAME="${XRAY_SERVER_NAME:-}"
@@ -226,7 +226,7 @@ if ! update_panel_metadata; then
   die "panel metadata update failed; previous state restored"
 fi
 if command -v ufw >/dev/null 2>&1; then
-  ufw allow "$PORT/tcp" comment 'RIXXX VLESS REALITY' >/dev/null 2>&1 || true
+  ufw allow "$PORT/tcp" comment 'VertaFlux VLESS REALITY' >/dev/null 2>&1 || true
 fi
 
 {

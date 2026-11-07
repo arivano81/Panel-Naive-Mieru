@@ -43,7 +43,7 @@ ok(update.includes('--rollback)') && update.includes('MODE="rollback"'),
 ok(/validate_rollback_backup\(\)/.test(update), 'rollback validates snapshots before replacement');
 ok(/safety=\$\(auto_backup \| tail -n1\)/.test(update), 'rollback creates a pre-change safety snapshot');
 ok(update.includes('safety snapshot restored'), 'failed rollback automatically restores original state');
-ok(update.includes('rixxx-panel-rollback-report.txt'), 'rollback writes a root-only outcome report');
+ok(update.includes('vertaflux-rollback-report.txt'), 'rollback writes a root-only outcome report');
 ok(update.includes('"${DB_PATH}-wal" "${DB_PATH}-shm"'),
   'rollback removes newer SQLite WAL/SHM before activating the restored DB');
 
@@ -53,6 +53,9 @@ ok(migrations.status === 0, 'explicit SQLite migration regression suite passes')
 const configMigrations = spawnSync(process.execPath, [path.join(__dirname, 'config-migrations.test.js')],
   { stdio: 'inherit' });
 ok(configMigrations.status === 0, 'explicit config migration regression suite passes');
+const brand = spawnSync(process.execPath, [path.join(__dirname, 'vertaflux-brand.test.js')],
+  { stdio: 'inherit' });
+ok(brand.status === 0, 'VertaFlux identity regression suite passes');
 const multiFileTransaction = spawnSync(process.execPath, [path.join(__dirname, 'multi-file-transaction.test.js')],
   { stdio: 'inherit' });
 ok(multiFileTransaction.status === 0, 'coupled config transaction regression suite passes');

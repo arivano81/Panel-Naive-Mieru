@@ -123,7 +123,7 @@ function applyTheme(theme) {
     const btn = document.getElementById(id);
     if (btn) btn.innerHTML = iconHtml;
   });
-  localStorage.setItem('rixxx-theme', theme);
+  localStorage.setItem('vertaflux-theme', theme);
 }
 
 function toggleTheme() {
@@ -147,7 +147,7 @@ async function setLang(lang) {
     if (titleEl) titleEl.textContent = titles[state.currentPage] || state.currentPage;
     navigateTo(state.currentPage);
   }
-  localStorage.setItem('rixxx-lang', lang);
+  localStorage.setItem('vertaflux-lang', lang);
 }
 
 async function cycleLang() {
@@ -194,8 +194,8 @@ let currentLogService = 'caddy';
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Restore persisted preferences FIRST
-  const savedTheme = localStorage.getItem('rixxx-theme') || 'dark';
-  const savedLang  = localStorage.getItem('rixxx-lang')  || 'ru';
+  const savedTheme = localStorage.getItem('vertaflux-theme') || localStorage.getItem('rixxx-theme') || 'dark';
+  const savedLang  = localStorage.getItem('vertaflux-lang') || localStorage.getItem('rixxx-lang') || 'ru';
 
   applyTheme(savedTheme);
   await setLang(savedLang);
@@ -1651,7 +1651,7 @@ async function backupExport() {
     }
     const blob = await res.blob();
     const cd   = res.headers.get('Content-Disposition') || '';
-    const fn   = cd.match(/filename="(.+)"/)?.[1] || 'rixxx-backup.rixxx.enc.json';
+    const fn   = cd.match(/filename="(.+)"/)?.[1] || 'vertaflux-backup.enc.json';
     downloadBlob(blob, fn);
     toast(t('settings.backupExported') || 'Backup downloaded', 'success');
   } catch (err) {
@@ -3056,7 +3056,7 @@ async function exportDiagnostics() {
     if (!res.ok) throw new Error(await res.text());
     const blob = await res.blob();
     const cd = res.headers.get('Content-Disposition') || '';
-    const filename = cd.match(/filename="(.+)"/)?.[1] || 'rixxx-diagnostics.json';
+    const filename = cd.match(/filename="(.+)"/)?.[1] || 'vertaflux-diagnostics.json';
     downloadBlob(blob, filename);
     toast(t('diagnostics.exported') || 'Diagnostic report downloaded', 'success');
   } catch (err) {

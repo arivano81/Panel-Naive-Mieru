@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# warp_egress.sh — Cloudflare WARP as a server-wide EGRESS mode for RIXXX panel.
+# warp_egress.sh — Cloudflare WARP as a server-wide VertaFlux egress mode.
 #
 # Goal: route the server's OUTBOUND traffic through Cloudflare WARP so the real
 # server IP is hidden from upstream destinations (privacy + IP-block evasion).

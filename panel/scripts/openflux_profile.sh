@@ -31,7 +31,7 @@ service_name() { printf 'openflux-exit@%s.service' "$1"; }
 profile_config() { printf '%s/%s.conf' "$PROFILE_DIR" "$1"; }
 profile_meta() { printf '%s/%s.json' "$PROFILE_DIR" "$1"; }
 profile_secret() { printf '%s/%s.key' "$SECRET_DIR" "$1"; }
-firewall_comment() { printf 'RIXXX OpenFlux %s' "$1"; }
+firewall_comment() { printf 'VertaFlux OpenFlux %s' "$1"; }
 
 [[ -n "$TEST_ROOT" || $EUID -eq 0 ]] || die "run as root"
 for command in node jq openssl systemctl flock ss install cmp timeout; do

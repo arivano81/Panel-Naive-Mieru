@@ -4,7 +4,7 @@ umask 077
 
 CONFIG="/etc/rixxx-panel/config.json"
 APP_DIR="/opt/panel-naive-mieru"
-REPORT="/root/rixxx-panel-install-report.txt"
+REPORT="/root/vertaflux-install-report.txt"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 [[ ${EUID:-$(id -u)} -eq 0 ]] || die "Запустите от root: sudo bash $0"
@@ -80,7 +80,7 @@ fi
 
 VERSION="$(cat /etc/rixxx-panel/version 2>/dev/null | sed -n 's/^panel_version=//p' | head -n1)"
 cat > "$REPORT" <<EOF
-RIXXX PANEL ACCESS REPORT
+VERTAFLUX ACCESS REPORT
 Generated:             $(date --iso-8601=seconds)
 Panel version:         ${VERSION:-unknown}
 VPN domain:            ${VPN_DOMAIN:-not configured}

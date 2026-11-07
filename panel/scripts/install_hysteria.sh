@@ -1,7 +1,6 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════════
-#  Hysteria2 Auto-Installer — by RIXXX (multi-arch)
-#  Panel Naive + Mieru + Hysteria2 by RIXXX
+#  VertaFlux Hysteria2 installer (multi-arch)
 #
 #  Integrates Hy2 as a THIRD protocol into the existing Naive+Mieru panel.
 #  KEY DIFFERENCES from the standalone donor installer:
@@ -82,21 +81,10 @@ log "✅ Зависимости готовы"
 
 # ══════════════════════════════════════════════════════
 step 2
-log "▶ UDP-оптимизации..."
+log "▶ Проверка сетевых параметров..."
 # ══════════════════════════════════════════════════════
 
-cat > /etc/sysctl.d/99-rixxx-tune.conf << 'SYSCTLEOF'
-net.core.default_qdisc=fq
-net.ipv4.tcp_congestion_control=bbr
-net.core.rmem_max=16777216
-net.core.wmem_max=16777216
-net.core.rmem_default=2500000
-net.core.wmem_default=2500000
-net.ipv4.tcp_fastopen=3
-SYSCTLEOF
-sysctl --system >/dev/null 2>&1 || true
-
-log "✅ Сетевой тюнинг применён"
+log "  Hysteria2 не изменяет глобальные sysctl. Рекомендации доступны в helper панели."
 
 # ══════════════════════════════════════════════════════
 step 3
@@ -177,7 +165,7 @@ chown -R "$HY_USER":"$HY_USER" /etc/hysteria 2>/dev/null || true
 # service can start immediately even before the first panel apply.
 cat > /etc/hysteria/config.yaml << HYCFGEOF
 # ═══════════════════════════════════════════════
-#  Hysteria2 — by RIXXX  (managed by RIXXX Panel)
+#  Hysteria2 — managed by VertaFlux
 #  https://v2.hysteria.network/
 #  ⚠ auth.userpass ниже управляется панелью (SQLite users где protocols
 #     содержит "hy2"). Ручные правки в этом блоке будут перезаписаны.
@@ -556,7 +544,7 @@ fi
 
 cat > /etc/systemd/system/hysteria-server.service << HYSVCEOF
 [Unit]
-Description=Hysteria2 Server (by RIXXX)
+Description=Hysteria2 Server (VertaFlux)
 Documentation=https://v2.hysteria.network/
 ${HY_AFTER}
 ${HY_WANTS}

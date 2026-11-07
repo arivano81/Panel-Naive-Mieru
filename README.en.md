@@ -396,7 +396,6 @@ ufw status
 ## 📝 Credits
 
 - **Project:** VertaFlux (`arivano81/Panel-Naive-Mieru`)
-- **Parent project:** [cwash797-cmd/Panel-Naive-Mieru-by-RIXXX](https://github.com/cwash797-cmd/Panel-Naive-Mieru-by-RIXXX)
 - **Telegram:** [@russian_paradice_vpn](https://t.me/russian_paradice_vpn)
 - **Donate:** [app.lava.top/2107724612](https://app.lava.top/2107724612?tabId=donate)
 - **NaiveProxy:** [klzgrad/naiveproxy](https://github.com/klzgrad/naiveproxy)

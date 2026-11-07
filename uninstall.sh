@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Panel Naive + Mieru by RIXXX — uninstall.sh  v1.2.6
+# VertaFlux uninstaller
 # Removes all panel components, services, configs, and data.
 #
 # v1.2.3: Full cleanup for caddy-forwardproxy-naive migration.

@@ -51,7 +51,7 @@ ok(/service_stable=0/.test(script) && /systemctl is-active xray/.test(script),
 ok(script.includes('loopback Stats API port 10085 is already in use'),
   'installer refuses a Stats API port collision');
 ok(/activation failed; restoring previous Xray state/.test(script), 'failed activation rolls back');
-ok(/RIXXX VLESS REALITY/.test(script), 'firewall rule has a component-specific marker');
+ok(/VertaFlux VLESS REALITY/.test(script), 'firewall rule has a component-specific marker');
 ok(/chmod 600 "\$REPORT"/.test(script), 'installation report is root-only');
 ok(/config\.stack\.vless == null\) config\.stack\.vless = false/.test(configMigrations),
   'existing installs keep VLESS disabled by default');

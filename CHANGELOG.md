@@ -9,6 +9,17 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [v1.13.1] - 2026-11-07
+
+### Changed
+
+- User-facing installer, recovery, systemd, firewall, TOTP, backup and diagnostic names now use
+  VertaFlux. Legacy storage and backup identifiers remain readable until a dedicated dual-read
+  path migration can preserve existing servers safely.
+- Fresh installs no longer silently apply global BBR/TFO/buffer sysctls or disable IPv6. The main
+  installer and Hysteria2 installer perform read-only assessment; explicit managed application is
+  reserved for the protocol tuning helper with confirmation and rollback.
+
 ## [v1.13.0] - 2026-11-07
 
 ### Added
@@ -411,7 +422,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Canonical version-file reads retry transient Windows file-lock errors before
   falling back to a bundled or config version.
 - Debian 13 is accepted by the installer on amd64 systems.
-- The installer writes `/root/rixxx-panel-install-report.txt` before risky
+- The installer writes `/root/vertaflux-install-report.txt` before risky
   service-configuration steps and refreshes it after a successful installation.
 - `panel/scripts/recover_access.sh` resets both the panel password and public
   HTTP Basic Auth without requiring the old passwords, while backing up config.

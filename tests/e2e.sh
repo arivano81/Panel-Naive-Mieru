@@ -94,7 +94,7 @@ detect_admin_pass() {
     # canonical recovery source. Persistent logs deliberately contain no secret.
     local from_log
     from_log=$(sed -n 's/^Panel password:[[:space:]]*//p' \
-                 /root/rixxx-panel-install-report.txt 2>/dev/null | tail -1 || true)
+                 /root/vertaflux-install-report.txt 2>/dev/null | tail -1 || true)
     ADMIN_PASS="${from_log:-}"
   fi
   if [[ -z "$ADMIN_PASS" ]]; then
@@ -545,8 +545,8 @@ assert "default cfg has cascadeMieru object" \
   "grep -q 'cascadeMieru:' '$REPO_ROOT/panel/server/index.js'"
 
 # Install / Uninstall wiring
-assert "install.sh calls sysctl_tune.sh (BBR)" \
-  "grep -q 'sysctl_tune.sh' '$REPO_ROOT/install.sh' && grep -q 'tune_network' '$REPO_ROOT/install.sh'"
+assert "install previews network tuning without changing sysctl" \
+  "grep -q 'sysctl_tune.sh.*--dry-run\|\"\$tune\" --dry-run' '$REPO_ROOT/install.sh' && ! grep -q 'sysctl -p.*disable-ipv6' '$REPO_ROOT/install.sh'"
 assert "uninstall.sh removes iptables REDSOCKS chain" \
   "grep -q 'iptables -t nat -X REDSOCKS' '$REPO_ROOT/uninstall.sh'"
 assert "uninstall.sh removes mieru.service" \

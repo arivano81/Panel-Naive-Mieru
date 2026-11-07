@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Panel Naive + Mieru by RIXXX — install.sh  v1.2.6
+# VertaFlux installer
 # Caddy-forwardproxy-naive (amd64-only) + Mieru (mita) + fake-site + probe-resistance
 # Supports: Ubuntu 20.04/22.04/24.04, Debian 11/12/13 | x86_64 only
 # ==============================================================================
@@ -26,7 +26,7 @@ export PYTHONIOENCODING=utf-8
 
 # ── Capture all installer output to a log file ────────────────────────────────
 INSTALL_LOG="/var/log/rixxx-panel-install.log"
-ADMIN_REPORT="/root/rixxx-panel-install-report.txt"
+ADMIN_REPORT="/root/vertaflux-install-report.txt"
 mkdir -p "$(dirname "$INSTALL_LOG")"
 exec 3>&1
 exec > >(tee -a "$INSTALL_LOG") 2>&1
@@ -162,7 +162,7 @@ select_language() {
   if $NON_INTERACTIVE; then return; fi
   echo ""
   echo -e "${BOLD}╔══════════════════════════════════════════════════╗${NC}"
-  echo -e "${BOLD}║   Panel Naive + Mieru by RIXXX  v${CURRENT_VERSION}       ║${NC}"
+  echo -e "${BOLD}║              VertaFlux  v${CURRENT_VERSION}               ║${NC}"
   # Bug 32: interactive prompts go to /dev/tty so tee-to-log doesn't swallow them
   # (exec redirect is set up above; read uses /dev/tty automatically in bash)
   echo -e "${BOLD}╚══════════════════════════════════════════════════╝${NC}"
@@ -1650,7 +1650,7 @@ write_admin_report() {
     panel_url="https://${PANEL_DOMAIN}/${WEB_BASE_PATH}/"
   fi
   {
-    echo "RIXXX PANEL INSTALLATION REPORT"
+    echo "VERTAFLUX INSTALLATION REPORT"
     echo "Status:              $phase"
     echo "Generated:           $(date --iso-8601=seconds)"
     echo "Panel version:       ${CURRENT_VERSION:-unknown}"
@@ -1727,15 +1727,16 @@ print_banner() {
   echo ""
 }
 
-# ── Network tuning (BBR + UDP buffers) ────────────────────────────────────────
+# ── Read-only network tuning preview ──────────────────────────────────────────
 tune_network() {
-  log_step "$(t 'Сетевая оптимизация (BBR, буферы UDP)' 'Network tuning (BBR, UDP buffers)')"
+  log_step "$(t 'Анализ сетевых параметров' 'Network settings analysis')"
   local tune="${PANEL_DIR}/scripts/sysctl_tune.sh"
   if [[ -f "$tune" ]]; then
-    bash "$tune" 2>/dev/null && \
-      log_info "$(t 'BBR и сетевые буферы применены ✓' 'BBR and network buffers applied ✓')" || \
-      log_warn "$(t 'Не удалось применить сетевую оптимизацию (не критично)' \
-                   'Could not apply network tuning (non-fatal)')"
+    bash "$tune" --dry-run 2>/dev/null && \
+      log_info "$(t 'Рекомендация рассчитана без изменения sysctl; примените её позже через helper в панели' \
+                   'Recommendation calculated without changing sysctl; apply it later through the panel helper')" || \
+      log_warn "$(t 'Не удалось рассчитать сетевую рекомендацию (не критично)' \
+                   'Could not calculate network recommendation (non-fatal)')"
   else
     log_warn "$(t "sysctl_tune.sh не найден в $PANEL_DIR/scripts — пропуск" \
                  "sysctl_tune.sh not found in $PANEL_DIR/scripts — skipping")"
@@ -1763,35 +1764,8 @@ ensure_ipv4_preference() {
     log_info "$(t 'IPv6-маршрут найден — оставляем как есть' 'Working IPv6 route present — leaving as-is')"
     return 0
   fi
-  log_warn "$(t 'IPv6-маршрут наружу отсутствует — включаю предпочтение IPv4 (иначе mieru/mita копит NetworkUnreachableErrors на сайтах с AAAA)' \
-               'No outbound IPv6 route — enabling IPv4 preference (otherwise mieru/mita piles up NetworkUnreachableErrors on AAAA sites)')"
-
-  # 1) getaddrinfo (glibc) preference: prefer IPv4 over IPv6 in /etc/gai.conf.
-  #    "precedence ::ffff:0:0/96 100" pushes IPv4-mapped addresses to the top.
-  if ! grep -qE '^\s*precedence\s+::ffff:0:0/96\s+100' /etc/gai.conf 2>/dev/null; then
-    {
-      echo ''
-      echo '# Added by Panel Naive+Mieru (Bug 103): prefer IPv4 — no working IPv6 route.'
-      echo 'precedence ::ffff:0:0/96  100'
-    } >> /etc/gai.conf 2>/dev/null \
-      && log_info "$(t '/etc/gai.conf: предпочтение IPv4 включено ✓' '/etc/gai.conf: IPv4 preference set ✓')" \
-      || log_warn "$(t 'Не удалось записать /etc/gai.conf' 'Could not write /etc/gai.conf')"
-  fi
-
-  # 2) Disable IPv6 at the kernel level so it survives reboot. We write a
-  #    sysctl.d drop-in (persistent) AND apply it live.
-  local sc=/etc/sysctl.d/99-rixxx-disable-ipv6.conf
-  cat > "$sc" <<'SYSCTL'
-# Added by Panel Naive+Mieru (Bug 103): this host has no working outbound IPv6
-# route, so IPv6 is disabled to keep mieru/mita from routing AAAA traffic into a
-# black hole. Remove this file and `sysctl --system` to re-enable IPv6.
-net.ipv6.conf.all.disable_ipv6 = 1
-net.ipv6.conf.default.disable_ipv6 = 1
-net.ipv6.conf.lo.disable_ipv6 = 0
-SYSCTL
-  sysctl -p "$sc" >/dev/null 2>&1 \
-    && log_info "$(t 'IPv6 отключён (sysctl, переживёт reboot) ✓' 'IPv6 disabled (sysctl, survives reboot) ✓')" \
-    || log_warn "$(t 'Не удалось применить sysctl для IPv6' 'Could not apply IPv6 sysctl')"
+  log_warn "$(t 'IPv6-маршрут наружу отсутствует. Система не изменена; helper предложит IPv4-стратегию отдельно' \
+               'No outbound IPv6 route. The system was not changed; the helper will offer an IPv4 strategy separately')"
 }
 
 # ── Bug 103: outbound connectivity smoke test (IPv4 + optional IPv6) ──────────
@@ -1846,8 +1820,8 @@ main() {
   write_config_json
   write_version
   write_component_registry
-  tune_network      # BBR + UDP buffers (uses panel/scripts/sysctl_tune.sh)
-  ensure_ipv4_preference   # Bug 103: force IPv4 when no working IPv6 route
+  tune_network      # read-only preview; administrator applies later in the panel
+  ensure_ipv4_preference   # read-only IPv6 route assessment
   maybe_ufw
   start_services
   smoke_test

@@ -19,9 +19,10 @@ ok(spawnSync('bash', ['-n', 'panel/scripts/uninstall_openflux.sh'], { cwd: root,
   'uninstaller has valid Bash syntax');
 ok(source.includes('[[ "${1:-}" == --purge') && source.includes('explicit --purge is required'),
   'uninstall requires an explicit destructive flag');
-ok(source.includes('rixxx-openflux-uninstall-backup-') && source.includes('chmod 0600 "$backup"'),
+ok(source.includes('vertaflux-openflux-uninstall-backup-') && source.includes('chmod 0600 "$backup"'),
   'root-only recovery archive is created before deletion');
-ok(source.includes('RIXXX OpenFlux $id') && source.includes('openflux-exit@${id}.service'),
+ok(source.includes('VertaFlux OpenFlux $id') && source.includes('RIXXX OpenFlux $id') &&
+   source.includes('openflux-exit@${id}.service'),
   'cleanup is scoped by validated profile metadata');
 ok(!/caddy|mieru|hysteria|xray|warp|cascade/i.test(source),
   'uninstaller cannot address the primary proxy stack');
@@ -60,7 +61,7 @@ if (process.platform !== 'win32') {
   const registry = JSON.parse(fs.readFileSync(path.join(fixture, 'etc/rixxx-panel/components.json'), 'utf8'));
   ok(registry.components.openflux.installed === false && registry.components.caddy.installed === true,
     'component registry disables OpenFlux and preserves unrelated entries');
-  ok(fs.readFileSync(path.join(fixture, 'ufw.log'), 'utf8').includes('delete allow 18445/tcp comment RIXXX OpenFlux alpha'),
+  ok(fs.readFileSync(path.join(fixture, 'ufw.log'), 'utf8').includes('delete allow 18445/tcp comment VertaFlux OpenFlux alpha'),
     'profile-scoped firewall rule is removed');
   const second = spawnSync('bash', [scriptPath, '--purge'], { env, encoding: 'utf8' });
   let secondJson = null;

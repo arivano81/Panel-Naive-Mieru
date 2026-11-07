@@ -6,7 +6,7 @@
 
 # ◈ VertaFlux
 
-**v1.13.0** — универсальная панель управления личным прокси-сервером на Ubuntu или Debian
+**v1.13.1** — универсальная панель управления личным прокси-сервером на Ubuntu или Debian
 
 [![Telegram](https://img.shields.io/badge/Telegram-@russian__paradice__vpn-2CA5E0?logo=telegram&logoColor=white)](https://t.me/russian_paradice_vpn)
 [![GitHub](https://img.shields.io/badge/GitHub-arivano81-181717?logo=github)](https://github.com/arivano81/Panel-Naive-Mieru)
@@ -53,6 +53,10 @@ VertaFlux — самостоятельно поддерживаемая верс
 - дальнейшая разработка новых протоколов и улучшений панели.
 
 Перед обновлением рабочего сервера прочитайте журнал изменений и сохраните резервную копию.
+
+Новая установка не применяет глобальные BBR, TCP Fast Open, размеры буферов и отключение IPv6
+без решения администратора. Установщик выполняет только read-only анализ; управляемое применение
+будет выполняться общим helper через подтверждение, проверку и откат.
 
 Планы развития VLESS, OpenFlux и общих компонентов собраны в
 [`ROADMAP.md`](ROADMAP.md).
@@ -132,7 +136,7 @@ sudo bash install.sh
 Установщик заранее сохраняет данные администратора в файл:
 
 ```bash
-sudo cat /root/rixxx-panel-install-report.txt
+sudo cat /root/vertaflux-install-report.txt
 ```
 
 Файл доступен только пользователю `root`. Он создаётся до запуска сетевых сервисов,
@@ -190,7 +194,7 @@ sudo bash update.sh --ssh-only
 
 ### 1. Первый вход
 
-1. Получите адрес и учётные данные командой `sudo cat /root/rixxx-panel-install-report.txt`.
+1. Получите адрес и учётные данные командой `sudo cat /root/vertaflux-install-report.txt`.
 2. В режиме SSH-only сначала откройте туннель `ssh -L 3000:127.0.0.1:3000 root@IP_СЕРВЕРА`,
    затем перейдите на `http://localhost:3000/`.
 3. При публичном доступе откройте адрес из отчёта. Сначала браузер запросит HTTP Basic Auth,
@@ -339,7 +343,7 @@ sudo bash tests/openflux-systemd-canary.sh cleanup
 
 Приватный ключ не возвращается API и хранится только в `/etc/xray/config.json`. Публичные
 параметры находятся в `/etc/xray/reality-public.json`, а root-only отчёт установки — в
-`/root/rixxx-xray-install-report.txt`. Для диагностики:
+`/root/vertaflux-xray-install-report.txt`. Для диагностики:
 
 В таблице пользователей есть отдельная колонка VLESS (MB). Панель опрашивает локальный
 Xray раз в минуту и сохраняет накопленный результат в SQLite. Счётчики не обнуляются после
@@ -458,7 +462,7 @@ sudo bash /opt/panel-naive-mieru/scripts/recover_access.sh
 ```
 
 Скрипт создаст резервную копию, предложит задать новые пароли панели и HTTP Basic Auth,
-применит настройки и обновит `/root/rixxx-panel-install-report.txt`.
+применит настройки и обновит `/root/vertaflux-install-report.txt`.
 
 ---
 
@@ -478,6 +482,11 @@ sudo bash /opt/panel-naive-mieru/scripts/recover_access.sh
 | `/var/log/cascade-watchdog.log` | Журнал автовосстановления каскада |
 | `/var/lib/rixxx-panel/mita-state.json` | JSON-файл Mieru (применяется через `mita apply config`) |
 | `/var/lib/rixxx-panel/db.sqlite` | SQLite база данных пользователей |
+
+Каталоги с `rixxx-panel` — прежние машинные идентификаторы формата хранения. Они временно
+сохраняются для обновления уже работающих серверов и не являются названием продукта. Переход на
+`/etc/vertaflux` и `/var/lib/vertaflux` будет выполнен отдельной dual-read миграцией, чтобы не
+потерять настройки, пользователей и резервные копии.
 | `/opt/panel-naive-mieru/` | Файлы приложения панели |
 | `/usr/local/bin/caddy-naive` | Бинарный файл caddy-forwardproxy-naive |
 
@@ -485,7 +494,7 @@ sudo bash /opt/panel-naive-mieru/scripts/recover_access.sh
 или при достижении 10 MiB; хранится 14 сжатых поколений. Caddy использует собственную
 ротацию access-лога, поэтому `logrotate` его не обрабатывает.
 Пароли, UUID, токены, приватные ключи и полные subscription URL маскируются до записи.
-Исходные учётные данные хранятся только в root-only отчёте `/root/rixxx-panel-install-report.txt`.
+Исходные учётные данные хранятся только в root-only отчёте `/root/vertaflux-install-report.txt`.
 
 > ⚠️ **Важно:** `/etc/mita/` — внутреннее хранилище Mieru в формате protobuf, **не редактируется вручную**.  
 > Панель использует `/var/lib/rixxx-panel/mita-state.json` и применяет его командой `mita apply config <file>`.

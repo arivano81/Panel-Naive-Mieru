@@ -41,7 +41,7 @@ ok(script.includes('validate_profile_config "$id"') && script.includes('cmp -s "
   'service activation rejects a config that differs from validated metadata');
 ok(script.includes('profile failed its systemd health check; activation rolled back') &&
    script.includes('firewall_remove "$id" "$port"'), 'failed start rolls service and firewall back');
-ok(script.includes("RIXXX OpenFlux %s") &&
+ok(script.includes("VertaFlux OpenFlux %s") &&
    script.includes('ufw --force delete allow "$port/tcp" comment "$comment"'),
   'firewall rule is scoped by profile marker');
 ok(script.includes("find \"$bundle\" -maxdepth 1 -type f -delete") &&
@@ -135,8 +135,8 @@ echo "LISTEN 0 4096 0.0.0.0:$port 0.0.0.0:*"
   ok(failed.status !== 0 && !fs.existsSync(path.join(state, 'openflux-exit@alpha.service.active')),
     'failed systemd start leaves no active instance');
   const firewallAfterFailure = fs.readFileSync(path.join(state, 'ufw.log'), 'utf8');
-  ok(firewallAfterFailure.includes('allow 18445/tcp comment RIXXX OpenFlux alpha') &&
-    firewallAfterFailure.includes('delete allow 18445/tcp comment RIXXX OpenFlux alpha'),
+  ok(firewallAfterFailure.includes('allow 18445/tcp comment VertaFlux OpenFlux alpha') &&
+    firewallAfterFailure.includes('delete allow 18445/tcp comment VertaFlux OpenFlux alpha'),
   'failed start removes the same scoped firewall rule');
   const hungStartedAt = Date.now();
   const hung = run(['start', 'alpha'], { OPENFLUX_TEST_HANG_START: '1' });
@@ -145,8 +145,8 @@ echo "LISTEN 0 4096 0.0.0.0:$port 0.0.0.0:*"
     !fs.existsSync(path.join(state, 'openflux-exit@alpha.service.active')),
   `hung systemd start is terminated and rolled back in bounded time (${hungElapsed} ms)`);
   const firewallAfterHang = fs.readFileSync(path.join(state, 'ufw.log'), 'utf8');
-  ok((firewallAfterHang.match(/^allow 18445\/tcp comment RIXXX OpenFlux alpha$/gm) || []).length ===
-    (firewallAfterHang.match(/^--force delete allow 18445\/tcp comment RIXXX OpenFlux alpha$/gm) || []).length,
+  ok((firewallAfterHang.match(/^allow 18445\/tcp comment VertaFlux OpenFlux alpha$/gm) || []).length ===
+    (firewallAfterHang.match(/^--force delete allow 18445\/tcp comment VertaFlux OpenFlux alpha$/gm) || []).length,
   'hung start leaves no unmatched scoped firewall rule');
   const missingListener = run(['start', 'alpha'], { OPENFLUX_TEST_NO_LISTENER: '1' });
   ok(missingListener.status !== 0 &&

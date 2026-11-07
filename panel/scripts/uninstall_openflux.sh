@@ -52,7 +52,7 @@ if [[ -e "$OPENFLUX_BIN" || -e "$UNIT" || -d "$OPENFLUX_DIR" || ${#bundles[@]} -
     [[ -d "$bundle" && ! -L "$bundle" ]] || die "unsafe OpenFlux client bundle: $bundle"
     cp -a "$bundle" "$snapshot/$(basename "$bundle")"
   done
-  backup="$REPORT_DIR/rixxx-openflux-uninstall-backup-$(date -u +%Y%m%dT%H%M%SZ).tar.gz"
+  backup="$REPORT_DIR/vertaflux-openflux-uninstall-backup-$(date -u +%Y%m%dT%H%M%SZ).tar.gz"
   tar -C "$snapshot" -czf "$backup" .
   chmod 0600 "$backup"
 fi
@@ -64,7 +64,8 @@ for meta in "${profiles[@]}"; do
   valid_port "$port" || die "invalid profile port in metadata: $meta"
   systemctl disable --now "openflux-exit@${id}.service" >/dev/null 2>&1 || true
   if command -v ufw >/dev/null 2>&1; then
-    ufw --force delete allow "$port/tcp" comment "RIXXX OpenFlux $id" >/dev/null 2>&1 || true
+    ufw --force delete allow "$port/tcp" comment "VertaFlux OpenFlux $id" >/dev/null 2>&1 ||
+      ufw --force delete allow "$port/tcp" comment "RIXXX OpenFlux $id" >/dev/null 2>&1 || true
   fi
 done
 

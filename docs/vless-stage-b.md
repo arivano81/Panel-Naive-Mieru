@@ -55,7 +55,7 @@ sudo XRAY_PORT=8443 \
   bash panel/scripts/install_xray.sh
 ```
 
-Скрипт создаёт `/root/rixxx-xray-install-report.txt`. Private key туда не выводится.
+Скрипт создаёт `/root/vertaflux-xray-install-report.txt`. Private key туда не выводится.
 Повторный запуск, который способен заменить ключи REALITY, блокируется; для canary-ротации
 требуется явно задать `XRAY_FORCE=1`.
 

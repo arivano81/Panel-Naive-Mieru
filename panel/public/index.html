@@ -683,6 +683,29 @@
               <div id="vless-target-msg" class="msg-inline hidden"></div>
               <div id="vless-rebuild-msg" class="msg-inline hidden"></div>
               <hr />
+              <h3>Оптимизация Xray/VLESS</h3>
+              <p class="card-desc">Анализ работает только на чтение. Применение валидирует конфигурацию, перезапускает только Xray и автоматически откатывается при ошибке.</p>
+              <div class="form-row">
+                <div class="form-group"><label>Профиль</label><select id="s-xray-profile"><option value="conservative">Conservative</option><option value="balanced">Balanced</option><option value="latency">Latency</option><option value="throughput">Throughput</option><option value="custom">Custom</option></select></div>
+                <div class="form-group"><label>TCP congestion control</label><select id="s-xray-congestion"><option value="">System default</option><option value="bbr">BBR</option><option value="cubic">Cubic</option></select></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Keepalive idle, sec</label><input id="s-xray-keepalive-idle" type="number" min="30" max="7200" /></div>
+                <div class="form-group"><label>Keepalive interval, sec (0 = system)</label><input id="s-xray-keepalive-interval" type="number" min="0" max="600" /></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>TCP user timeout, ms (0 = system)</label><input id="s-xray-user-timeout" type="number" min="0" max="300000" /></div>
+                <div class="form-group"><label>Outbound domain strategy</label><select id="s-xray-domain-strategy"><option>AsIs</option><option>UseIP</option><option>UseIPv4</option><option>UseIPv6</option><option>UseIPv4v6</option><option>UseIPv6v4</option></select></div>
+              </div>
+              <label class="checkbox"><input id="s-xray-tfo" type="checkbox" /> <span>TCP Fast Open</span></label>
+              <label class="checkbox"><input id="s-xray-sniffing" type="checkbox" /> <span>Protocol sniffing (route-only)</span></label>
+              <div class="btn-row mt-2">
+                <button class="btn btn-secondary" data-action="analyze-xray-tuning" id="btn-analyze-xray-tuning">Измерить и предложить</button>
+                <button class="btn btn-primary" data-action="apply-xray-tuning" id="btn-apply-xray-tuning">Проверить и применить</button>
+              </div>
+              <div id="xray-tuning-msg" class="msg-inline hidden"></div>
+              <pre id="xray-tuning-report" class="mini-log hidden"></pre>
+              <hr />
               <h3>VLESS XHTTP через Caddy</h3>
               <p class="card-desc">Экспериментальный транспорт использует TLS основного домена и секретный URL. При ошибке Xray и Caddy откатываются вместе.</p>
               <div class="form-row">

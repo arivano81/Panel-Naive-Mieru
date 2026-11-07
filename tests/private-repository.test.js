@@ -89,6 +89,9 @@ ok(realityTargetSafety.status === 0, 'operator-owned REALITY target safety suite
 const xrayStats = spawnSync(process.execPath, [path.join(__dirname, 'xray-stats.test.js')],
   { stdio: 'inherit' });
 ok(xrayStats.status === 0, 'Xray per-user traffic regression suite passes');
+const xrayTuning = spawnSync(process.execPath, [path.join(__dirname, 'xray-tuning.test.js')],
+  { stdio: 'inherit' });
+ok(xrayTuning.status === 0, 'Xray adaptive tuning regression suite passes');
 const vlessLifecycle = spawnSync(process.execPath, [path.join(__dirname, 'vless-access-lifecycle.test.js')],
   { stdio: 'inherit' });
 ok(vlessLifecycle.status === 0, 'VLESS access lifecycle regression suite passes');

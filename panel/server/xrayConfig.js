@@ -1,6 +1,7 @@
 'use strict';
 
 const net = require('net');
+const { normalizeXrayTuning } = require('./xrayTuning');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const KEY_RE = /^[A-Za-z0-9_-]{43}$/;
@@ -69,6 +70,7 @@ function buildXhttpInbound(settings, users) {
 
 function buildXrayRealityConfig(settings, users, xhttpSettings) {
   const reality = normalizeRealitySettings(settings);
+  const tuning = normalizeXrayTuning(settings.tuning);
   const clients = normalizeVlessUsers(users);
   const config = {
     log: { loglevel: 'warning' },
@@ -96,6 +98,20 @@ function buildXrayRealityConfig(settings, users, xhttpSettings) {
       { tag: 'blocked', protocol: 'blackhole' },
     ],
   };
+  if (tuning.enabled) {
+    const socket = {
+      tcpFastOpen: tuning.tcpFastOpen,
+      tcpKeepAliveIdle: tuning.tcpKeepAliveIdle,
+      tcpKeepAliveInterval: tuning.tcpKeepAliveInterval,
+      tcpUserTimeout: tuning.tcpUserTimeout,
+    };
+    if (tuning.tcpCongestion) socket.tcpcongestion = tuning.tcpCongestion;
+    config.inbounds[0].sniffing.enabled = tuning.sniffing;
+    config.inbounds[0].streamSettings.sockopt = socket;
+    config.outbounds[0].streamSettings = {
+      sockopt: { ...socket, domainStrategy: tuning.domainStrategy },
+    };
+  }
   if (xhttpSettings && xhttpSettings.enabled === true)
     config.inbounds.push(buildXhttpInbound(xhttpSettings, users));
   return config;

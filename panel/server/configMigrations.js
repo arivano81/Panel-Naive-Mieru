@@ -1,6 +1,6 @@
 'use strict';
 
-const LATEST_CONFIG_SCHEMA = 10;
+const LATEST_CONFIG_SCHEMA = 11;
 
 const CONFIG_MIGRATIONS = [
   { version: 1, name: 'probe mode', up(config) {
@@ -59,6 +59,11 @@ const CONFIG_MIGRATIONS = [
     // Existing installations must not be interrupted by a new-product tour.
     // The installer writes false explicitly for genuinely fresh deployments.
     if (config.onboardingComplete == null) config.onboardingComplete = true;
+  } },
+  { version: 11, name: 'opt-in Xray tuning', up(config) {
+    if (!config.xrayTuning || typeof config.xrayTuning !== 'object' || Array.isArray(config.xrayTuning))
+      config.xrayTuning = { enabled: false };
+    if (config.xrayTuning.enabled == null) config.xrayTuning.enabled = false;
   } },
 ];
 

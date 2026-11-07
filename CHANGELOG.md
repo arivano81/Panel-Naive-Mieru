@@ -9,6 +9,21 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [v1.13.0] - 2026-11-07
+
+### Added
+
+- **Adaptive Xray/VLESS tuning:** Settings can now run bounded read-only probes for VPS capacity,
+  load, route MTU, IPv6, TCP Fast Open and kernel-supported congestion controls. The panel explains
+  its recommendation and lets the administrator edit keepalive, user timeout, DNS strategy,
+  sniffing and socket settings before activation.
+- **Service-isolated activation:** tuning is opt-in and preserves the previous generated config on
+  every existing installation. Activation requires confirmation, validates the candidate with the
+  installed Xray binary, restarts Xray only, performs a health check and rolls back on failure.
+- **Cross-service tuning roadmap:** the same measure/recommend/confirm/validate/rollback contract is
+  now documented for Hysteria2, Mieru and NaiveProxy without silently changing kernel or firewall
+  settings.
+
 ## [v1.12.1] - 2026-11-07
 
 ### Added

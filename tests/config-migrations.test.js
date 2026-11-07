@@ -24,6 +24,7 @@ ok(legacy.stack.vlessXhttp === false && legacy.vlessXhttpPort === 10443,
 ok(legacy.totpEnabled === false && legacy.totpSecret === '' && legacy.totpLastCounter === -1,
   'administrator TOTP remains opt-in on upgrade');
 ok(legacy.onboardingComplete === true, 'existing installs do not receive the first-run wizard');
+ok(legacy.xrayTuning.enabled === false, 'existing Xray profiles keep byte-compatible tuning disabled');
 
 const fresh = runConfigMigrations({ onboardingComplete: false }, { logger: { log() {} } }).config;
 ok(fresh.onboardingComplete === false, 'fresh-install onboarding remains pending');

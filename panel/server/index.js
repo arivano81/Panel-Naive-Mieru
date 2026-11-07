@@ -39,6 +39,7 @@ const path           = require('path');
 const { execSync, execFileSync } = require('child_process');
 const si             = require('systeminformation');
 const crypto         = require('crypto');   // Bug 100: module-level require so generateSafePassword() has a real Node crypto (not Web-Crypto globalThis.crypto, which lacks randomInt)
+const os             = require('os');
 const { readPanelVersion: resolvePanelVersion } = require('./version');
 const { applyFileTransaction } = require('./fileTransaction');
 const { applyMultiFileTransaction } = require('./multiFileTransaction');
@@ -48,6 +49,7 @@ const { BACKUP_FORMAT, BACKUP_SCHEMA, validateBackup, restoreBackupState } = req
 const { ENCRYPTED_BACKUP_FORMAT, encryptBackup, decryptBackup } = require('./backupCrypto');
 const { buildXrayRealityConfig, buildVlessRealityLink, buildVlessXhttpLink,
   buildCaddyXhttpRoute, normalizeXhttpSettings } = require('./xrayConfig');
+const { normalizeXrayTuning, recommendXrayTuning } = require('./xrayTuning');
 const { parseXrayStats, accumulateXrayStats } = require('./xrayStats');
 const { createOpenFluxService } = require('./openfluxService');
 const { registerOpenFluxRoutes } = require('./openfluxRoutes');
@@ -1683,6 +1685,7 @@ function getVlessRealitySettings() {
     port: cfg.vlessPort, host: cfg.domain || cfg.serverIp,
     serverName: reality.serverName, target: reality.target,
     privateKey, publicKey: reality.publicKey, shortId: reality.shortId,
+    tuning: cfg.xrayTuning,
   };
 }
 
@@ -3085,6 +3088,7 @@ app.get('/api/settings/vless', requireAuth, (_req, res) => {
     serverName: reality.serverName || '', target: reality.target || '',
     publicKey: reality.publicKey || '', shortId: reality.shortId || '',
     users: getVlessUsers().length,
+    tuning: normalizeXrayTuning(cfg.xrayTuning),
     xhttp: {
       enabled: !!(cfg.stack && cfg.stack.vlessXhttp),
       port: Number(cfg.vlessXhttpPort) || 10443,
@@ -3133,6 +3137,67 @@ app.post('/api/settings/vless/rebuild', requireAuth, (_req, res) => {
   if (!xrayInstalled()) return res.status(409).json({ error: 'Xray is not installed' });
   const result = applyXrayConfig();
   res.status(result.ok ? 200 : 409).json(result);
+});
+
+function collectXrayTuningFacts() {
+  const readCommand = (command, args) => {
+    try { return execFileSync(command, args, { timeout: 3000, encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch { return ''; }
+  };
+  const controls = readCommand('sysctl', ['-n', 'net.ipv4.tcp_available_congestion_control'])
+    .split(/\s+/).filter(Boolean);
+  const route = readCommand('ip', ['route', 'get', '1.1.1.1']);
+  const device = route.match(/\bdev\s+(\S+)/)?.[1] || '';
+  let routeMtu = Number(route.match(/\bmtu\s+(\d+)/)?.[1] || 0);
+  if (!routeMtu && device && /^[a-zA-Z0-9_.:-]+$/.test(device)) {
+    try { routeMtu = Number(fs.readFileSync(`/sys/class/net/${device}/mtu`, 'utf8').trim()) || 0; }
+    catch { routeMtu = 0; }
+  }
+  const established = readCommand('ss', ['-Hnt', 'state', 'established']);
+  const cores = Math.max(1, os.cpus().length);
+  return {
+    generatedAt: new Date().toISOString(),
+    cpuCores: cores,
+    cpuLoadPercent: Math.round((os.loadavg()[0] / cores) * 100),
+    memoryMB: Math.round(os.totalmem() / 1048576),
+    routeDevice: device,
+    routeMtu,
+    ipv6Default: !!readCommand('ip', ['-6', 'route', 'show', 'default']),
+    tcpFastOpen: Number(readCommand('sysctl', ['-n', 'net.ipv4.tcp_fastopen'])) || 0,
+    congestionControls: controls,
+    currentCongestion: readCommand('sysctl', ['-n', 'net.ipv4.tcp_congestion_control']),
+    establishedTcpConnections: established ? established.split(/\r?\n/).length : 0,
+    vlessUsers: getVlessUsers().length,
+  };
+}
+
+app.get('/api/settings/vless/tuning/recommendation', requireAuth, (_req, res) => {
+  const facts = collectXrayTuningFacts();
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ facts, ...recommendXrayTuning(facts) });
+});
+
+app.post('/api/settings/vless/tuning', requireAuth, (req, res) => {
+  if (!xrayInstalled() || !(cfg.stack && cfg.stack.vless))
+    return res.status(409).json({ error: 'VLESS REALITY is not installed or enabled' });
+  let tuning;
+  try { tuning = normalizeXrayTuning({ ...(req.body || {}), enabled: true }); }
+  catch (error) { return res.status(400).json({ error: error.message }); }
+  const available = collectXrayTuningFacts().congestionControls;
+  if (tuning.tcpCongestion && !available.includes(tuning.tcpCongestion))
+    return res.status(400).json({ error: `TCP congestion control ${tuning.tcpCongestion} is unavailable` });
+  const previous = cfg.xrayTuning;
+  cfg.xrayTuning = tuning;
+  try { saveConfig(); }
+  catch (error) { cfg.xrayTuning = previous; return res.status(500).json({ error: error.message }); }
+  const result = applyXrayConfig();
+  if (!result.ok) {
+    cfg.xrayTuning = previous;
+    try { saveConfig(); } catch {}
+    return res.status(409).json({ error: result.error, rolledBack: result.rolledBack });
+  }
+  return res.json({ ok: true, tuning, xrayRestarted: result.changed === true,
+    otherServicesRestarted: false });
 });
 
 // Change only the REALITY camouflage target. The isolated script validates the

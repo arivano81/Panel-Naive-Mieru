@@ -321,6 +321,8 @@ function handleDelegatedClick(e) {
     case 'install-vless':        installVless(); break;
     case 'change-vless-target':  changeVlessTarget(); break;
     case 'rebuild-vless':        rebuildVless(); break;
+    case 'analyze-xray-tuning':  analyzeXrayTuning(); break;
+    case 'apply-xray-tuning':    applyXrayTuning(); break;
     case 'save-vless-xhttp':     saveVlessXhttp(); break;
     case 'openflux-install':     installOpenFlux(); break;
     case 'openflux-update':      updateOpenFlux(); break;
@@ -2091,7 +2093,71 @@ function renderVlessCard(v) {
     if (el('s-vless-xhttp-host')) el('s-vless-xhttp-host').value = xhttp.host || state.config?.domain || '';
     if (el('s-vless-xhttp-port')) el('s-vless-xhttp-port').value = xhttp.port || 10443;
     if (el('s-vless-xhttp-path')) el('s-vless-xhttp-path').value = xhttp.path || '';
+    renderXrayTuning(v.tuning || {});
   }
+}
+
+function renderXrayTuning(tuning) {
+  const values = { profile: 'balanced', tcpKeepAliveIdle: 300, tcpKeepAliveInterval: 0,
+    tcpUserTimeout: 10000, tcpCongestion: '', domainStrategy: 'AsIs', sniffing: true,
+    tcpFastOpen: false, ...tuning };
+  if (el('s-xray-profile')) el('s-xray-profile').value = values.profile;
+  if (el('s-xray-congestion')) el('s-xray-congestion').value = values.tcpCongestion;
+  if (el('s-xray-keepalive-idle')) el('s-xray-keepalive-idle').value = values.tcpKeepAliveIdle;
+  if (el('s-xray-keepalive-interval')) el('s-xray-keepalive-interval').value = values.tcpKeepAliveInterval;
+  if (el('s-xray-user-timeout')) el('s-xray-user-timeout').value = values.tcpUserTimeout;
+  if (el('s-xray-domain-strategy')) el('s-xray-domain-strategy').value = values.domainStrategy;
+  if (el('s-xray-sniffing')) el('s-xray-sniffing').checked = values.sniffing !== false;
+  if (el('s-xray-tfo')) el('s-xray-tfo').checked = values.tcpFastOpen === true;
+}
+
+function readXrayTuningForm() {
+  return {
+    profile: el('s-xray-profile')?.value,
+    tcpCongestion: el('s-xray-congestion')?.value,
+    tcpKeepAliveIdle: Number(el('s-xray-keepalive-idle')?.value),
+    tcpKeepAliveInterval: Number(el('s-xray-keepalive-interval')?.value),
+    tcpUserTimeout: Number(el('s-xray-user-timeout')?.value),
+    domainStrategy: el('s-xray-domain-strategy')?.value,
+    sniffing: !!el('s-xray-sniffing')?.checked,
+    tcpFastOpen: !!el('s-xray-tfo')?.checked,
+  };
+}
+
+async function analyzeXrayTuning() {
+  const btn = el('btn-analyze-xray-tuning');
+  setBtnBusy(btn, true);
+  showMsg('xray-tuning-msg', 'Считываем параметры VPS без изменения системы…', true);
+  try {
+    const result = await api('GET', '/api/settings/vless/tuning/recommendation');
+    renderXrayTuning(result.settings);
+    const report = el('xray-tuning-report');
+    if (report) {
+      const f = result.facts || {};
+      report.textContent = [`CPU: ${f.cpuCores} cores · load ${f.cpuLoadPercent}%`,
+        `RAM: ${f.memoryMB} MB · route ${f.routeDevice || '—'} MTU ${f.routeMtu || '—'}`,
+        `TCP: TFO=${f.tcpFastOpen} · congestion=${(f.congestionControls || []).join(', ') || '—'}`,
+        `IPv6 default: ${f.ipv6Default ? 'yes' : 'no'} · established TCP: ${f.establishedTcpConnections}`,
+        '', ...(result.reasons || []).map(reason => `• ${reason}`)].join('\n');
+      report.classList.remove('hidden');
+    }
+    showMsg('xray-tuning-msg', 'Рекомендация рассчитана. Проверьте значения и примените вручную.', true);
+  } catch (error) { showMsg('xray-tuning-msg', error.message, false); }
+  finally { setBtnBusy(btn, false); }
+}
+
+async function applyXrayTuning() {
+  if (!confirm('Проверить и применить параметры? Будет кратко перезапущен только Xray; при ошибке конфигурация откатится.')) return;
+  const btn = el('btn-apply-xray-tuning');
+  setBtnBusy(btn, true);
+  showMsg('xray-tuning-msg', 'Валидация и транзакционное применение…', true);
+  try {
+    const result = await api('POST', '/api/settings/vless/tuning', readXrayTuningForm());
+    renderXrayTuning(result.tuning);
+    showMsg('xray-tuning-msg', 'Настройки применены. Перезапущен только Xray.', true);
+    toast('Оптимизация Xray применена', 'success');
+  } catch (error) { showMsg('xray-tuning-msg', error.message, false); }
+  finally { setBtnBusy(btn, false); }
 }
 
 async function installVless() {

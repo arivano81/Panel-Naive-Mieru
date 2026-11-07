@@ -50,6 +50,7 @@ const { ENCRYPTED_BACKUP_FORMAT, encryptBackup, decryptBackup } = require('./bac
 const { buildXrayRealityConfig, buildVlessRealityLink, buildVlessXhttpLink,
   buildCaddyXhttpRoute, normalizeXhttpSettings } = require('./xrayConfig');
 const { normalizeXrayTuning, recommendXrayTuning } = require('./xrayTuning');
+const { normalizeHy2Tuning, recommendHy2Tuning, spliceHy2Tuning } = require('./hy2Tuning');
 const { parseXrayStats, accumulateXrayStats } = require('./xrayStats');
 const { createOpenFluxService } = require('./openfluxService');
 const { registerOpenFluxRoutes } = require('./openfluxRoutes');
@@ -3257,8 +3258,42 @@ app.get('/api/settings/hy2', requireAuth, (req, res) => {
     active,
     port: parseInt(cfg.hy2Port, 10) || 443,
     stack: cfg.stack || { naive: true, mieru: true, hy2: false },
-    hy2UserCount: (() => { try { return getHy2Users().length; } catch { return 0; } })()
+    hy2UserCount: (() => { try { return getHy2Users().length; } catch { return 0; } })(),
+    tuning: normalizeHy2Tuning(cfg.hy2Tuning),
   });
+});
+
+app.get('/api/settings/hy2/tuning/recommendation', requireAuth, (_req, res) => {
+  const facts = collectXrayTuningFacts();
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ facts, ...recommendHy2Tuning(facts) });
+});
+
+app.post('/api/settings/hy2/tuning', requireAuth, (req, res) => {
+  if (!hy2Installed() || !(cfg.stack && cfg.stack.hy2))
+    return res.status(409).json({ error: 'Hysteria2 is not installed or enabled' });
+  let tuning, candidate;
+  try {
+    tuning = normalizeHy2Tuning({ ...(req.body || {}), enabled: true });
+    candidate = spliceHy2Tuning(fs.readFileSync(HY2_CONFIG, 'utf8'), tuning);
+  } catch (error) { return res.status(400).json({ error: error.message }); }
+  const previous = cfg.hy2Tuning;
+  cfg.hy2Tuning = tuning;
+  try { saveConfig(); }
+  catch (error) { cfg.hy2Tuning = previous; return res.status(500).json({ error: error.message }); }
+  const result = applyFileTransaction({ targetPath: HY2_CONFIG, content: candidate, mode: 0o640,
+    validate: file => ({ ok: hy2ConfigLooksValid(fs.readFileSync(file, 'utf8')),
+      error: 'invalid Hysteria2 config structure' }),
+    afterWrite: () => hy2ChownConfig(HY2_CONFIG),
+    apply: () => reloadHysteria(), rollbackApply: () => reloadHysteria(),
+  });
+  if (!result.ok) {
+    cfg.hy2Tuning = previous;
+    try { saveConfig(); } catch {}
+    return res.status(409).json({ error: result.error, rolledBack: result.rolledBack });
+  }
+  return res.json({ ok: true, tuning, hysteriaRestarted: result.changed === true,
+    otherServicesRestarted: false });
 });
 
 // Install (or reinstall) the Hy2 server. Runs install_hysteria.sh with the

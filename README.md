@@ -6,7 +6,7 @@
 
 # ◈ VertaFlux
 
-**v1.13.1** — универсальная панель управления личным прокси-сервером на Ubuntu или Debian
+**v1.14.0** — универсальная панель управления личным прокси-сервером на Ubuntu или Debian
 
 [![Telegram](https://img.shields.io/badge/Telegram-@russian__paradice__vpn-2CA5E0?logo=telegram&logoColor=white)](https://t.me/russian_paradice_vpn)
 [![GitHub](https://img.shields.io/badge/GitHub-arivano81-181717?logo=github)](https://github.com/arivano81/Panel-Naive-Mieru)
@@ -44,6 +44,9 @@ VertaFlux — самостоятельно поддерживаемая верс
 - безопасный помощник оптимизации Xray/VLESS: измеряет ресурсы VPS, доступные TCP congestion
   control, TCP Fast Open, MTU и IPv6, предлагает редактируемый профиль и применяет его только
   после подтверждения; конфиг проверяется, перезапускается только Xray, при ошибке выполняется откат;
+- helper Hysteria2 предлагает профиль по ресурсам VPS и MTU, позволяет изменить QUIC idle,
+  UDP idle, число потоков, BBR/Reno и Path MTU Discovery; ручные настройки не перезаписываются
+  молча, применение транзакционно перезапускает только `hysteria-server`;
 - OpenFlux Experimental вынесен в отдельную страницу: opt-in установка,
   независимые L4/Direct-профили, lifecycle, журнал, защищённый экспорт bundle и
   транзакционная ротация ключа, идемпотентное обновление, Repair и архивируемое удаление;

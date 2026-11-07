@@ -1,6 +1,6 @@
 'use strict';
 
-const LATEST_CONFIG_SCHEMA = 11;
+const LATEST_CONFIG_SCHEMA = 12;
 
 const CONFIG_MIGRATIONS = [
   { version: 1, name: 'probe mode', up(config) {
@@ -64,6 +64,11 @@ const CONFIG_MIGRATIONS = [
     if (!config.xrayTuning || typeof config.xrayTuning !== 'object' || Array.isArray(config.xrayTuning))
       config.xrayTuning = { enabled: false };
     if (config.xrayTuning.enabled == null) config.xrayTuning.enabled = false;
+  } },
+  { version: 12, name: 'opt-in Hysteria2 tuning', up(config) {
+    if (!config.hy2Tuning || typeof config.hy2Tuning !== 'object' || Array.isArray(config.hy2Tuning))
+      config.hy2Tuning = { enabled: false };
+    if (config.hy2Tuning.enabled == null) config.hy2Tuning.enabled = false;
   } },
 ];
 

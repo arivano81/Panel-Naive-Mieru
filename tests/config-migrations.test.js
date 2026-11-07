@@ -25,6 +25,7 @@ ok(legacy.totpEnabled === false && legacy.totpSecret === '' && legacy.totpLastCo
   'administrator TOTP remains opt-in on upgrade');
 ok(legacy.onboardingComplete === true, 'existing installs do not receive the first-run wizard');
 ok(legacy.xrayTuning.enabled === false, 'existing Xray profiles keep byte-compatible tuning disabled');
+ok(legacy.hy2Tuning.enabled === false, 'existing Hysteria2 profiles keep tuning disabled');
 
 const fresh = runConfigMigrations({ onboardingComplete: false }, { logger: { log() {} } }).config;
 ok(fresh.onboardingComplete === false, 'fresh-install onboarding remains pending');

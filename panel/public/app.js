@@ -318,6 +318,8 @@ function handleDelegatedClick(e) {
     case 'install-hy2':          installHy2(false); break;
     case 'reinstall-hy2':        installHy2(true); break;
     case 'change-hy2-port':      changeHy2Port(); break;
+    case 'analyze-hy2-tuning':   analyzeHy2Tuning(); break;
+    case 'apply-hy2-tuning':     applyHy2Tuning(); break;
     case 'install-vless':        installVless(); break;
     case 'change-vless-target':  changeVlessTarget(); break;
     case 'rebuild-vless':        rebuildVless(); break;
@@ -2421,12 +2423,45 @@ function renderHy2Card(h) {
         (h.active ? (t('dashboard.active') || 'активен') : (t('dashboard.inactive') || 'остановлен')) +
         ` · ${h.hy2UserCount || 0} ${t('settings.hy2Users') || 'польз.'}`;
     }
+    renderHy2Tuning(h.tuning || {});
   } else {
     if (notInstalled) notInstalled.classList.remove('hidden');
     if (installed)    installed.classList.add('hidden');
     const pInput = el('s-hy2-port');
     if (pInput) pInput.value = port;
   }
+}
+
+function renderHy2Tuning(value = {}) {
+  const v = { profile: 'balanced', congestion: 'bbr', maxIdleTimeout: 30,
+    udpIdleTimeout: 60, maxIncomingStreams: 1024, disablePathMTUDiscovery: false, ...value };
+  for (const [id, key] of [['s-hy2-profile','profile'], ['s-hy2-congestion','congestion'],
+    ['s-hy2-quic-idle','maxIdleTimeout'], ['s-hy2-udp-idle','udpIdleTimeout'],
+    ['s-hy2-streams','maxIncomingStreams']]) if (el(id)) el(id).value = v[key];
+  if (el('s-hy2-disable-pmtud')) el('s-hy2-disable-pmtud').checked = v.disablePathMTUDiscovery === true;
+}
+
+function readHy2Tuning() { return { profile: el('s-hy2-profile')?.value,
+  congestion: el('s-hy2-congestion')?.value, bbrProfile: 'standard',
+  maxIdleTimeout: Number(el('s-hy2-quic-idle')?.value), udpIdleTimeout: Number(el('s-hy2-udp-idle')?.value),
+  maxIncomingStreams: Number(el('s-hy2-streams')?.value),
+  disablePathMTUDiscovery: !!el('s-hy2-disable-pmtud')?.checked,
+  ignoreClientBandwidth: false, bandwidthUp: '0 mbps', bandwidthDown: '0 mbps' }; }
+
+async function analyzeHy2Tuning() {
+  const btn = el('btn-analyze-hy2-tuning'); setBtnBusy(btn, true);
+  try { const r = await api('GET', '/api/settings/hy2/tuning/recommendation'); renderHy2Tuning(r.settings);
+    const report = el('hy2-tuning-report'); if (report) { report.textContent = (r.reasons || []).map(x => `• ${x}`).join('\n'); report.classList.remove('hidden'); }
+    showMsg('hy2-tuning-msg', 'Рекомендация рассчитана без изменения системы.', true);
+  } catch (e) { showMsg('hy2-tuning-msg', e.message, false); } finally { setBtnBusy(btn, false); }
+}
+
+async function applyHy2Tuning() {
+  if (!confirm('Применить параметры? Будет кратко перезапущен только Hysteria2.')) return;
+  const btn = el('btn-apply-hy2-tuning'); setBtnBusy(btn, true);
+  try { const r = await api('POST', '/api/settings/hy2/tuning', readHy2Tuning()); renderHy2Tuning(r.tuning);
+    showMsg('hy2-tuning-msg', 'Настройки применены; остальные VPN-службы не перезапускались.', true);
+  } catch (e) { showMsg('hy2-tuning-msg', e.message, false); } finally { setBtnBusy(btn, false); }
 }
 
 async function installHy2(reinstall) {

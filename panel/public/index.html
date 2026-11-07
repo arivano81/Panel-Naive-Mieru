@@ -756,6 +756,21 @@
               <button class="btn btn-primary mt-2" data-action="change-hy2-port" data-i18n="settings.hy2ApplyPort">Применить порт Hy2</button>
               <button class="btn btn-secondary mt-2" data-action="reinstall-hy2" data-i18n="settings.hy2Reinstall">Переустановить</button>
               <div id="hy2-port-msg" class="msg-inline hidden"></div>
+              <hr />
+              <h3>Оптимизация Hysteria2</h3>
+              <p class="card-desc">Анализ ничего не меняет. Применение затрагивает только hysteria-server и откатывается при ошибке.</p>
+              <div class="form-row">
+                <div class="form-group"><label>Профиль</label><select id="s-hy2-profile"><option value="conservative">Conservative</option><option value="balanced">Balanced</option><option value="latency">Latency</option><option value="throughput">Throughput</option><option value="custom">Custom</option></select></div>
+                <div class="form-group"><label>Congestion</label><select id="s-hy2-congestion"><option value="bbr">BBR</option><option value="reno">Reno</option></select></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>QUIC idle, сек.</label><input id="s-hy2-quic-idle" type="number" min="5" max="300" /></div>
+                <div class="form-group"><label>UDP idle, сек.</label><input id="s-hy2-udp-idle" type="number" min="10" max="600" /></div>
+                <div class="form-group"><label>Входящие потоки</label><input id="s-hy2-streams" type="number" min="64" max="8192" /></div>
+              </div>
+              <label class="checkbox"><input id="s-hy2-disable-pmtud" type="checkbox" /> <span>Отключить Path MTU Discovery</span></label>
+              <div class="btn-row mt-2"><button class="btn btn-secondary" data-action="analyze-hy2-tuning" id="btn-analyze-hy2-tuning">Измерить и предложить</button><button class="btn btn-primary" data-action="apply-hy2-tuning" id="btn-apply-hy2-tuning">Проверить и применить</button></div>
+              <div id="hy2-tuning-msg" class="msg-inline hidden"></div><pre id="hy2-tuning-report" class="mini-log hidden"></pre>
             </div>
           </div>
         </div>

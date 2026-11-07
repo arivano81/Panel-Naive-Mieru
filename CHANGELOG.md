@@ -9,6 +9,17 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [v1.14.0] - 2026-11-07
+
+### Added
+
+- **Hysteria2 tuning helper:** read-only VPS/MTU assessment, editable QUIC idle, UDP idle,
+  incoming streams, BBR/Reno and Path MTU Discovery settings. Existing installs remain disabled
+  until confirmation; unmanaged operator tuning is rejected instead of overwritten.
+- **Isolated transactional activation:** only `hysteria-server` is restarted, service health is
+  checked and the previous config plus panel state are restored on failure. Bandwidth remains
+  unlimited because the panel does not pretend that VPS hardware measurements equal link capacity.
+
 ## [v1.13.1] - 2026-11-07
 
 ### Changed

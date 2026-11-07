@@ -319,6 +319,7 @@ function handleDelegatedClick(e) {
     case 'reinstall-hy2':        installHy2(true); break;
     case 'change-hy2-port':      changeHy2Port(); break;
     case 'install-vless':        installVless(); break;
+    case 'change-vless-target':  changeVlessTarget(); break;
     case 'rebuild-vless':        rebuildVless(); break;
     case 'save-vless-xhttp':     saveVlessXhttp(); break;
     case 'openflux-install':     installOpenFlux(); break;
@@ -2078,6 +2079,7 @@ function renderVlessCard(v) {
   const installed = !!v.installed;
   el('vless-not-installed')?.classList.toggle('hidden', installed);
   el('vless-installed')?.classList.toggle('hidden', !installed);
+  if (el('s-vless-server-name')) el('s-vless-server-name').value = state.config?.domain || '';
   if (installed) {
     const status = v.active ? 'active' : 'inactive';
     const target = v.serverName || '—';
@@ -2121,6 +2123,23 @@ async function rebuildVless() {
     renderVlessCard(v);
     showMsg('vless-rebuild-msg', 'Конфигурация проверена и применена', true);
   } catch (error) { showMsg('vless-rebuild-msg', error.message, false); }
+}
+
+async function changeVlessTarget() {
+  const serverName = state.config?.domain || '';
+  if (!serverName) return showMsg('vless-target-msg', 'Основной домен не настроен', false);
+  if (!confirm(`Сменить REALITY target на ${serverName}:443? Xray кратко перезапустится; NaiveProxy затронут не будет. Клиентам VLESS понадобятся обновлённые ссылки.`)) return;
+  const btn = el('btn-change-vless-target');
+  setBtnBusy(btn, true);
+  showMsg('vless-target-msg', 'Проверка DNS/TLS и изолированное применение…', true);
+  try {
+    const result = await api('POST', '/api/settings/vless/reality-target', { serverName });
+    const v = await api('GET', '/api/settings/vless');
+    renderVlessCard(v);
+    showMsg('vless-target-msg', `REALITY target: ${result.target}. Ключи сохранены, NaiveProxy не перезапускался.`, true);
+    toast('REALITY target безопасно обновлён', 'success');
+  } catch (error) { showMsg('vless-target-msg', error.message, false); }
+  finally { setBtnBusy(btn, false); }
 }
 
 async function saveVlessXhttp() {
@@ -2619,8 +2638,6 @@ async function changeCascade() {
     const passEl = el('s-cascade-mieru-pass');
     if (passEl) { passEl.value = ''; if (state.config.cascadeMieru.pass) passEl.placeholder = '••••••• (set — leave blank to keep)'; }
     toast(t('settings.cascadeUpdated') || 'Каскад обновлён', 'success');
-    // Surface the cascade script output if present.
-    if (res.cascadeOutput) cascadeShowStatus(res.cascadeOutput);
   } catch (err) {
     showMsg('cascade-msg', err.message, false);
   } finally {
@@ -2633,7 +2650,7 @@ function cascadeShowStatus(text) {
   const pre = el('cascade-status');
   if (!pre) return;
   pre.textContent = text || '';
-  pre.classList.remove('hidden');
+  el('cascade-details')?.classList.remove('hidden');
 }
 
 // "Проверить статус" button → GET /api/settings/cascade/status.
@@ -2642,7 +2659,10 @@ async function checkCascadeStatus() {
   setBtnBusy(btn, true);
   try {
     const res = await api('GET', '/api/settings/cascade/status');
-    cascadeShowStatus(res.output || (res.ok ? 'OK' : 'no status'));
+    const mode = !res.enabled ? t('settings.cascadeStateOff')
+      : (res.mieruConfigured ? t('settings.cascadeStateFull') : t('settings.cascadeStateNaive'));
+    showMsg('cascade-msg', res.ok ? mode : t('settings.cascadeStateAttention'), res.ok);
+    cascadeShowStatus(res.output || t('diagnostics.noOutput') || '—');
   } catch (err) {
     showMsg('cascade-msg', err.message, false);
   } finally {
@@ -2675,7 +2695,6 @@ async function resetCascade() {
     const egress = res.nativeEgress ? ` (egress: ${res.nativeEgress})` : '';
     showMsg('cascade-msg', (res.message || t('settings.cascadeReset') || 'Каскад сброшен') + egress, true);
     toast(t('settings.cascadeReset') || 'Каскад сброшен', 'success');
-    if (res.cascadeOutput) cascadeShowStatus(res.cascadeOutput);
     // Refresh dashboard service state so mita/naive status reflects the reset.
     if (typeof loadDashboard === 'function') { try { await loadDashboard(); } catch {} }
   } catch (err) {
@@ -2749,7 +2768,6 @@ async function applyWarp() {
     if (severity === 'success') toast('WARP применён', 'success');
     else if (severity === 'warning') toast('WARP: ограничение хостинга (всё откачено, доступ сохранён)', 'info');
     else toast('WARP: ошибка', 'error');
-    if (res.output) { const pre = el('warp-status'); if (pre) { pre.textContent = res.output; pre.classList.remove('hidden'); } }
     if (typeof loadDashboard === 'function') { try { await loadDashboard(); } catch {} }
   } catch (err) {
     showMsg('warp-msg', err.message, false);
@@ -2764,7 +2782,13 @@ async function checkWarpStatus() {
   try {
     const res = await api('GET', '/api/settings/warp/status');
     const pre = el('warp-status');
-    if (pre) { pre.textContent = res.output || '(нет данных)'; pre.classList.remove('hidden'); }
+    showMsg('warp-msg', res.ok
+      ? (res.enabled ? t('settings.warpStateOn') : t('settings.warpStateOff'))
+      : t('settings.warpStateAttention'), res.ok);
+    if (pre) {
+      pre.textContent = res.output || t('diagnostics.noOutput') || '—';
+      el('warp-details')?.classList.remove('hidden');
+    }
   } catch (err) {
     showMsg('warp-msg', err.message, false);
   } finally {
@@ -2783,7 +2807,6 @@ async function resetWarp() {
     const egress = res.nativeEgress ? ` (egress: ${res.nativeEgress})` : '';
     showMsg('warp-msg', (res.message || 'WARP снят') + egress, true);
     toast('WARP снят', 'success');
-    if (res.output) { const pre = el('warp-status'); if (pre) { pre.textContent = res.output; pre.classList.remove('hidden'); } }
     if (typeof loadDashboard === 'function') { try { await loadDashboard(); } catch {} }
   } catch (err) {
     showMsg('warp-msg', err.message, false);

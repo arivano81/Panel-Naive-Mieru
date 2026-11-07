@@ -39,8 +39,8 @@ const fs = require('fs');
 const { buildXrayRealityConfig } = require(process.env.XRAY_ADAPTER);
 const config = buildXrayRealityConfig({
   port: 18443,
-  serverName: 'www.microsoft.com',
-  target: 'www.microsoft.com:443',
+  serverName: 'www.example.com',
+  target: 'www.example.com:443',
   privateKey: process.env.XRAY_PRIVATE_KEY,
   publicKey: process.env.XRAY_PUBLIC_KEY,
   shortId: '0123456789abcdef',
@@ -51,8 +51,8 @@ fs.writeFileSync(process.env.XRAY_OUT, JSON.stringify(config, null, 2));
 NODE
 "$WORK/xray" run -test -config "$WORK/config.json"
 
-# End-to-end REALITY canary: use the same real, publicly trusted TLS target as
-# the field-tested installer default. A local self-signed openssl decoy is not a
+# End-to-end REALITY canary uses IANA's reserved example domain, never the
+# production default (which must be the operator's own primary domain). A local self-signed decoy is not a
 # valid stability substitute: TLS 1.3 compatibility varies and previously made
 # this canary flap with `unexpected ccs message`. The HTTP origin remains local,
 # so a successful body still proves that traffic traversed client → REALITY
@@ -66,7 +66,7 @@ const fs = require('fs');
 const { buildXrayRealityConfig } = require(process.env.XRAY_ADAPTER);
 const id = '11111111-1111-4111-8111-111111111111';
 const settings = {
-  port: 18443, serverName: 'www.cloudflare.com', target: 'www.cloudflare.com:443',
+  port: 18443, serverName: 'www.example.com', target: 'www.example.com:443',
   privateKey: process.env.XRAY_PRIVATE_KEY, publicKey: process.env.XRAY_PUBLIC_KEY,
   shortId: '0123456789abcdef',
 };

@@ -24,8 +24,8 @@ ok(binaryCanary.includes('run -test -config "$WORK/config.json"'),
   'binary canary validates the generated config with real Xray');
 ok(binaryCanary.includes('--socks5-hostname 127.0.0.1:18080') &&
    binaryCanary.includes('vless-reality-canary') &&
-   binaryCanary.includes("serverName: 'www.cloudflare.com'") &&
-   binaryCanary.includes("target: 'www.cloudflare.com:443'") &&
+   binaryCanary.includes("serverName: 'www.example.com'") &&
+   binaryCanary.includes("target: 'www.example.com:443'") &&
    !binaryCanary.includes('openssl s_server'),
   'Debian 13 canary carries a local HTTP origin through a real VLESS REALITY client/server and trusted TLS target');
 for (const [name, source] of [['installer', script], ['binary canary', binaryCanary]]) {
@@ -33,8 +33,9 @@ for (const [name, source] of [['installer', script], ['binary canary', binaryCan
     `${name} accepts the current and legacy X25519 labels`);
 }
 ok(/XRAY_ASSET="Xray-linux-64\.zip"/.test(script), 'amd64 release asset is pinned');
-ok(/SERVER_NAME="\$\{XRAY_SERVER_NAME:-www\.cloudflare\.com\}"/.test(script),
-  'real-VPS-tested Cloudflare TLS target is the installer default');
+ok(/SERVER_NAME="\$\{XRAY_SERVER_NAME:-\}"/.test(script) &&
+   script.includes('XRAY_SERVER_NAME must equal the configured primary domain'),
+  'installer requires the operator-owned primary domain instead of a third-party target');
 ok(script.includes('23cd9af937744d97776ee35ecad4972cf4b2109d1e0fe6be9930467608f7c8ae'),
   'official SHA-256 is pinned');
 ok(!/releases\/latest|api\.github\.com\/repos\/XTLS/.test(script), 'installer never resolves latest');

@@ -142,6 +142,7 @@ parse_args() {
         if [[ -n "${2:-}" && "${2:-}" != --* ]]; then ROLLBACK_TARGET="$2"; shift; fi
         ;;
       --repair)    MODE="repair" ;;
+      --panel-only) MODE="panel-only" ;;
       --enroll-hy2) MODE="enroll-hy2" ;;
       --help|-h)   print_help; exit 0 ;;
       *) die "Unknown argument: $1  (use --help)" ;;
@@ -183,6 +184,7 @@ OPTIONS:
   --doctor               Run read-only diagnostics; exit non-zero on failures
   --rollback [backup-id] Restore latest (or selected) update backup safely
   --repair               Rebuild Caddyfile + mita config from SQLite DB; restart services
+  --panel-only           Update only panel files and PM2; never restart proxy services
   --enroll-hy2           Add Hysteria2 to EVERY existing user + rewrite userpass +
                          restart Hy2 (one-off; existing clients start working over Hy2).
                          Same as HY2_ENROLL_ALL=1 but runs ONLY this step (no full update).
@@ -196,6 +198,7 @@ EXAMPLES:
   bash update.sh --doctor          # Read-only diagnostics for automation
   bash update.sh --rollback        # Roll back to the newest backup
   bash update.sh --repair          # Fix broken installation
+  bash update.sh --panel-only -y   # Update UI/API without restarting VPN services
   bash update.sh --expose panel.example.com
   bash update.sh --ssh-only        # Revert to SSH-only
 EOF
@@ -2519,6 +2522,33 @@ maybe_prompt_external_access() {
 }
 
 # ── Main update flow ──────────────────────────────────────────────────────────
+do_panel_only() {
+  resolve_target_version
+  log_step "Updating panel only to v${TARGET_VERSION}"
+  $DRY_RUN && { log_dry "Would update panel files and PM2 only; proxy services remain untouched"; return; }
+  local before after
+  proxy_snapshot() {
+    local unit
+    for unit in caddy-naive mita hysteria-server xray; do
+      systemctl show "$unit" --property=Id,LoadState,ActiveState,MainPID --no-pager 2>/dev/null || true
+    done
+  }
+  before=$(proxy_snapshot | sha256sum | awk '{print $1}')
+  auto_backup >/dev/null
+  update_panel
+  if [[ -f "$VERSION_FILE" ]]; then
+    sed -i "s|^panel_version=.*|panel_version=${TARGET_VERSION}|" "$VERSION_FILE" 2>/dev/null || \
+      echo "panel_version=${TARGET_VERSION}" >> "$VERSION_FILE"
+  else
+    echo "panel_version=${TARGET_VERSION}" > "$VERSION_FILE"
+  fi
+  sync_config_version
+  write_component_registry
+  after=$(proxy_snapshot | sha256sum | awk '{print $1}')
+  [[ "$before" == "$after" ]] || die "a proxy service changed during panel-only update"
+  log_info "Panel-only update complete; Caddy/Naive, Mieru, Hy2 and Xray PIDs unchanged ✓"
+}
+
 do_update() {
   detect_arch
 
@@ -2666,6 +2696,7 @@ main() {
     expose)   check_install; load_config; do_expose ;;
     ssh-only) check_install; load_config; do_ssh_only ;;
     repair)   check_install; load_config; do_repair ;;
+    panel-only) check_install; load_config; do_panel_only ;;
     enroll-hy2) check_install; load_config; do_enroll_hy2 ;;
     update)   check_install; load_config; do_update ;;
   esac

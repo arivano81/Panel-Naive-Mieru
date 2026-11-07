@@ -51,7 +51,7 @@ ok(Buffer.from(renderCaddy(base)).equals(Buffer.from(renderCaddy(disabled))),
   'Caddyfile is byte-identical when disabled OpenFlux state is present');
 
 const reality = {
-  port: 8444, serverName: 'www.cloudflare.com', target: 'www.cloudflare.com:443',
+  port: 8444, serverName: 'www.example.com', target: 'www.example.com:443',
   privateKey: 'A'.repeat(43), publicKey: 'B'.repeat(43), shortId: 'a1b2c3d4',
 };
 const vlessUsers = [{ id: '550e8400-e29b-41d4-a716-446655440000', email: 'golden-user' }];

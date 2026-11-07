@@ -65,6 +65,9 @@ ok(backupCrypto.status === 0, 'encrypted backup regression suite passes');
 const diagnosticsExport = spawnSync(process.execPath, [path.join(__dirname, 'diagnostics-export.test.js')],
   { stdio: 'inherit' });
 ok(diagnosticsExport.status === 0, 'secret-free diagnostic export regression suite passes');
+const operatorMessages = spawnSync(process.execPath, [path.join(__dirname, 'operator-messages.test.js')],
+  { stdio: 'inherit' });
+ok(operatorMessages.status === 0, 'operator-friendly result message regression suite passes');
 const sbom = spawnSync(process.execPath, [path.join(__dirname, 'sbom.test.js')],
   { stdio: 'inherit' });
 ok(sbom.status === 0, 'SPDX release SBOM regression suite passes');
@@ -80,6 +83,9 @@ ok(xrayInstaller.status === 0, 'pinned Xray installer regression suite passes');
 const vlessIntegration = spawnSync(process.execPath, [path.join(__dirname, 'vless-panel-integration.test.js')],
   { stdio: 'inherit' });
 ok(vlessIntegration.status === 0, 'VLESS panel integration regression suite passes');
+const realityTargetSafety = spawnSync(process.execPath, [path.join(__dirname, 'reality-target-safety.test.js')],
+  { stdio: 'inherit' });
+ok(realityTargetSafety.status === 0, 'operator-owned REALITY target safety suite passes');
 const xrayStats = spawnSync(process.execPath, [path.join(__dirname, 'xray-stats.test.js')],
   { stdio: 'inherit' });
 ok(xrayStats.status === 0, 'Xray per-user traffic regression suite passes');

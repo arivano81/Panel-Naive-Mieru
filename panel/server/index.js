@@ -78,6 +78,7 @@ const LOG_PANEL         = '/var/log/panel-naive-mieru.log';
 const XRAY_BIN          = '/usr/local/bin/xray';
 const XRAY_CONFIG       = '/etc/xray/config.json';
 const XRAY_INSTALL_SCRIPT = path.join(__dirname, '../scripts/install_xray.sh');
+const XRAY_TARGET_SCRIPT = path.join(__dirname, '../scripts/reconfigure_xray_reality.sh');
 
 // Legacy path kept for migration detection only
 const LEGACY_NAIVE_BIN = '/usr/local/bin/naive';
@@ -3134,14 +3135,36 @@ app.post('/api/settings/vless/rebuild', requireAuth, (_req, res) => {
   res.status(result.ok ? 200 : 409).json(result);
 });
 
+// Change only the REALITY camouflage target. The isolated script validates the
+// primary domain's local TLS certificate, preserves every key/UUID, restarts
+// Xray only, and refuses success if caddy-naive's PID changes.
+app.post('/api/settings/vless/reality-target', requireAuth, (req, res) => {
+  if (!xrayInstalled()) return res.status(409).json({ error: 'Xray is not installed' });
+  const serverName = String(req.body?.serverName || cfg.domain || '').trim().toLowerCase();
+  if (!serverName || serverName !== String(cfg.domain || '').trim().toLowerCase())
+    return res.status(400).json({ error: 'REALITY target must use the configured primary domain' });
+  try {
+    const output = execFileSync('bash', [XRAY_TARGET_SCRIPT, serverName], {
+      timeout: 60000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    cfg = runConfigMigrations(JSON.parse(fs.readFileSync(PANEL_CONFIG, 'utf8'))).config;
+    return res.json(JSON.parse(output));
+  } catch (error) {
+    const detail = String(error.stderr || error.stdout || error.message).trim().split('\n').slice(-2).join(' ');
+    return res.status(409).json({ error: `REALITY target change failed: ${detail}` });
+  }
+});
+
 app.post('/api/settings/vless/install', requireAuth, (req, res) => {
   if (xrayInstalled()) return res.status(409).json({ error: 'Xray is already installed' });
   const port = Number(req.body && req.body.port || 8443);
-  const serverName = String(req.body && req.body.serverName || 'www.cloudflare.com').trim().toLowerCase();
+  const serverName = String(req.body && req.body.serverName || cfg.domain || '').trim().toLowerCase();
   if (!Number.isInteger(port) || port < 1024 || port > 65535)
     return res.status(400).json({ error: 'VLESS port must be 1024..65535' });
   if (!/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i.test(serverName))
     return res.status(400).json({ error: 'REALITY server name must be a DNS hostname' });
+  if (serverName !== String(cfg.domain || '').trim().toLowerCase())
+    return res.status(400).json({ error: 'REALITY target must use the configured primary domain' });
   try {
     execFileSync('bash', [XRAY_INSTALL_SCRIPT], {
       timeout: 180000,
@@ -3443,7 +3466,14 @@ app.get('/api/settings/cascade/status', requireAuth, (req, res) => {
     (xrayEgress.ip || (xrayEgress.available ? xrayEgress.error : 'not installed'));
 
   const output = naiveOut + '\n\n' + mieruOut + '\n\n' + xrayOut;
-  res.json({ ok: m.ok, output, xrayEgress });
+  res.json({
+    ok: m.ok,
+    enabled: !!cfg.cascadeEnabled,
+    naiveConfigured: !!(cfg.cascadeEnabled && cfg.cascadeNaiveUpstream),
+    mieruConfigured: !!(cfg.cascadeEnabled && cfg.cascadeMieru?.host),
+    output,
+    xrayEgress
+  });
 });
 
 app.post('/api/settings/cascade', requireAuth, (req, res) => {

@@ -15,7 +15,7 @@ COMPONENT_REGISTRY="/etc/rixxx-panel/components.json"
 REPORT="/root/rixxx-xray-install-report.txt"
 
 PORT="${XRAY_PORT:-8443}"
-SERVER_NAME="${XRAY_SERVER_NAME:-www.cloudflare.com}"
+SERVER_NAME="${XRAY_SERVER_NAME:-}"
 TARGET="${XRAY_TARGET:-${SERVER_NAME}:443}"
 FORCE="${XRAY_FORCE:-0}"
 
@@ -24,7 +24,7 @@ die() { printf '[XRAY] ERROR: %s\n' "$*" >&2; exit 1; }
 
 [[ $EUID -eq 0 ]] || die "run as root"
 [[ "$(uname -m)" == "x86_64" || "$(uname -m)" == "amd64" ]] || die "only amd64 is supported"
-for command in curl unzip sha256sum node openssl systemctl jq; do
+for command in curl unzip sha256sum node openssl systemctl jq timeout; do
   command -v "$command" >/dev/null 2>&1 || die "missing dependency: $command"
 done
 [[ "$PORT" =~ ^[0-9]+$ ]] && (( PORT >= 1024 && PORT <= 65535 )) || die "XRAY_PORT must be 1024..65535"
@@ -36,6 +36,15 @@ if [[ -e "$XRAY_CONFIG" && "$FORCE" != "1" ]]; then
   die "Xray config already exists; refusing to rotate REALITY keys (set XRAY_FORCE=1 explicitly)"
 fi
 [[ ! -f "$PANEL_CONFIG" ]] || jq empty "$PANEL_CONFIG" >/dev/null 2>&1 || die "panel config is invalid JSON"
+PRIMARY_DOMAIN=$(jq -r '.domain // empty' "$PANEL_CONFIG" 2>/dev/null || true)
+[[ -n "$SERVER_NAME" ]] || SERVER_NAME="$PRIMARY_DOMAIN"
+TARGET="${XRAY_TARGET:-${SERVER_NAME}:443}"
+[[ -n "$PRIMARY_DOMAIN" && "$SERVER_NAME" == "$PRIMARY_DOMAIN" ]] \
+  || die "XRAY_SERVER_NAME must equal the configured primary domain"
+timeout 12 openssl s_client -connect 127.0.0.1:443 -servername "$SERVER_NAME" \
+  -verify_hostname "$SERVER_NAME" -verify_return_error </dev/null 2>/dev/null \
+  | openssl x509 -noout -checkend 86400 >/dev/null \
+  || die "a trusted local TLS certificate for $SERVER_NAME:443 is required"
 [[ ! -f "$COMPONENT_REGISTRY" ]] || jq empty "$COMPONENT_REGISTRY" >/dev/null 2>&1 || die "component registry is invalid JSON"
 HAD_BIN=0; HAD_CONFIG=0; HAD_PUBLIC=0; HAD_UNIT=0; HAD_PANEL_CONFIG=0; HAD_REGISTRY=0; HAD_DIR=0
 [[ ! -e "$XRAY_BIN" ]] || HAD_BIN=1

@@ -438,6 +438,7 @@ img { max-width: 100%; display: block; }
 
 .page-header {
   display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
   margin-bottom: 20px;
 }
 .page-header h3 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
@@ -1068,4 +1069,9 @@ select option { background: var(--bg-card); color: var(--text); }
   .metrics-strip { gap: 8px; }
   .metric-chip { min-width: 90px; padding: 10px 12px; }
   .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .page-header { align-items: stretch; flex-direction: column; }
+  .page-header > .btn, .page-header > .btn-row { width: 100%; }
+  .page-header > .btn { justify-content: center; }
 }

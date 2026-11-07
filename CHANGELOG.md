@@ -9,8 +9,23 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [v1.12.1] - 2026-11-07
+
 ### Added
 
+- **Operator-owned REALITY target:** production VLESS no longer defaults to a
+  popular third-party site. Installation and migration require the configured
+  primary domain with a valid local TLS certificate. The isolated migration
+  preserves keys and UUIDs, restarts Xray only, verifies that Caddy/Naive kept
+  the same PID, and rolls back on failure.
+- **No-proxy-restart deployment:** `update.sh --panel-only` updates panel files
+  and PM2 while snapshotting Caddy/Naive, Mieru, Hy2 and Xray state before and
+  after. Any proxy PID change makes the operation fail visibly.
+- **Responsive user header:** page-header actions wrap and stack on narrow
+  screens, keeping the Add User button inside the viewport.
+- **Operator-friendly network results:** cascade and WARP actions now lead with
+  a classified result. Raw command output remains available on demand inside a
+  collapsed technical-details section instead of being shown after every action.
 - **Component health overview:** Diagnostics now presents one read-only status
   list for the panel, NaiveProxy, Mieru, Hysteria2, VLESS/Xray, OpenFlux and
   time synchronization. OpenFlux reports active and listener-healthy profiles

@@ -618,6 +618,12 @@ async function loadDashboard() {
     }
     const vless = status.services.vless || {};
     state.vlessInstalled = !!vless.installed;
+    const xrayCard = el('d-xray-card');
+    if (xrayCard) {
+      xrayCard.classList.toggle('hidden', !vless.installed);
+      if (vless.installed) el('d-xray-status').innerHTML = badge(vless.active,
+        t('dashboard.active'), t('dashboard.inactive'));
+    }
     el('d-user-count').textContent = status.panel.userCount;
     el('d-domain').textContent     = status.domain || '—';
 

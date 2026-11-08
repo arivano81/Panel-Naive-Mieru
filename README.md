@@ -6,7 +6,7 @@
 
 # ◈ VertaFlux
 
-**v1.14.0** — универсальная панель управления личным прокси-сервером на Ubuntu или Debian
+**v1.14.1** — универсальная панель управления личным прокси-сервером на Ubuntu или Debian
 
 [![Telegram](https://img.shields.io/badge/Telegram-@russian__paradice__vpn-2CA5E0?logo=telegram&logoColor=white)](https://t.me/russian_paradice_vpn)
 [![GitHub](https://img.shields.io/badge/GitHub-arivano81-181717?logo=github)](https://github.com/arivano81/Panel-Naive-Mieru)

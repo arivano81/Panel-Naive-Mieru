@@ -19,8 +19,11 @@ for (const file of files) {
     `${file} has no former-project display name`);
 }
 const totp = fs.readFileSync(path.join(root, 'panel/server/totp.js'), 'utf8');
+const server = fs.readFileSync(path.join(root, 'panel/server/index.js'), 'utf8');
 const app = fs.readFileSync(path.join(root, 'panel/public/app.js'), 'utf8');
 ok(totp.includes("issuer = 'VertaFlux'"), 'new TOTP entries use the VertaFlux issuer');
+ok(server.includes('│              VERTAFLUX               │') &&
+   !server.includes('██████╗  ██╗ ██╗  ██╗'), 'startup banner uses the VertaFlux identity');
 ok(app.includes("localStorage.setItem('vertaflux-theme'") &&
    app.includes("localStorage.getItem('rixxx-theme')"),
   'browser preferences use the new name while reading the legacy key');

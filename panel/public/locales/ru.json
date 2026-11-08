@@ -57,7 +57,8 @@
     "stop": "Стоп",
     "active": "Активен",
     "inactive": "Неактивен",
-    "hy2": "Hysteria2"
+    "hy2": "Hysteria2",
+    "xray": "VLESS / Xray"
   },
   "users": {
     "title": "Пользователи",

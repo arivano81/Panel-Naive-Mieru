@@ -9,6 +9,14 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [v1.14.1] - 2026-11-08
+
+### Fixed
+
+- Restored the installed-only VLESS/Xray activity card on Dashboard with live status and the same
+  start/restart/stop controls as other managed services.
+- Replaced the remaining former-project ASCII startup mark with the VertaFlux identity.
+
 ## [v1.14.0] - 2026-11-07
 
 ### Added

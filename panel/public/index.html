@@ -218,6 +218,18 @@
             <button class="btn btn-xs btn-danger"   data-action="svc" data-svc="hy2" data-svc-action="stop"    data-i18n="dashboard.stop">Stop</button>
           </div>
         </div>
+        <!-- VLESS/Xray service card — hidden until installed -->
+        <div class="stat-card hidden" id="d-xray-card">
+          <div class="stat-icon xray">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4.5v9L12 22l-8-6.5v-9L12 2z"/><path d="M8 8l8 8M16 8l-8 8"/></svg>
+          </div>
+          <div class="stat-body"><div class="stat-label" data-i18n="dashboard.xray">VLESS / Xray</div><div class="stat-value" id="d-xray-status">—</div></div>
+          <div class="stat-actions">
+            <button class="btn btn-xs btn-success" data-action="svc" data-svc="xray" data-svc-action="start" data-i18n="dashboard.start">Start</button>
+            <button class="btn btn-xs btn-warning" data-action="svc" data-svc="xray" data-svc-action="restart" data-i18n="dashboard.restart">Restart</button>
+            <button class="btn btn-xs btn-danger" data-action="svc" data-svc="xray" data-svc-action="stop" data-i18n="dashboard.stop">Stop</button>
+          </div>
+        </div>
         <div class="stat-card">
           <div class="stat-icon users">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>

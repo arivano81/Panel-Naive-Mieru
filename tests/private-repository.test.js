@@ -95,6 +95,9 @@ ok(xrayStats.status === 0, 'Xray per-user traffic regression suite passes');
 const xrayTuning = spawnSync(process.execPath, [path.join(__dirname, 'xray-tuning.test.js')],
   { stdio: 'inherit' });
 ok(xrayTuning.status === 0, 'Xray adaptive tuning regression suite passes');
+const xrayDashboard = spawnSync(process.execPath, [path.join(__dirname, 'xray-dashboard-card.test.js')],
+  { stdio: 'inherit' });
+ok(xrayDashboard.status === 0, 'Xray dashboard card regression suite passes');
 const hy2Tuning = spawnSync(process.execPath, [path.join(__dirname, 'hy2-tuning.test.js')],
   { stdio: 'inherit' });
 ok(hy2Tuning.status === 0, 'Hysteria2 tuning adapter regression suite passes');

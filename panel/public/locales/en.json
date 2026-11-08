@@ -57,7 +57,8 @@
     "stop": "Stop",
     "active": "Active",
     "inactive": "Inactive",
-    "hy2": "Hysteria2"
+    "hy2": "Hysteria2",
+    "xray": "VLESS / Xray"
   },
   "users": {
     "title": "Users",

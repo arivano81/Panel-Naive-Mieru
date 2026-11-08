@@ -16,6 +16,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Restored the installed-only VLESS/Xray activity card on Dashboard with live status and the same
   start/restart/stop controls as other managed services.
 - Replaced the remaining former-project ASCII startup mark with the VertaFlux identity.
+- Debian CI now includes the standard Python/make/C++ fallback toolchain so native npm modules
+  remain buildable when a new Node.js patch release temporarily has no prebuilt binary.
 
 ## [v1.14.0] - 2026-11-07
 

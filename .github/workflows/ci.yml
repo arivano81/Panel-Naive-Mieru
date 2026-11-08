@@ -46,7 +46,7 @@ jobs:
         release: ['12', '13']
     steps:
       - name: Install runner prerequisites
-        run: apt-get update && apt-get install -y --no-install-recommends ca-certificates curl git jq openssl shellcheck sqlite3 unzip xz-utils
+        run: apt-get update && apt-get install -y --no-install-recommends ca-certificates curl git jq openssl shellcheck sqlite3 unzip xz-utils python3 make g++
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:

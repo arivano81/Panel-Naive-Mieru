@@ -51,6 +51,7 @@ const { buildXrayRealityConfig, buildVlessRealityLink, buildVlessXhttpLink,
   buildCaddyXhttpRoute, normalizeXhttpSettings } = require('./xrayConfig');
 const { normalizeXrayTuning, recommendXrayTuning } = require('./xrayTuning');
 const { normalizeHy2Tuning, recommendHy2Tuning, spliceHy2Tuning } = require('./hy2Tuning');
+const { normalizeMieruTuning, recommendMieruTuning } = require('./mieruTuning');
 const { parseXrayStats, accumulateXrayStats } = require('./xrayStats');
 const { createOpenFluxService } = require('./openfluxService');
 const { registerOpenFluxRoutes } = require('./openfluxRoutes');
@@ -3414,6 +3415,57 @@ app.post('/api/settings/hy2-port', requireAuth, (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+function collectMieruTuningFacts() {
+  const facts = collectXrayTuningFacts();
+  let installedVersion = '';
+  try { installedVersion = execFileSync('mita', ['version'], { timeout: 3000, encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'] }).trim().split(/\r?\n/)[0]; } catch {}
+  return { generatedAt: facts.generatedAt, cpuCores: facts.cpuCores,
+    cpuLoadPercent: facts.cpuLoadPercent, memoryMB: facts.memoryMB,
+    routeDevice: facts.routeDevice, routeMtu: facts.routeMtu,
+    installedVersion, current: normalizeMieruTuning({ enabled: cfg.mieruTuning?.enabled === true,
+      profile: cfg.mieruTuning?.profile || 'balanced', mtu: cfg.mtu || 1400,
+      multiplexing: cfg.mieruTuning?.multiplexing || 'MULTIPLEXING_HIGH',
+      transport: cfg.udpEnabled ? 'TCP_UDP' : 'TCP', trafficPattern: cfg.trafficPattern || 'NOOP' }) };
+}
+
+app.get('/api/settings/mieru/tuning/recommendation', requireAuth, (_req, res) => {
+  const facts = collectMieruTuningFacts();
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ facts, ...recommendMieruTuning(facts) });
+});
+
+app.post('/api/settings/mieru/tuning', requireAuth, (req, res) => {
+  let tuning;
+  try { tuning = normalizeMieruTuning({ ...(req.body || {}), enabled: true }); }
+  catch (error) { return res.status(400).json({ error: error.message }); }
+  const previous = { tuning: cfg.mieruTuning, mtu: cfg.mtu,
+    udpEnabled: cfg.udpEnabled, trafficPattern: cfg.trafficPattern };
+  cfg.mieruTuning = tuning;
+  cfg.mtu = tuning.mtu;
+  cfg.udpEnabled = tuning.transport === 'TCP_UDP';
+  cfg.trafficPattern = tuning.trafficPattern;
+  try { saveConfig(); }
+  catch (error) {
+    cfg.mieruTuning = previous.tuning; cfg.mtu = previous.mtu;
+    cfg.udpEnabled = previous.udpEnabled; cfg.trafficPattern = previous.trafficPattern;
+    return res.status(500).json({ error: error.message });
+  }
+  const ok = restartMieru();
+  if (!ok) {
+    cfg.mieruTuning = previous.tuning; cfg.mtu = previous.mtu;
+    cfg.udpEnabled = previous.udpEnabled; cfg.trafficPattern = previous.trafficPattern;
+    try { saveConfig(); } catch {}
+    const rolledBack = restartMieru();
+    return res.status(409).json({ error: 'Mieru failed to restart with the proposed settings', rolledBack });
+  }
+  try {
+    const action = cfg.udpEnabled ? '' : 'delete';
+    ufwMieruRule(action, cfg.mieruPortStart, cfg.mieruPortEnd, 'udp', cfg.udpEnabled ? 'Mieru UDP' : '');
+  } catch {}
+  return res.json({ ok: true, tuning, mieruRestarted: true, otherServicesRestarted: false });
+});
+
 // Traffic pattern + MTU: mita reload
 app.post('/api/settings/traffic-pattern', requireAuth, (req, res) => {
   const validPatterns = ['NOOP', 'RANDOM_PADDING', 'RANDOM_PADDING_AGGRESSIVE'];
@@ -3942,7 +3994,7 @@ app.get('/api/users/:id/config/mieru', requireAuth, (req, res) => {
         transport: 'TCP',
         username: user.username, password,
         // Bug 74: string enum, not an object
-        multiplexing: 'MULTIPLEXING_HIGH'
+        multiplexing: cfg.mieruTuning?.multiplexing || 'MULTIPLEXING_HIGH'
       },
       { type: 'direct', tag: 'direct' }
     ],
@@ -4021,7 +4073,7 @@ app.get('/api/users/:id/config/mieru-link', requireAuth, (req, res) => {
     host: cfg.serverIp || cfg.domain,
     ports,
     transport: 'TCP',
-    multiplexing: 'MULTIPLEXING_HIGH'
+    multiplexing: cfg.mieruTuning?.multiplexing || 'MULTIPLEXING_HIGH'
   });
   res.json({ link, username: user.username });
 });
@@ -4115,7 +4167,7 @@ function buildUserUris(user, opts = {}) {
       username: user.username, password,
       host: cfg.serverIp || cfg.domain,
       ports: [mieruPort], transport: 'TCP',
-      multiplexing: 'MULTIPLEXING_HIGH',
+      multiplexing: cfg.mieruTuning?.multiplexing || 'MULTIPLEXING_HIGH',
       name: applyServerFlag(user.username)   // v1.9.4: server flag in the label
     }));
   }
@@ -4457,7 +4509,7 @@ function buildProxyOutbounds(user, opts = {}) {
       server_port: mieruPort,
       transport: 'TCP',
       username: user.username, password,
-      multiplexing: 'MULTIPLEXING_HIGH'
+      multiplexing: cfg.mieruTuning?.multiplexing || 'MULTIPLEXING_HIGH'
     });
   }
   if (protos.includes('hy2') && cfg.stack && cfg.stack.hy2) {

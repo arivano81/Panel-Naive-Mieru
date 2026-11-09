@@ -101,6 +101,9 @@ ok(xrayDashboard.status === 0, 'Xray dashboard card regression suite passes');
 const hy2Tuning = spawnSync(process.execPath, [path.join(__dirname, 'hy2-tuning.test.js')],
   { stdio: 'inherit' });
 ok(hy2Tuning.status === 0, 'Hysteria2 tuning adapter regression suite passes');
+const mieruTuning = spawnSync(process.execPath, [path.join(__dirname, 'mieru-tuning.test.js')],
+  { stdio: 'inherit' });
+ok(mieruTuning.status === 0, 'Mieru adaptive tuning regression suite passes');
 const vlessLifecycle = spawnSync(process.execPath, [path.join(__dirname, 'vless-access-lifecycle.test.js')],
   { stdio: 'inherit' });
 ok(vlessLifecycle.status === 0, 'VLESS access lifecycle regression suite passes');

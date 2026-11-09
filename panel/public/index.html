@@ -812,6 +812,14 @@
               <label data-i18n="settings.mtuLabel">MTU (1280–1400)</label>
               <input type="number" id="s-mtu" min="1280" max="1400" value="1400" />
             </div>
+            <div class="form-row">
+              <div class="form-group"><label data-i18n="settings.mieruProfile">Профиль Mieru</label><select id="s-mieru-profile"><option value="conservative">Conservative</option><option value="balanced">Balanced</option><option value="throughput">Throughput</option><option value="custom">Custom</option></select></div>
+              <div class="form-group"><label data-i18n="settings.mieruMultiplexing">Multiplexing клиентов</label><select id="s-mieru-multiplexing"><option value="MULTIPLEXING_LOW">Low</option><option value="MULTIPLEXING_MIDDLE">Middle</option><option value="MULTIPLEXING_HIGH">High</option></select></div>
+              <div class="form-group"><label data-i18n="settings.mieruTransport">Серверные bindings</label><select id="s-mieru-transport"><option value="TCP">TCP</option><option value="TCP_UDP">TCP + UDP</option></select></div>
+            </div>
+            <p class="card-desc" data-i18n="settings.mieruTuningDesc">Анализ ничего не меняет. Применение проверяет конфигурацию, перезапускает только Mieru и возвращает прежние параметры при ошибке.</p>
+            <div class="btn-row mt-2"><button class="btn btn-secondary" data-action="analyze-mieru-tuning" id="btn-analyze-mieru-tuning" data-i18n="settings.tuningAnalyze">Измерить и предложить</button><button class="btn btn-primary" data-action="apply-mieru-tuning" id="btn-apply-mieru-tuning" data-i18n="settings.tuningApply">Проверить и применить</button></div>
+            <div id="mieru-tuning-msg" class="msg-inline hidden"></div><pre id="mieru-tuning-report" class="mini-log hidden"></pre>
             <button class="btn btn-primary mt-2" data-action="change-traffic-pattern" data-i18n="settings.applyPattern">Apply Pattern</button>
             <div id="traffic-msg" class="msg-inline hidden"></div>
           </div>

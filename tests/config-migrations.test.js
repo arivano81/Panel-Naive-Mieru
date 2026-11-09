@@ -26,6 +26,7 @@ ok(legacy.totpEnabled === false && legacy.totpSecret === '' && legacy.totpLastCo
 ok(legacy.onboardingComplete === true, 'existing installs do not receive the first-run wizard');
 ok(legacy.xrayTuning.enabled === false, 'existing Xray profiles keep byte-compatible tuning disabled');
 ok(legacy.hy2Tuning.enabled === false, 'existing Hysteria2 profiles keep tuning disabled');
+ok(legacy.mieruTuning.enabled === false, 'existing Mieru profiles keep tuning disabled');
 
 const fresh = runConfigMigrations({ onboardingComplete: false }, { logger: { log() {} } }).config;
 ok(fresh.onboardingComplete === false, 'fresh-install onboarding remains pending');

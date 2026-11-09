@@ -1,6 +1,6 @@
 'use strict';
 
-const LATEST_CONFIG_SCHEMA = 12;
+const LATEST_CONFIG_SCHEMA = 13;
 
 const CONFIG_MIGRATIONS = [
   { version: 1, name: 'probe mode', up(config) {
@@ -69,6 +69,11 @@ const CONFIG_MIGRATIONS = [
     if (!config.hy2Tuning || typeof config.hy2Tuning !== 'object' || Array.isArray(config.hy2Tuning))
       config.hy2Tuning = { enabled: false };
     if (config.hy2Tuning.enabled == null) config.hy2Tuning.enabled = false;
+  } },
+  { version: 13, name: 'opt-in Mieru tuning', up(config) {
+    if (!config.mieruTuning || typeof config.mieruTuning !== 'object' || Array.isArray(config.mieruTuning))
+      config.mieruTuning = { enabled: false };
+    if (config.mieruTuning.enabled == null) config.mieruTuning.enabled = false;
   } },
 ];
 

@@ -9,6 +9,16 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [v1.15.0] - 2026-11-09
+
+### Added
+
+- Adaptive Mieru helper with read-only VPS and route-MTU analysis plus editable MTU,
+  client multiplexing, TCP/TCP+UDP server bindings and traffic-pattern settings.
+- Confirmed activation restarts only Mieru and restores the previous panel and Mita
+  configuration when activation fails. Existing installations remain opt-in.
+- Newly generated Mieru links and profiles use the confirmed multiplexing level.
+
 ## [v1.14.1] - 2026-11-08
 
 ### Fixed

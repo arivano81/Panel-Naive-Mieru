@@ -337,6 +337,8 @@ function handleDelegatedClick(e) {
     case 'openflux-bundle':      downloadOpenFluxBundle(btn.dataset.id); break;
     case 'openflux-rotate':      rotateOpenFluxKey(btn.dataset.id); break;
     case 'change-traffic-pattern': changeTrafficPattern(); break;
+    case 'analyze-mieru-tuning': analyzeMieruTuning(); break;
+    case 'apply-mieru-tuning': applyMieruTuning(); break;
     case 'change-udp-mode':      changeUdpMode(); break;
     case 'change-language':      changeLanguage(); break;
     case 'change-password':      changePassword(); break;
@@ -1409,6 +1411,8 @@ async function loadSettings() {
     el('s-mieru-start').value = cfg.mieruPortStart || 2012;
     el('s-mieru-end').value   = cfg.mieruPortEnd   || 2022;
     el('s-mtu').value         = cfg.mtu || 1400;
+    renderMieruTuning({ ...(cfg.mieruTuning || {}), mtu: cfg.mtu || 1400,
+      transport: cfg.udpEnabled ? 'TCP_UDP' : 'TCP', trafficPattern: cfg.trafficPattern || 'NOOP' });
     const subBaseEl = el('s-sub-base-url');
     if (subBaseEl) subBaseEl.value = cfg.subBaseUrl || '';
     const flagEl = el('s-server-flag');
@@ -2542,6 +2546,47 @@ async function changeUdpMode() {
   } finally {
     setBtnBusy(btn, false);
   }
+}
+
+function renderMieruTuning(value = {}) {
+  const v = { profile: 'balanced', mtu: 1400, multiplexing: 'MULTIPLEXING_MIDDLE',
+    transport: 'TCP', trafficPattern: 'NOOP', ...value };
+  if (el('s-mieru-profile')) el('s-mieru-profile').value = v.profile;
+  if (el('s-mieru-multiplexing')) el('s-mieru-multiplexing').value = v.multiplexing;
+  if (el('s-mieru-transport')) el('s-mieru-transport').value = v.transport;
+  if (el('s-mtu')) el('s-mtu').value = v.mtu;
+  const pattern = document.querySelector(`input[name="traffic-pattern"][value="${v.trafficPattern}"]`);
+  if (pattern) pattern.checked = true;
+}
+
+function readMieruTuning() {
+  return { profile: el('s-mieru-profile')?.value,
+    mtu: Number(el('s-mtu')?.value), multiplexing: el('s-mieru-multiplexing')?.value,
+    transport: el('s-mieru-transport')?.value,
+    trafficPattern: document.querySelector('input[name="traffic-pattern"]:checked')?.value || 'NOOP' };
+}
+
+async function analyzeMieruTuning() {
+  const btn = el('btn-analyze-mieru-tuning'); setBtnBusy(btn, true);
+  try {
+    const result = await api('GET', '/api/settings/mieru/tuning/recommendation');
+    renderMieruTuning(result.settings);
+    const report = el('mieru-tuning-report');
+    if (report) { report.textContent = (result.reasons || []).map(x => `• ${x}`).join('\n'); report.classList.remove('hidden'); }
+    showMsg('mieru-tuning-msg', 'Рекомендация рассчитана без изменения системы.', true);
+  } catch (error) { showMsg('mieru-tuning-msg', error.message, false); }
+  finally { setBtnBusy(btn, false); }
+}
+
+async function applyMieruTuning() {
+  if (!confirm('Применить параметры? Будет кратко перезапущен только Mieru.')) return;
+  const btn = el('btn-apply-mieru-tuning'); setBtnBusy(btn, true);
+  try {
+    const result = await api('POST', '/api/settings/mieru/tuning', readMieruTuning());
+    renderMieruTuning(result.tuning);
+    showMsg('mieru-tuning-msg', 'Настройки применены; остальные VPN-службы не перезапускались.', true);
+  } catch (error) { showMsg('mieru-tuning-msg', error.message, false); }
+  finally { setBtnBusy(btn, false); }
 }
 
 async function changeTrafficPattern() {

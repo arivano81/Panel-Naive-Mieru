@@ -831,7 +831,8 @@ if (fs.existsSync(TEMPLATE_JS)) {
     // even when config.json had subBaseUrl set → the sub domain had no TLS cert
     // and /sub returned a TLS internal error until the panel next rebuilt at
     // runtime. buildCaddyfile() in index.js already passed this; update.sh didn't.
-    subBaseUrl:         cfg.subBaseUrl          || ''
+    subBaseUrl:         cfg.subBaseUrl          || '',
+    caddyTuning:        cfg.caddyTuning         || {}
   }, naiveUsers);
 } else {
   // Fallback (template not available): emit correct Bug 83 syntax directly
@@ -847,6 +848,17 @@ if (fs.existsSync(TEMPLATE_JS)) {
   if (probeMode === 'off') probeLine = '';
   else if (probeMode === 'secret' && probeSecret) probeLine = '\n    probe_resistance ' + probeSecret;
   else probeLine = '\n    probe_resistance';
+  let tuningLines = '';
+  {
+    const t = cfg.caddyTuning || {};
+    const dial = Number(t.dialTimeout), total = Number(t.maxIdleConns), perHost = Number(t.maxIdleConnsPerHost);
+    if (t.enabled === true && Number.isInteger(dial) && dial >= 1 && dial <= 120 &&
+        Number.isInteger(total) && total >= 1 && total <= 4096 &&
+        Number.isInteger(perHost) && perHost >= 1 && perHost <= 256 && perHost <= total) {
+      tuningLines = '\n    dial_timeout ' + dial + 's\n    max_idle_conns ' + total +
+        '\n    max_idle_conns_per_host ' + perHost;
+    }
+  }
   // v1.4.0: panel external-access subdomain block (inline fallback)
   let panelBlock = '';
   {
@@ -923,7 +935,7 @@ if (fs.existsSync(TEMPLATE_JS)) {
     '  forward_proxy {',
     authLines,
     '    hide_ip',
-    '    hide_via' + probeLine,
+      '    hide_via' + tuningLines + probeLine,
     '  }',
     '',
     '  file_server {',

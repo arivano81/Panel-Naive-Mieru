@@ -36,6 +36,7 @@
  */
 
 const crypto = require('crypto');
+const { renderCaddyTuning } = require('./caddyTuning');
 
 // ── extractBcrypt() — BUG-155 ────────────────────────────────────────────────
 // Return a single valid bcrypt token ($2[aby]$NN$<53 chars>) from arbitrary
@@ -309,6 +310,7 @@ function render(cfg, naiveUsers) {
   const upstreamLine = upstreamUrl
     ? `\n    upstream ${upstreamUrl}`
     : '';
+  const tuningLines = renderCaddyTuning(cfg.caddyTuning || {});
 
   // ── Bug 98: masquerade handler — file_server OR reverse_proxy ─────────────
   // When fakeSiteUrl points at a real site we reverse_proxy to it so the cover
@@ -408,7 +410,7 @@ function render(cfg, naiveUsers) {
     # Bug 29: order — credentials → hide_ip → hide_via → probe_resistance
 ${authLines}
     hide_ip
-    hide_via${probeLine}${upstreamLine}
+    hide_via${tuningLines}${probeLine}${upstreamLine}
   }
 
 ${renderXhttpRoute(cfg)}${masqueradeBlock}

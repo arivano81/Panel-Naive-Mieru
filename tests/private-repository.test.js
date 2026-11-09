@@ -104,6 +104,9 @@ ok(hy2Tuning.status === 0, 'Hysteria2 tuning adapter regression suite passes');
 const mieruTuning = spawnSync(process.execPath, [path.join(__dirname, 'mieru-tuning.test.js')],
   { stdio: 'inherit' });
 ok(mieruTuning.status === 0, 'Mieru adaptive tuning regression suite passes');
+const caddyTuning = spawnSync(process.execPath, [path.join(__dirname, 'caddy-tuning.test.js')],
+  { stdio: 'inherit' });
+ok(caddyTuning.status === 0, 'NaiveProxy/Caddy tuning regression suite passes');
 const vlessLifecycle = spawnSync(process.execPath, [path.join(__dirname, 'vless-access-lifecycle.test.js')],
   { stdio: 'inherit' });
 ok(vlessLifecycle.status === 0, 'VLESS access lifecycle regression suite passes');

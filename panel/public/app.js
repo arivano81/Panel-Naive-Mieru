@@ -301,6 +301,8 @@ function handleDelegatedClick(e) {
 
     // ── Settings page
     case 'change-naive-port':    changeNaivePort(); break;
+    case 'analyze-caddy-tuning': analyzeCaddyTuning(); break;
+    case 'apply-caddy-tuning':   applyCaddyTuning(); break;
     case 'change-mieru-ports':   changeMieruPorts(); break;
     case 'save-sub-base-url':    saveSubBaseUrl(); break;
     case 'save-fake-site-url':   saveFakeSiteUrl(); break;
@@ -1408,6 +1410,7 @@ async function loadSettings() {
     const cfg = await api('GET', '/api/config');
     state.config = cfg;
     el('s-naive-port').value  = cfg.naivePort     || 443;
+    renderCaddyTuning(cfg.caddyTuning || {});
     el('s-mieru-start').value = cfg.mieruPortStart || 2012;
     el('s-mieru-end').value   = cfg.mieruPortEnd   || 2022;
     el('s-mtu').value         = cfg.mtu || 1400;
@@ -1773,6 +1776,45 @@ async function changeNaivePort() {
   } finally {
     setBtnBusy(btn, false);
   }
+}
+
+function renderCaddyTuning(value = {}) {
+  const v = { profile: 'balanced', dialTimeout: 30, maxIdleConns: 100,
+    maxIdleConnsPerHost: 4, ...value };
+  if (el('s-caddy-profile')) el('s-caddy-profile').value = v.profile;
+  if (el('s-caddy-dial-timeout')) el('s-caddy-dial-timeout').value = v.dialTimeout;
+  if (el('s-caddy-max-idle')) el('s-caddy-max-idle').value = v.maxIdleConns;
+  if (el('s-caddy-max-idle-host')) el('s-caddy-max-idle-host').value = v.maxIdleConnsPerHost;
+}
+
+function readCaddyTuning() {
+  return { profile: el('s-caddy-profile')?.value,
+    dialTimeout: Number(el('s-caddy-dial-timeout')?.value),
+    maxIdleConns: Number(el('s-caddy-max-idle')?.value),
+    maxIdleConnsPerHost: Number(el('s-caddy-max-idle-host')?.value) };
+}
+
+async function analyzeCaddyTuning() {
+  const btn = el('btn-analyze-caddy-tuning'); setBtnBusy(btn, true);
+  try {
+    const result = await api('GET', '/api/settings/naive/tuning/recommendation');
+    renderCaddyTuning(result.settings);
+    const report = el('caddy-tuning-report');
+    if (report) { report.textContent = (result.reasons || []).map(x => `• ${x}`).join('\n'); report.classList.remove('hidden'); }
+    showMsg('caddy-tuning-msg', 'Рекомендация рассчитана без изменения системы.', true);
+  } catch (error) { showMsg('caddy-tuning-msg', error.message, false); }
+  finally { setBtnBusy(btn, false); }
+}
+
+async function applyCaddyTuning() {
+  if (!confirm('Проверить и применить параметры? Будет плавно перезагружен только Caddy/NaiveProxy.')) return;
+  const btn = el('btn-apply-caddy-tuning'); setBtnBusy(btn, true);
+  try {
+    const result = await api('POST', '/api/settings/naive/tuning', readCaddyTuning());
+    renderCaddyTuning(result.tuning);
+    showMsg('caddy-tuning-msg', 'Настройки применены; остальные VPN-службы не перезапускались.', true);
+  } catch (error) { showMsg('caddy-tuning-msg', error.message, false); }
+  finally { setBtnBusy(btn, false); }
 }
 
 // v1.8.7: save the optional subscription base URL. Empty clears it (sub-links

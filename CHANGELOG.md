@@ -9,6 +9,16 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [v1.16.0] - 2026-11-09
+
+### Added
+
+- Opt-in NaiveProxy/Caddy helper with read-only VPS analysis and editable official
+  `forward_proxy` dial timeout and idle-connection pool settings.
+- Candidate Caddyfiles are validated before a graceful Caddy-only reload; failed activation
+  restores both the previous Caddyfile and panel setting. Domains, TLS, users, masquerade and
+  probe resistance remain outside the helper.
+
 ## [v1.15.0] - 2026-11-09
 
 ### Added

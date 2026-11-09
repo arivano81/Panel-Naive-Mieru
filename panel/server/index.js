@@ -52,6 +52,7 @@ const { buildXrayRealityConfig, buildVlessRealityLink, buildVlessXhttpLink,
 const { normalizeXrayTuning, recommendXrayTuning } = require('./xrayTuning');
 const { normalizeHy2Tuning, recommendHy2Tuning, spliceHy2Tuning } = require('./hy2Tuning');
 const { normalizeMieruTuning, recommendMieruTuning } = require('./mieruTuning');
+const { normalizeCaddyTuning, recommendCaddyTuning, renderCaddyTuning } = require('./caddyTuning');
 const { parseXrayStats, accumulateXrayStats } = require('./xrayStats');
 const { createOpenFluxService } = require('./openfluxService');
 const { registerOpenFluxRoutes } = require('./openfluxRoutes');
@@ -537,6 +538,7 @@ function buildCaddyfile(config, users) {
             host: config.vlessXhttp && config.vlessXhttp.host,
             path: config.vlessXhttp && config.vlessXhttp.path })
         : '',
+      caddyTuning: config.caddyTuning || {},
     }, naiveUsers);
   }
 
@@ -571,6 +573,7 @@ function buildCaddyfile(config, users) {
   // Bug 92: normalize the upstream so forward_proxy gets a clean https:// URL.
   const upstreamUrl = (config.cascadeEnabled && config.cascadeNaiveUpstream) ? normalizeUpstream(config.cascadeNaiveUpstream) : '';
   const upstreamLine = upstreamUrl ? `\n    upstream ${upstreamUrl}` : '';
+  const tuningLines = renderCaddyTuning(config.caddyTuning || {});
 
   // Bug 98: masquerade — file_server (default) or reverse_proxy (real site).
   let masqueradeBlock;
@@ -670,7 +673,7 @@ function buildCaddyfile(config, users) {
     # Bug 29: order — credentials → hide_ip → hide_via → probe_resistance
 ${authLines}
     hide_ip
-    hide_via${probeLine}${upstreamLine}
+    hide_via${tuningLines}${probeLine}${upstreamLine}
   }
 
 ${masqueradeBlock}
@@ -3200,6 +3203,42 @@ app.post('/api/settings/vless/tuning', requireAuth, (req, res) => {
   }
   return res.json({ ok: true, tuning, xrayRestarted: result.changed === true,
     otherServicesRestarted: false });
+});
+
+function collectCaddyTuningFacts() {
+  const facts = collectXrayTuningFacts();
+  let installedVersion = '';
+  try { installedVersion = execFileSync(resolvedCaddyBin, ['version'], { timeout: 3000,
+    encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim().split(/\r?\n/)[0]; } catch {}
+  return { generatedAt: facts.generatedAt, cpuCores: facts.cpuCores,
+    cpuLoadPercent: facts.cpuLoadPercent, memoryMB: facts.memoryMB,
+    establishedTcpConnections: facts.establishedTcpConnections, installedVersion,
+    current: normalizeCaddyTuning(cfg.caddyTuning || {}) };
+}
+
+app.get('/api/settings/naive/tuning/recommendation', requireAuth, (_req, res) => {
+  const facts = collectCaddyTuningFacts();
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ facts, ...recommendCaddyTuning(facts) });
+});
+
+app.post('/api/settings/naive/tuning', requireAuth, (req, res) => {
+  let tuning;
+  try { tuning = normalizeCaddyTuning({ ...(req.body || {}), enabled: true }); }
+  catch (error) { return res.status(400).json({ error: error.message }); }
+  const previous = cfg.caddyTuning;
+  cfg.caddyTuning = tuning;
+  if (!saveConfig()) {
+    cfg.caddyTuning = previous;
+    return res.status(500).json({ error: 'Could not persist NaiveProxy tuning' });
+  }
+  const result = applyCaddyTransaction(buildCaddyfile(cfg, getAllUsers()));
+  if (!result.ok) {
+    cfg.caddyTuning = previous;
+    try { saveConfig(); } catch {}
+    return res.status(409).json({ error: result.error, rolledBack: result.rolledBack });
+  }
+  return res.json({ ok: true, tuning, caddyReloaded: true, otherServicesRestarted: false });
 });
 
 // Change only the REALITY camouflage target. The isolated script validates the

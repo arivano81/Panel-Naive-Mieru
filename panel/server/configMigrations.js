@@ -1,6 +1,6 @@
 'use strict';
 
-const LATEST_CONFIG_SCHEMA = 13;
+const LATEST_CONFIG_SCHEMA = 14;
 
 const CONFIG_MIGRATIONS = [
   { version: 1, name: 'probe mode', up(config) {
@@ -74,6 +74,11 @@ const CONFIG_MIGRATIONS = [
     if (!config.mieruTuning || typeof config.mieruTuning !== 'object' || Array.isArray(config.mieruTuning))
       config.mieruTuning = { enabled: false };
     if (config.mieruTuning.enabled == null) config.mieruTuning.enabled = false;
+  } },
+  { version: 14, name: 'opt-in NaiveProxy tuning', up(config) {
+    if (!config.caddyTuning || typeof config.caddyTuning !== 'object' || Array.isArray(config.caddyTuning))
+      config.caddyTuning = { enabled: false };
+    if (config.caddyTuning.enabled == null) config.caddyTuning.enabled = false;
   } },
 ];
 

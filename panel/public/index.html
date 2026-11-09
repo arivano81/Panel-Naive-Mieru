@@ -652,6 +652,23 @@
         </div>
 
         <div class="card">
+          <div class="card-header" data-i18n="settings.naiveTuningTitle">Оптимизация NaiveProxy / Caddy</div>
+          <div class="card-body">
+            <p class="card-desc" data-i18n="settings.naiveTuningDesc">Анализ ничего не меняет. Применение валидирует Caddyfile, выполняет плавную перезагрузку только Caddy и откатывается при ошибке.</p>
+            <div class="form-row">
+              <div class="form-group"><label data-i18n="settings.naiveTuningProfile">Профиль</label><select id="s-caddy-profile"><option value="conservative">Conservative</option><option value="balanced">Balanced</option><option value="throughput">Throughput</option><option value="custom">Custom</option></select></div>
+              <div class="form-group"><label data-i18n="settings.naiveDialTimeout">Dial timeout, сек.</label><input id="s-caddy-dial-timeout" type="number" min="1" max="120" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label data-i18n="settings.naiveMaxIdle">Idle-соединения, всего</label><input id="s-caddy-max-idle" type="number" min="1" max="4096" /></div>
+              <div class="form-group"><label data-i18n="settings.naiveMaxIdleHost">Idle-соединения на хост</label><input id="s-caddy-max-idle-host" type="number" min="1" max="256" /></div>
+            </div>
+            <div class="btn-row mt-2"><button class="btn btn-secondary" data-action="analyze-caddy-tuning" id="btn-analyze-caddy-tuning" data-i18n="settings.tuningAnalyze">Измерить и предложить</button><button class="btn btn-primary" data-action="apply-caddy-tuning" id="btn-apply-caddy-tuning" data-i18n="settings.tuningApply">Проверить и применить</button></div>
+            <div id="caddy-tuning-msg" class="msg-inline hidden"></div><pre id="caddy-tuning-report" class="mini-log hidden"></pre>
+          </div>
+        </div>
+
+        <div class="card">
           <div class="card-header" data-i18n="settings.mieruPortTitle">Mieru Port Range</div>
           <div class="card-body">
             <p class="card-desc" data-i18n="settings.mieruPortDesc">Change the TCP port range for Mieru. <strong>Requires full Mieru restart.</strong></p>

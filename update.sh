@@ -1668,6 +1668,10 @@ update_panel() {
   # repo_root is the dir that CONTAINS panel/ (holds VERSION + deploy scripts).
   local repo_root; repo_root="$(dirname "$src")"
 
+  # Move legacy data to the branded paths while retaining compatibility links
+  # for rollback releases and helper scripts not migrated yet.
+  bash "$repo_root/panel/scripts/migrate_storage.sh"
+
   pm2 stop panel-naive-mieru 2>/dev/null || true
 
   mkdir -p "$PANEL_DIR"

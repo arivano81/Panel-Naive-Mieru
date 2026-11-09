@@ -6,7 +6,7 @@
 
 # ◈ VertaFlux
 
-**v1.17.0** — Universal control panel for a personal proxy server on Ubuntu or Debian
+**v1.18.0** — Universal control panel for a personal proxy server on Ubuntu or Debian
 
 [![Telegram](https://img.shields.io/badge/Telegram-@russian__paradice__vpn-2CA5E0?logo=telegram&logoColor=white)](https://t.me/russian_paradice_vpn)
 [![GitHub](https://img.shields.io/badge/GitHub-arivano81-181717?logo=github)](https://github.com/arivano81/Panel-Naive-Mieru)
@@ -125,23 +125,26 @@ sudo bash update.sh --expose panel.example.com
 
 | Path | Purpose |
 |------|---------|
-| `/etc/rixxx-panel/config.json` | Panel configuration |
-| `/etc/rixxx-panel/version` | Installed version |
-| `/etc/rixxx-panel/backups/` | Timestamped backups (last 10 kept) |
+| `/etc/vertaflux/config.json` | Panel configuration |
+| `/etc/vertaflux/version` | Installed version |
+| `/etc/vertaflux/backups/` | Timestamped backups (last 10 kept) |
 | `/etc/caddy-naive/Caddyfile` | Caddy forwardproxy config (basicauth users + probe_resistance) |
 | `/etc/caddy-naive/probe_secret` | Probe resistance secret token |
 | `/var/www/fake-site/` | Fake site (shown to unrecognised clients) |
 | `/var/log/caddy-naive/access.log` | caddy-naive access log |
-| `/var/lib/rixxx-panel/mita-state.json` | Mieru JSON state (applied via `mita apply config`) |
-| `/var/lib/rixxx-panel/db.sqlite` | SQLite user database |
+| `/var/lib/vertaflux/mita-state.json` | Mieru JSON state (applied via `mita apply config`) |
+| `/var/lib/vertaflux/db.sqlite` | SQLite user database |
 | `/opt/panel-naive-mieru/` | Panel application files |
 | `/usr/local/bin/caddy-naive` | caddy-forwardproxy-naive binary |
 
+After an upgrade, `/etc/rixxx-panel` and `/var/lib/rixxx-panel` remain compatibility symlinks.
+Older helper scripts and rollback releases therefore continue to access the same canonical data.
+
 > ⚠️ **Note:** `/etc/mita/` is Mieru's internal protobuf store — **never edit manually**.  
-> The panel uses `/var/lib/rixxx-panel/mita-state.json` and applies it via `mita apply config <file>`.
+> The panel uses `/var/lib/vertaflux/mita-state.json` and applies it via `mita apply config <file>`.
 
 > 🔐 **Security Warning (Bug 45):** The panel stores **plaintext passwords** for NaiveProxy users  
-> in SQLite (`/var/lib/rixxx-panel/db.sqlite`). This is required because `caddy-forwardproxy-naive`  
+> in SQLite (`/var/lib/vertaflux/db.sqlite`). This is required because `caddy-forwardproxy-naive`
 > hashes passwords internally at startup and needs the original plaintext. **Protect the database  
 > file:** it is already mode `600 root:root`, but ensure your VPS is not compromised. Do **not**  
 > reuse VPN passwords on other services.
@@ -165,7 +168,7 @@ pm2 status
 mita status
 mita describe users
 mita describe config
-mita apply config /var/lib/rixxx-panel/mita-state.json
+mita apply config /var/lib/vertaflux/mita-state.json
 mita reload
 
 # Caddy
@@ -329,7 +332,7 @@ sudo bash uninstall.sh
 
 - Panel runs on `127.0.0.1:3000` — not exposed to the internet by default
 - Admin password is bcrypt-hashed in `config.json` (chmod 600)
-- SQLite DB in `/var/lib/rixxx-panel/` (root access only)
+- SQLite DB in `/var/lib/vertaflux/` (root access only)
 - **Probe resistance**: unrecognised clients see the fake site instead of a proxy error
 - **No certbot**: Caddy manages TLS automatically via TLS-ALPN-01 (port 80 not needed)
 - Temporary config files deleted with `shred -u`
@@ -359,8 +362,8 @@ ss -tlnup | grep -E '443|2012'
 ```bash
 journalctl -u mita -n 50
 mita status
-# Check /var/lib/rixxx-panel/mita-state.json for valid JSON
-mita apply config /var/lib/rixxx-panel/mita-state.json
+# Check /var/lib/vertaflux/mita-state.json for valid JSON
+mita apply config /var/lib/vertaflux/mita-state.json
 ```
 
 **4. Caddy TLS certificate issues**

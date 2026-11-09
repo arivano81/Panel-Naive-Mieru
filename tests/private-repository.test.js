@@ -24,8 +24,8 @@ ok(update.includes('curl -H @-'), 'updater keeps the curl authorization header o
 ok(html.includes('github.com/arivano81/Panel-Naive-Mieru'), 'panel GitHub links point to this fork');
 ok(!html.includes('github.com/cwash797-cmd'), 'panel has no duplicate parent-project link');
 for (const [name, source] of [['install.sh', install], ['update.sh', update]]) {
-  ok(source.includes('COMPONENT_REGISTRY="/etc/rixxx-panel/components.json"'),
-    `${name} uses the canonical component registry path`);
+  ok(source.includes(`COMPONENT_REGISTRY="/etc/${name === 'install.sh' ? 'vertaflux' : 'rixxx-panel'}/components.json"`),
+    `${name} uses its migration-safe component registry path`);
   ok(/write_component_registry\(\)/.test(source), `${name} defines component registry writer`);
   ok(source.includes('vless:{installed:$xrayInstalled') && source.includes('openflux:{installed:$openfluxInstalled'),
     `${name} detects VLESS while reserving a disabled OpenFlux registry entry`);
@@ -77,6 +77,9 @@ ok(sbom.status === 0, 'SPDX release SBOM regression suite passes');
 const goVulnAudit = spawnSync(process.execPath, [path.join(__dirname, 'go-vulnerability-audit.test.js')],
   { stdio: 'inherit' });
 ok(goVulnAudit.status === 0, 'pinned Go binary vulnerability audit contract passes');
+const storageMigration = spawnSync(process.execPath, [path.join(__dirname, 'storage-migration.test.js')],
+  { stdio: 'inherit' });
+ok(storageMigration.status === 0, 'VertaFlux storage migration regression suite passes');
 const vlessAdapter = spawnSync(process.execPath, [path.join(__dirname, 'vless-reality-adapter.test.js')],
   { stdio: 'inherit' });
 ok(vlessAdapter.status === 0, 'VLESS REALITY adapter regression suite passes');

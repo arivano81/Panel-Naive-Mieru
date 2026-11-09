@@ -134,8 +134,8 @@ if [[ -d /etc/naive ]]; then
   log_info "/etc/naive (legacy) removed ✓"
 fi
 # Panel config
-rm -rf /etc/rixxx-panel
-log_info "/etc/rixxx-panel removed ✓"
+rm -rf /etc/rixxx-panel /etc/vertaflux
+log_info "/etc/vertaflux and its legacy compatibility link removed ✓"
 log_info "Configuration directories removed ✓"
 
 # ── Remove fake site ──────────────────────────────────────────────────────────
@@ -161,12 +161,12 @@ log_info "Panel files removed ✓"
 
 # ── Remove database and runtime data ─────────────────────────────────────────
 log_step "Removing database and runtime data"
-if [[ -f /var/lib/rixxx-panel/db.sqlite ]]; then
-  shred -u /var/lib/rixxx-panel/db.sqlite 2>/dev/null || \
-    rm -f /var/lib/rixxx-panel/db.sqlite
+if [[ -f /var/lib/vertaflux/db.sqlite ]]; then
+  shred -u /var/lib/vertaflux/db.sqlite 2>/dev/null || \
+    rm -f /var/lib/vertaflux/db.sqlite
   log_info "SQLite database securely removed ✓"
 fi
-rm -rf /var/lib/rixxx-panel
+rm -rf /var/lib/rixxx-panel /var/lib/vertaflux
 # Bug 43 / v1.2.5: /var/lib/caddy stores ACME TLS certificates — remove on uninstall
 rm -rf /var/lib/caddy 2>/dev/null || true
 log_info "Runtime data removed ✓"

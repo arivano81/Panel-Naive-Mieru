@@ -63,12 +63,12 @@ die()       { log_error "$*"; exit 1; }
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 PANEL_DIR="/opt/panel-naive-mieru"
-PANEL_CONFIG="/etc/rixxx-panel/config.json"
-VERSION_FILE="/etc/rixxx-panel/version"
-COMPONENT_REGISTRY="/etc/rixxx-panel/components.json"
-BACKUP_DIR="/etc/rixxx-panel/backups"
-DB_PATH="/var/lib/rixxx-panel/db.sqlite"
-MITA_STATE_FILE="/var/lib/rixxx-panel/mita-state.json"
+PANEL_CONFIG="/etc/vertaflux/config.json"
+VERSION_FILE="/etc/vertaflux/version"
+COMPONENT_REGISTRY="/etc/vertaflux/components.json"
+BACKUP_DIR="/etc/vertaflux/backups"
+DB_PATH="/var/lib/vertaflux/db.sqlite"
+MITA_STATE_FILE="/var/lib/vertaflux/mita-state.json"
 
 # v1.2.3: Caddy-forwardproxy-naive replaces standalone naive binary
 CADDY_BIN="/usr/local/bin/caddy-naive"
@@ -1051,7 +1051,7 @@ setup_ufw() {
 
   # Bug 36: backup current rules before --force reset
   if command -v ufw &>/dev/null; then
-    local ufw_bak="/etc/rixxx-panel/backups/ufw-before-install-$(date +%Y%m%d-%H%M%S).rules"
+    local ufw_bak="/etc/vertaflux/backups/ufw-before-install-$(date +%Y%m%d-%H%M%S).rules"
     mkdir -p "$(dirname "$ufw_bak")"
     ufw status verbose 2>/dev/null > "$ufw_bak" || true
     log_info "$(t "Резервная копия правил UFW: $ufw_bak" "UFW rules backup: $ufw_bak")"
@@ -1145,8 +1145,8 @@ install_panel() {
 
 # ── config.json ───────────────────────────────────────────────────────────────
 write_config_json() {
-  log_step "$(t 'Запись /etc/rixxx-panel/config.json' 'Writing /etc/rixxx-panel/config.json')"
-  mkdir -p /etc/rixxx-panel "$(dirname "$DB_PATH")"
+  log_step "$(t 'Запись /etc/vertaflux/config.json' 'Writing /etc/vertaflux/config.json')"
+  mkdir -p /etc/vertaflux "$(dirname "$DB_PATH")"
   local server_ip
   server_ip=$(curl -4 -fsSL https://api.ipify.org 2>/dev/null || hostname -I | awk '{print $1}')
 
@@ -1811,6 +1811,9 @@ main() {
   # --expose cannot silently fall back to the legacy inline template that has
   # no external panel block.
   install_panel
+  # Canonical VertaFlux storage with compatibility links for older helpers and
+  # rollback releases. Existing data is moved, never copied or merged.
+  bash "$PANEL_DIR/scripts/migrate_storage.sh"
   write_mita_state
   write_caddyfile
   write_caddy_service

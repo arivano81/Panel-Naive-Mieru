@@ -9,6 +9,20 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [v1.18.0] - 2026-11-09
+
+### Added
+
+- Conflict-safe, idempotent storage migration from the former machine paths to
+  `/etc/vertaflux` and `/var/lib/vertaflux`.
+- Compatibility symlinks keep older helper scripts and rollback releases operational without
+  duplicating configuration or user data.
+
+### Changed
+
+- New installations and the panel runtime use the VertaFlux storage paths as canonical.
+- Updated Russian and English operator documentation for the new layout.
+
 ## [v1.17.0] - 2026-11-09
 
 ### Added

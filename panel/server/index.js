@@ -65,14 +65,14 @@ const { redactLogText, installConsoleRedaction } = require('./logRedaction');
 installConsoleRedaction();
 
 // ── Paths ─────────────────────────────────────────────────────────────────────
-const PANEL_CONFIG    = '/etc/rixxx-panel/config.json';
-const DB_PATH         = '/var/lib/rixxx-panel/db.sqlite';
-const MITA_STATE_FILE = '/var/lib/rixxx-panel/mita-state.json';
+const PANEL_CONFIG    = '/etc/vertaflux/config.json';
+const DB_PATH         = '/var/lib/vertaflux/db.sqlite';
+const MITA_STATE_FILE = '/var/lib/vertaflux/mita-state.json';
 // Bug 143: canonical version source written by install.sh / update.sh from the
 // repo's VERSION file. Read LIVE on each /api/status so the panel UI reflects
 // the installed version immediately after `update.sh` — no manual edits, no
 // process restart needed. Format: `panel_version=X.Y.Z`.
-const VERSION_FILE    = '/etc/rixxx-panel/version';
+const VERSION_FILE    = '/etc/vertaflux/version';
 
 // v1.2.3: Caddy-forwardproxy-naive paths (replaces standalone naive binary)
 const CADDY_BIN         = '/usr/local/bin/caddy-naive';
@@ -170,7 +170,7 @@ if (configLoadedFromDisk && configMigration.changed) {
 
 // Bug 143 (recurring): single source of truth for the displayed version.
 // Precedence, read LIVE so the UI updates the moment update.sh runs:
-//   1. /etc/rixxx-panel/version   (written by install.sh/update.sh from VERSION)
+//   1. /etc/vertaflux/version   (written by install.sh/update.sh from VERSION)
 //   2. the VERSION file bundled next to the panel code (repo source of truth)
 //   3. config.json's `version` field (synced by update.sh as a belt-and-braces)
 //   4. hard fallback constant

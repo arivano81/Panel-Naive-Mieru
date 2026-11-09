@@ -18,8 +18,8 @@ PORT="${PORT:-4021}"
 # One clean throwaway config. Hash admin/admin with the SAME bcrypt module the
 # server uses so login succeeds; point all writable paths at the temp dir.
 ADMIN_HASH="$(cd "$ROOT/panel" && node -e "console.log(require('bcryptjs').hashSync('admin',12))")"
-mkdir -p /etc/rixxx-panel
-cat > /etc/rixxx-panel/config.json <<JSON
+mkdir -p /etc/vertaflux
+cat > /etc/vertaflux/config.json <<JSON
 {
   "domain": "localhost", "serverIp": "127.0.0.1",
   "adminUser": "admin", "adminPassHash": "$ADMIN_HASH",
@@ -33,7 +33,7 @@ JSON
 
 ( cd "$ROOT/panel" && PANEL_PORT=$PORT PANEL_HOST=127.0.0.1 node server/index.js >"$TMP/server.log" 2>&1 ) &
 SRV_PID=$!
-cleanup() { kill "$SRV_PID" 2>/dev/null || true; rm -rf "$TMP"; rm -f /etc/rixxx-panel/config.json; }
+cleanup() { kill "$SRV_PID" 2>/dev/null || true; rm -rf "$TMP"; rm -f /etc/vertaflux/config.json; }
 trap cleanup EXIT
 
 # Wait for the server (probe /api/me — does NOT consume the login limiter).

@@ -6,7 +6,7 @@
 
 # ◈ VertaFlux
 
-**v1.17.0** — универсальная панель управления личным прокси-сервером на Ubuntu или Debian
+**v1.18.0** — универсальная панель управления личным прокси-сервером на Ubuntu или Debian
 
 [![Telegram](https://img.shields.io/badge/Telegram-@russian__paradice__vpn-2CA5E0?logo=telegram&logoColor=white)](https://t.me/russian_paradice_vpn)
 [![GitHub](https://img.shields.io/badge/GitHub-arivano81-181717?logo=github)](https://github.com/arivano81/Panel-Naive-Mieru)
@@ -497,9 +497,9 @@ sudo bash /opt/panel-naive-mieru/scripts/recover_access.sh
 
 | Путь | Назначение |
 |------|-----------|
-| `/etc/rixxx-panel/config.json` | Конфигурация панели |
-| `/etc/rixxx-panel/version` | Установленная версия |
-| `/etc/rixxx-panel/backups/` | Резервные копии (хранится последние 10) |
+| `/etc/vertaflux/config.json` | Конфигурация панели |
+| `/etc/vertaflux/version` | Установленная версия |
+| `/etc/vertaflux/backups/` | Резервные копии (хранится последние 10) |
 | `/etc/caddy-naive/Caddyfile` | Конфиг Caddy forwardproxy-naive (basicauth, probe_resistance) |
 | `/etc/caddy-naive/probe_secret` | Секрет защиты от зондирования |
 | `/var/www/fake-site/` | Фейковый сайт (показывается неопознанным клиентам) |
@@ -507,15 +507,14 @@ sudo bash /opt/panel-naive-mieru/scripts/recover_access.sh
 | `/var/log/rixxx-panel-install.log` | Лог установки |
 | `/var/log/panel-naive-mieru.log` | Файловый лог панели |
 | `/var/log/cascade-watchdog.log` | Журнал автовосстановления каскада |
-| `/var/lib/rixxx-panel/mita-state.json` | JSON-файл Mieru (применяется через `mita apply config`) |
-| `/var/lib/rixxx-panel/db.sqlite` | SQLite база данных пользователей |
-
-Каталоги с `rixxx-panel` — прежние машинные идентификаторы формата хранения. Они временно
-сохраняются для обновления уже работающих серверов и не являются названием продукта. Переход на
-`/etc/vertaflux` и `/var/lib/vertaflux` будет выполнен отдельной dual-read миграцией, чтобы не
-потерять настройки, пользователей и резервные копии.
+| `/var/lib/vertaflux/mita-state.json` | JSON-файл Mieru (применяется через `mita apply config`) |
+| `/var/lib/vertaflux/db.sqlite` | SQLite база данных пользователей |
 | `/opt/panel-naive-mieru/` | Файлы приложения панели |
 | `/usr/local/bin/caddy-naive` | Бинарный файл caddy-forwardproxy-naive |
+
+Пути `/etc/rixxx-panel` и `/var/lib/rixxx-panel` после обновления сохраняются как символические
+ссылки совместимости. Старые helper-скрипты и откат на предыдущую версию продолжают видеть те
+же данные, но основное хранилище уже использует имя VertaFlux.
 
 Файловые журналы панели, установщика и cascade-watchdog ротируются ежедневно
 или при достижении 10 MiB; хранится 14 сжатых поколений. Caddy использует собственную
@@ -524,10 +523,10 @@ sudo bash /opt/panel-naive-mieru/scripts/recover_access.sh
 Исходные учётные данные хранятся только в root-only отчёте `/root/vertaflux-install-report.txt`.
 
 > ⚠️ **Важно:** `/etc/mita/` — внутреннее хранилище Mieru в формате protobuf, **не редактируется вручную**.  
-> Панель использует `/var/lib/rixxx-panel/mita-state.json` и применяет его командой `mita apply config <file>`.
+> Панель использует `/var/lib/vertaflux/mita-state.json` и применяет его командой `mita apply config <file>`.
 
 > 🔐 **Предупреждение безопасности (Bug 45):** Панель хранит **открытые (plaintext) пароли** пользователей  
-> в SQLite (`/var/lib/rixxx-panel/db.sqlite`). Это необходимо, потому что `caddy-forwardproxy-naive`  
+> в SQLite (`/var/lib/vertaflux/db.sqlite`). Это необходимо, потому что `caddy-forwardproxy-naive`
 > хэширует пароли самостоятельно при запуске и требует оригинальный текст. **Ограничьте доступ  
 > к файлу БД:** он уже защищён правами `600 root:root`, но вы должны убедиться, что VPS не  
 > скомпрометирован. Не используйте пароли VPN повторно на других сервисах.
@@ -551,7 +550,7 @@ pm2 status
 mita status
 mita describe users
 mita describe config
-mita apply config /var/lib/rixxx-panel/mita-state.json
+mita apply config /var/lib/vertaflux/mita-state.json
 mita reload
 
 # Caddy
@@ -733,7 +732,7 @@ Entry: hysteria-server ── iptables ──▶ redsocks ──▶ mieru-client
 
 Репозиторий приватный, поэтому серверу нужен fine-grained GitHub token только с
 правом **Contents: Read** для этого проекта. БД с ключами
-(`/var/lib/rixxx-panel/db.sqlite`) и конфиг (`/etc/rixxx-panel/config.json`) при
+(`/var/lib/vertaflux/db.sqlite`) и конфиг (`/etc/vertaflux/config.json`) при
 обновлении **не трогаются**, плюс автоматически снимается бэкап (включая БД).
 
 ```bash
@@ -821,7 +820,7 @@ sudo bash uninstall.sh
 
 - Панель работает на `127.0.0.1:3000` — не доступна из интернета по умолчанию
 - Пароль администратора хранится в bcrypt-хэше в `config.json` (chmod 600)
-- SQLite БД в `/var/lib/rixxx-panel/` (только root)
+- SQLite БД в `/var/lib/vertaflux/` (только root)
 - **Probe resistance**: неопознанные клиенты видят фейковый сайт вместо ошибки прокси
 - **Без certbot**: Caddy управляет TLS автоматически через TLS-ALPN-01 (порт 80 не нужен)
 - Временные конфиг-файлы удаляются через `shred -u`
@@ -851,8 +850,8 @@ ss -tlnup | grep -E '443|2012'
 ```bash
 journalctl -u mita -n 50
 mita status
-# Проверьте /var/lib/rixxx-panel/mita-state.json на валидность JSON
-mita apply config /var/lib/rixxx-panel/mita-state.json
+# Проверьте /var/lib/vertaflux/mita-state.json на валидность JSON
+mita apply config /var/lib/vertaflux/mita-state.json
 ```
 
 **4. Проблемы с TLS-сертификатом Caddy**

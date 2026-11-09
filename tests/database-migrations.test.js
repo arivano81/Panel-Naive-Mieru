@@ -41,6 +41,9 @@ ok(names.has('vlessUploadBytes') && names.has('vlessLastUploadBytes'),
 const auditTable = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='admin_audit'").get();
 const auditIndex = db.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_admin_audit_ts'").get();
 ok(auditTable && auditIndex, 'administrator audit table and timestamp index are created');
+const tuningTable = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='tuning_history'").get();
+const tuningIndex = db.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_tuning_history_ts'").get();
+ok(tuningTable && tuningIndex, 'VPN tuning history table and timestamp index are created');
 ok(user.username === 'alice', 'existing user preserved');
 ok(user.email === null, 'legacy empty email normalized to NULL');
 ok(user.sub_token === 'ab'.repeat(16), 'missing subscription token backfilled');

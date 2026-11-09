@@ -9,6 +9,21 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [v1.17.0] - 2026-11-09
+
+### Added
+
+- Unified exact-value tuning preview before confirmation for Xray, Hysteria2, Mieru and
+  NaiveProxy/Caddy.
+- Bounded SQLite history of the latest 200 previews and successful applications; tuning
+  records contain no credentials, private keys or subscription tokens.
+- A readable Settings history card and an authenticated history API.
+
+### Changed
+
+- Reworked the Russian README front page into a concise product overview with CI/OS badges,
+  navigation, capability map and current operator guidance.
+
 ## [v1.16.0] - 2026-11-09
 
 ### Added

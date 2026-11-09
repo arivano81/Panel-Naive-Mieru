@@ -2,7 +2,7 @@
 
 const crypto = require('crypto');
 
-const LATEST_DB_SCHEMA = 7;
+const LATEST_DB_SCHEMA = 8;
 
 function ensureAdminAuditTable(db) {
   db.exec(`
@@ -17,6 +17,21 @@ function ensureAdminAuditTable(db) {
       durationMs INTEGER NOT NULL DEFAULT 0
     );
     CREATE INDEX IF NOT EXISTS idx_admin_audit_ts ON admin_audit(ts DESC);
+  `);
+}
+
+function ensureTuningHistoryTable(db) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS tuning_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts TEXT NOT NULL,
+      component TEXT NOT NULL,
+      event TEXT NOT NULL,
+      settingsJson TEXT NOT NULL,
+      diffJson TEXT NOT NULL,
+      factsJson TEXT NOT NULL DEFAULT '{}'
+    );
+    CREATE INDEX IF NOT EXISTS idx_tuning_history_ts ON tuning_history(ts DESC);
   `);
 }
 
@@ -124,6 +139,11 @@ const MIGRATIONS = [
     name: 'administrator audit log',
     up(db) { ensureAdminAuditTable(db); },
   },
+  {
+    version: 8,
+    name: 'VPN tuning history',
+    up(db) { ensureTuningHistoryTable(db); },
+  },
 ];
 
 function runDatabaseMigrations(db, {
@@ -160,6 +180,7 @@ function runDatabaseMigrations(db, {
     addColumn(db, 'users', 'vlessLastUploadBytes INTEGER DEFAULT 0');
     addColumn(db, 'users', 'vlessLastDownloadBytes INTEGER DEFAULT 0');
     ensureAdminAuditTable(db);
+    ensureTuningHistoryTable(db);
     db.prepare("UPDATE users SET email = NULL WHERE email = ''").run();
     missing = db.prepare("SELECT id FROM users WHERE sub_token IS NULL OR sub_token = ''").all();
     if (missing.length) {

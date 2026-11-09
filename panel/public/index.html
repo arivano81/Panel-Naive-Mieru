@@ -669,6 +669,15 @@
         </div>
 
         <div class="card">
+          <div class="card-header" data-i18n="settings.tuningHistoryTitle">История рекомендаций и изменений</div>
+          <div class="card-body">
+            <p class="card-desc" data-i18n="settings.tuningHistoryDesc">Последние рекомендации и успешно применённые изменения всех VPN-служб.</p>
+            <button class="btn btn-secondary" data-action="refresh-tuning-history" data-i18n="settings.tuningHistoryRefresh">Обновить историю</button>
+            <pre id="tuning-history" class="mini-log mt-2">—</pre>
+          </div>
+        </div>
+
+        <div class="card">
           <div class="card-header" data-i18n="settings.mieruPortTitle">Mieru Port Range</div>
           <div class="card-body">
             <p class="card-desc" data-i18n="settings.mieruPortDesc">Change the TCP port range for Mieru. <strong>Requires full Mieru restart.</strong></p>

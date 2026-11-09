@@ -303,6 +303,7 @@ function handleDelegatedClick(e) {
     case 'change-naive-port':    changeNaivePort(); break;
     case 'analyze-caddy-tuning': analyzeCaddyTuning(); break;
     case 'apply-caddy-tuning':   applyCaddyTuning(); break;
+    case 'refresh-tuning-history': loadTuningHistory(); break;
     case 'change-mieru-ports':   changeMieruPorts(); break;
     case 'save-sub-base-url':    saveSubBaseUrl(); break;
     case 'save-fake-site-url':   saveFakeSiteUrl(); break;
@@ -1411,6 +1412,7 @@ async function loadSettings() {
     state.config = cfg;
     el('s-naive-port').value  = cfg.naivePort     || 443;
     renderCaddyTuning(cfg.caddyTuning || {});
+    loadTuningHistory();
     el('s-mieru-start').value = cfg.mieruPortStart || 2012;
     el('s-mieru-end').value   = cfg.mieruPortEnd   || 2022;
     el('s-mtu').value         = cfg.mtu || 1400;
@@ -1794,6 +1796,26 @@ function readCaddyTuning() {
     maxIdleConnsPerHost: Number(el('s-caddy-max-idle-host')?.value) };
 }
 
+async function confirmTuningApply(component, settings, serviceName) {
+  const preview = await api('POST', '/api/settings/tuning/preview', { component, settings });
+  const lines = (preview.diff || []).map(item =>
+    `${item.key}: ${JSON.stringify(item.before)} → ${JSON.stringify(item.after)}`);
+  return confirm(`${serviceName}\n\n${lines.length ? lines.join('\n') : 'Изменений значений нет.'}\n\nПроверить и применить?`);
+}
+
+async function loadTuningHistory() {
+  const box = el('tuning-history');
+  if (!box) return;
+  try {
+    const result = await api('GET', '/api/settings/tuning/history?limit=30');
+    const names = { xray: 'Xray/VLESS', hy2: 'Hysteria2', mieru: 'Mieru', naive: 'NaiveProxy/Caddy' };
+    box.textContent = (result.history || []).map(row => {
+      const changes = (row.diff || []).map(x => `${x.key}: ${JSON.stringify(x.before)} → ${JSON.stringify(x.after)}`).join('; ');
+      return `${new Date(row.ts).toLocaleString()} · ${names[row.component] || row.component} · ${row.event}\n${changes || 'без изменения значений'}`;
+    }).join('\n\n') || 'История пока пуста.';
+  } catch (error) { box.textContent = error.message; }
+}
+
 async function analyzeCaddyTuning() {
   const btn = el('btn-analyze-caddy-tuning'); setBtnBusy(btn, true);
   try {
@@ -1807,10 +1829,12 @@ async function analyzeCaddyTuning() {
 }
 
 async function applyCaddyTuning() {
-  if (!confirm('Проверить и применить параметры? Будет плавно перезагружен только Caddy/NaiveProxy.')) return;
+  const settings = readCaddyTuning();
+  try { if (!await confirmTuningApply('naive', settings, 'NaiveProxy / Caddy')) return; }
+  catch (error) { return showMsg('caddy-tuning-msg', error.message, false); }
   const btn = el('btn-apply-caddy-tuning'); setBtnBusy(btn, true);
   try {
-    const result = await api('POST', '/api/settings/naive/tuning', readCaddyTuning());
+    const result = await api('POST', '/api/settings/naive/tuning', settings);
     renderCaddyTuning(result.tuning);
     showMsg('caddy-tuning-msg', 'Настройки применены; остальные VPN-службы не перезапускались.', true);
   } catch (error) { showMsg('caddy-tuning-msg', error.message, false); }
@@ -2201,12 +2225,14 @@ async function analyzeXrayTuning() {
 }
 
 async function applyXrayTuning() {
-  if (!confirm('Проверить и применить параметры? Будет кратко перезапущен только Xray; при ошибке конфигурация откатится.')) return;
+  const settings = readXrayTuningForm();
+  try { if (!await confirmTuningApply('xray', settings, 'Xray / VLESS')) return; }
+  catch (error) { return showMsg('xray-tuning-msg', error.message, false); }
   const btn = el('btn-apply-xray-tuning');
   setBtnBusy(btn, true);
   showMsg('xray-tuning-msg', 'Валидация и транзакционное применение…', true);
   try {
-    const result = await api('POST', '/api/settings/vless/tuning', readXrayTuningForm());
+    const result = await api('POST', '/api/settings/vless/tuning', settings);
     renderXrayTuning(result.tuning);
     showMsg('xray-tuning-msg', 'Настройки применены. Перезапущен только Xray.', true);
     toast('Оптимизация Xray применена', 'success');
@@ -2509,9 +2535,11 @@ async function analyzeHy2Tuning() {
 }
 
 async function applyHy2Tuning() {
-  if (!confirm('Применить параметры? Будет кратко перезапущен только Hysteria2.')) return;
+  const settings = readHy2Tuning();
+  try { if (!await confirmTuningApply('hy2', settings, 'Hysteria2')) return; }
+  catch (error) { return showMsg('hy2-tuning-msg', error.message, false); }
   const btn = el('btn-apply-hy2-tuning'); setBtnBusy(btn, true);
-  try { const r = await api('POST', '/api/settings/hy2/tuning', readHy2Tuning()); renderHy2Tuning(r.tuning);
+  try { const r = await api('POST', '/api/settings/hy2/tuning', settings); renderHy2Tuning(r.tuning);
     showMsg('hy2-tuning-msg', 'Настройки применены; остальные VPN-службы не перезапускались.', true);
   } catch (e) { showMsg('hy2-tuning-msg', e.message, false); } finally { setBtnBusy(btn, false); }
 }
@@ -2621,10 +2649,12 @@ async function analyzeMieruTuning() {
 }
 
 async function applyMieruTuning() {
-  if (!confirm('Применить параметры? Будет кратко перезапущен только Mieru.')) return;
+  const settings = readMieruTuning();
+  try { if (!await confirmTuningApply('mieru', settings, 'Mieru')) return; }
+  catch (error) { return showMsg('mieru-tuning-msg', error.message, false); }
   const btn = el('btn-apply-mieru-tuning'); setBtnBusy(btn, true);
   try {
-    const result = await api('POST', '/api/settings/mieru/tuning', readMieruTuning());
+    const result = await api('POST', '/api/settings/mieru/tuning', settings);
     renderMieruTuning(result.tuning);
     showMsg('mieru-tuning-msg', 'Настройки применены; остальные VPN-службы не перезапускались.', true);
   } catch (error) { showMsg('mieru-tuning-msg', error.message, false); }

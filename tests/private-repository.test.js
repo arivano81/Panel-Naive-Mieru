@@ -107,6 +107,9 @@ ok(mieruTuning.status === 0, 'Mieru adaptive tuning regression suite passes');
 const caddyTuning = spawnSync(process.execPath, [path.join(__dirname, 'caddy-tuning.test.js')],
   { stdio: 'inherit' });
 ok(caddyTuning.status === 0, 'NaiveProxy/Caddy tuning regression suite passes');
+const tuningHistory = spawnSync(process.execPath, [path.join(__dirname, 'tuning-history.test.js')],
+  { stdio: 'inherit' });
+ok(tuningHistory.status === 0, 'unified tuning preview and history regression suite passes');
 const vlessLifecycle = spawnSync(process.execPath, [path.join(__dirname, 'vless-access-lifecycle.test.js')],
   { stdio: 'inherit' });
 ok(vlessLifecycle.status === 0, 'VLESS access lifecycle regression suite passes');

@@ -80,8 +80,8 @@ ok(route.includes('cfg.xrayTuning = previous') && route.includes('rolledBack: re
 ok(html.includes('id="btn-analyze-xray-tuning"') && html.includes('id="btn-apply-xray-tuning"') &&
    app.includes('function analyzeXrayTuning()') && app.includes('function applyXrayTuning()'),
   'panel separates read-only analysis from confirmed activation');
-ok(app.includes("confirm('Проверить и применить параметры?"),
-  'activation requires an explicit administrator confirmation');
+ok(app.includes('confirmTuningApply(\'xray\'') && app.includes('return confirm('),
+  'activation requires an exact diff and explicit administrator confirmation');
 
 console.log(`\nResult: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

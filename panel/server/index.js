@@ -53,6 +53,7 @@ const { normalizeXrayTuning, recommendXrayTuning } = require('./xrayTuning');
 const { normalizeHy2Tuning, recommendHy2Tuning, spliceHy2Tuning } = require('./hy2Tuning');
 const { normalizeMieruTuning, recommendMieruTuning } = require('./mieruTuning');
 const { normalizeCaddyTuning, recommendCaddyTuning, renderCaddyTuning } = require('./caddyTuning');
+const { settingsDiff } = require('./tuningHistory');
 const { parseXrayStats, accumulateXrayStats } = require('./xrayStats');
 const { createOpenFluxService } = require('./openfluxService');
 const { registerOpenFluxRoutes } = require('./openfluxRoutes');
@@ -248,6 +249,37 @@ try {
 
 // In-memory fallback
 const memUsers = new Map();
+const TUNING_HISTORY_LIMIT = 200;
+
+function currentTuning(component) {
+  if (component === 'xray') return normalizeXrayTuning(cfg.xrayTuning || {});
+  if (component === 'hy2') return normalizeHy2Tuning(cfg.hy2Tuning || {});
+  if (component === 'naive') return normalizeCaddyTuning(cfg.caddyTuning || {});
+  if (component === 'mieru') return normalizeMieruTuning({ ...(cfg.mieruTuning || {}),
+    mtu: cfg.mtu || 1400, transport: cfg.udpEnabled ? 'TCP_UDP' : 'TCP',
+    trafficPattern: cfg.trafficPattern || 'NOOP' });
+  throw new Error('unknown tuning component');
+}
+
+function normalizeTuning(component, input) {
+  const value = { ...(input || {}), enabled: true };
+  if (component === 'xray') return normalizeXrayTuning(value);
+  if (component === 'hy2') return normalizeHy2Tuning(value);
+  if (component === 'naive') return normalizeCaddyTuning(value);
+  if (component === 'mieru') return normalizeMieruTuning(value);
+  throw new Error('unknown tuning component');
+}
+
+function recordTuning(component, event, settings, diff, facts = {}) {
+  if (!db) return;
+  try {
+    db.prepare(`INSERT INTO tuning_history (ts,component,event,settingsJson,diffJson,factsJson)
+      VALUES (?,?,?,?,?,?)`).run(new Date().toISOString(), component, event,
+        JSON.stringify(settings || {}), JSON.stringify(diff || []), JSON.stringify(facts || {}));
+    db.prepare(`DELETE FROM tuning_history WHERE id NOT IN
+      (SELECT id FROM tuning_history ORDER BY id DESC LIMIT ?)`).run(TUNING_HISTORY_LIMIT);
+  } catch (error) { console.error('[TUNING] history write failed:', error.message); }
+}
 
 // ── User DB helpers ───────────────────────────────────────────────────────────
 function getAllUsers() {
@@ -1972,6 +2004,27 @@ registerOpenFluxRoutes(app, requireAuth, openFluxService,
   password => !!(cfg.adminPassHash && bcrypt.compareSync(password, cfg.adminPassHash)),
   openFluxSecretLimiter);
 
+app.post('/api/settings/tuning/preview', requireAuth, (req, res) => {
+  try {
+    const component = String(req.body?.component || '');
+    const settings = normalizeTuning(component, req.body?.settings);
+    const diff = settingsDiff(currentTuning(component), settings);
+    recordTuning(component, 'recommendation', settings, diff);
+    res.json({ component, settings, diff });
+  } catch (error) { res.status(400).json({ error: error.message }); }
+});
+
+app.get('/api/settings/tuning/history', requireAuth, (req, res) => {
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+  if (!db) return res.json({ history: [] });
+  const rows = db.prepare(`SELECT id,ts,component,event,settingsJson,diffJson
+    FROM tuning_history ORDER BY id DESC LIMIT ?`).all(limit).map(row => ({
+      id: row.id, ts: row.ts, component: row.component, event: row.event,
+      settings: JSON.parse(row.settingsJson), diff: JSON.parse(row.diffJson),
+    }));
+  res.json({ history: rows });
+});
+
 // ── Auth routes ───────────────────────────────────────────────────────────────
 app.post('/api/login', loginLimiter, (req, res) => {
   const { username, password, totp } = req.body;
@@ -3178,8 +3231,10 @@ function collectXrayTuningFacts() {
 
 app.get('/api/settings/vless/tuning/recommendation', requireAuth, (_req, res) => {
   const facts = collectXrayTuningFacts();
+  const recommendation = recommendXrayTuning(facts);
+  const diff = settingsDiff(currentTuning('xray'), recommendation.settings);
   res.setHeader('Cache-Control', 'no-store');
-  res.json({ facts, ...recommendXrayTuning(facts) });
+  res.json({ facts, ...recommendation, diff });
 });
 
 app.post('/api/settings/vless/tuning', requireAuth, (req, res) => {
@@ -3191,6 +3246,7 @@ app.post('/api/settings/vless/tuning', requireAuth, (req, res) => {
   const available = collectXrayTuningFacts().congestionControls;
   if (tuning.tcpCongestion && !available.includes(tuning.tcpCongestion))
     return res.status(400).json({ error: `TCP congestion control ${tuning.tcpCongestion} is unavailable` });
+  const diff = settingsDiff(currentTuning('xray'), tuning);
   const previous = cfg.xrayTuning;
   cfg.xrayTuning = tuning;
   try { saveConfig(); }
@@ -3201,6 +3257,7 @@ app.post('/api/settings/vless/tuning', requireAuth, (req, res) => {
     try { saveConfig(); } catch {}
     return res.status(409).json({ error: result.error, rolledBack: result.rolledBack });
   }
+  recordTuning('xray', 'applied', tuning, diff);
   return res.json({ ok: true, tuning, xrayRestarted: result.changed === true,
     otherServicesRestarted: false });
 });
@@ -3218,14 +3275,17 @@ function collectCaddyTuningFacts() {
 
 app.get('/api/settings/naive/tuning/recommendation', requireAuth, (_req, res) => {
   const facts = collectCaddyTuningFacts();
+  const recommendation = recommendCaddyTuning(facts);
+  const diff = settingsDiff(currentTuning('naive'), recommendation.settings);
   res.setHeader('Cache-Control', 'no-store');
-  res.json({ facts, ...recommendCaddyTuning(facts) });
+  res.json({ facts, ...recommendation, diff });
 });
 
 app.post('/api/settings/naive/tuning', requireAuth, (req, res) => {
   let tuning;
   try { tuning = normalizeCaddyTuning({ ...(req.body || {}), enabled: true }); }
   catch (error) { return res.status(400).json({ error: error.message }); }
+  const diff = settingsDiff(currentTuning('naive'), tuning);
   const previous = cfg.caddyTuning;
   cfg.caddyTuning = tuning;
   if (!saveConfig()) {
@@ -3238,6 +3298,7 @@ app.post('/api/settings/naive/tuning', requireAuth, (req, res) => {
     try { saveConfig(); } catch {}
     return res.status(409).json({ error: result.error, rolledBack: result.rolledBack });
   }
+  recordTuning('naive', 'applied', tuning, diff);
   return res.json({ ok: true, tuning, caddyReloaded: true, otherServicesRestarted: false });
 });
 
@@ -3305,8 +3366,10 @@ app.get('/api/settings/hy2', requireAuth, (req, res) => {
 
 app.get('/api/settings/hy2/tuning/recommendation', requireAuth, (_req, res) => {
   const facts = collectXrayTuningFacts();
+  const recommendation = recommendHy2Tuning(facts);
+  const diff = settingsDiff(currentTuning('hy2'), recommendation.settings);
   res.setHeader('Cache-Control', 'no-store');
-  res.json({ facts, ...recommendHy2Tuning(facts) });
+  res.json({ facts, ...recommendation, diff });
 });
 
 app.post('/api/settings/hy2/tuning', requireAuth, (req, res) => {
@@ -3317,6 +3380,7 @@ app.post('/api/settings/hy2/tuning', requireAuth, (req, res) => {
     tuning = normalizeHy2Tuning({ ...(req.body || {}), enabled: true });
     candidate = spliceHy2Tuning(fs.readFileSync(HY2_CONFIG, 'utf8'), tuning);
   } catch (error) { return res.status(400).json({ error: error.message }); }
+  const diff = settingsDiff(currentTuning('hy2'), tuning);
   const previous = cfg.hy2Tuning;
   cfg.hy2Tuning = tuning;
   try { saveConfig(); }
@@ -3332,6 +3396,7 @@ app.post('/api/settings/hy2/tuning', requireAuth, (req, res) => {
     try { saveConfig(); } catch {}
     return res.status(409).json({ error: result.error, rolledBack: result.rolledBack });
   }
+  recordTuning('hy2', 'applied', tuning, diff);
   return res.json({ ok: true, tuning, hysteriaRestarted: result.changed === true,
     otherServicesRestarted: false });
 });
@@ -3470,14 +3535,17 @@ function collectMieruTuningFacts() {
 
 app.get('/api/settings/mieru/tuning/recommendation', requireAuth, (_req, res) => {
   const facts = collectMieruTuningFacts();
+  const recommendation = recommendMieruTuning(facts);
+  const diff = settingsDiff(currentTuning('mieru'), recommendation.settings);
   res.setHeader('Cache-Control', 'no-store');
-  res.json({ facts, ...recommendMieruTuning(facts) });
+  res.json({ facts, ...recommendation, diff });
 });
 
 app.post('/api/settings/mieru/tuning', requireAuth, (req, res) => {
   let tuning;
   try { tuning = normalizeMieruTuning({ ...(req.body || {}), enabled: true }); }
   catch (error) { return res.status(400).json({ error: error.message }); }
+  const diff = settingsDiff(currentTuning('mieru'), tuning);
   const previous = { tuning: cfg.mieruTuning, mtu: cfg.mtu,
     udpEnabled: cfg.udpEnabled, trafficPattern: cfg.trafficPattern };
   cfg.mieruTuning = tuning;
@@ -3502,6 +3570,7 @@ app.post('/api/settings/mieru/tuning', requireAuth, (req, res) => {
     const action = cfg.udpEnabled ? '' : 'delete';
     ufwMieruRule(action, cfg.mieruPortStart, cfg.mieruPortEnd, 'udp', cfg.udpEnabled ? 'Mieru UDP' : '');
   } catch {}
+  recordTuning('mieru', 'applied', tuning, diff);
   return res.json({ ok: true, tuning, mieruRestarted: true, otherServicesRestarted: false });
 });
 

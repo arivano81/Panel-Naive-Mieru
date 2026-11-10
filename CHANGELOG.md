@@ -29,6 +29,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Re-ran the production audit on 10 November 2026 and documented the increased reachable
   findings without adding broad VEX exclusions; the red upstream blocker remains explicit.
+- Updated Caddy/Xray artifacts reduce their binary findings from 87/74 to 11/2 and their
+  source-reachable findings from 49/28 to zero; remaining findings still fail the gate.
 
 ## [v1.18.1] - 2026-11-10
 

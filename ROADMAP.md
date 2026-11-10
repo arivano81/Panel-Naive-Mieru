@@ -489,7 +489,9 @@ L3 не включается, пока не будут готовы изолир
   также закрепляет полный upstream commit, а второй source-mode проход строит
   call graph всех Go modules для обоснованного VEX. Контрольный запуск 10 ноября
   2026 года повторно подтвердил блокер; artifact теперь получает автоматическую
-  Markdown/JSON-сводку уникальных advisory без их подавления;
+  Markdown/JSON-сводку уникальных advisory без их подавления. После перехода на Caddy
+  `v2.11.7-naive2` и Xray `v26.11.9` source findings этих двух компонентов стали нулевыми,
+  а binary findings сократились до 11 и 2 соответственно;
 - [ ] собственные воспроизводимые security-сборки Caddy, Mieru, Hysteria2,
   Xray, wgcf и OpenFlux перенесены в ветку 2.0/3.0. Линейка 1.x использует
   последние доступные checksum-pinned upstream assets; красный audit gate

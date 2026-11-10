@@ -84,17 +84,17 @@ security-сборки запланированы для 2.0/3.0.
 
 ### Контрольный аудит 10 ноября 2026
 
-Ручной production-запуск [№ 42784099162](https://github.com/arivano81/Panel-Naive-Mieru/actions/runs/42784099162)
-проверил точные артефакты текущего manifest. Обновившаяся Go vulnerability database увеличила
-число известных достижимых advisory; поэтому gate обоснованно остался красным:
+Production-запуск [№ 42789108590](https://github.com/arivano81/Panel-Naive-Mieru/actions/runs/42789108590)
+проверил точные артефакты текущего manifest после обновления Caddy и Xray. Число findings
+существенно уменьшилось, но gate обоснованно остался красным, пока binary advisory не закрыты:
 
 | Компонент | Версия | Go toolchain | Binary advisory | Source-reachable advisory |
 |---|---:|---:|---:|---:|
-| Caddy forwardproxy-naive | v2.11.2-naive | go1.25.9 | 87 | 49 |
+| Caddy forwardproxy-naive | v2.11.7-naive2 | go1.26.9 | 11 | 0 |
 | Mita | 3.38.0 | go1.25.14 | 56 | 23 |
 | Mieru client | 3.38.0 | go1.25.14 | 56 | 23 (общий scan с Mita) |
 | Hysteria2 | app/v2.12.3 | go1.26.8 | 23 | 20 |
-| Xray-core | v26.3.27 | go1.26.1 | 74 | 28 |
+| Xray-core | v26.11.9 | go1.27.3 | 2 | 0 |
 | wgcf | 2.3.0 | go1.27.0 | 17 | 18 |
 | OpenFlux | 0.0.5 | go1.26.4 | 43 | 18 |
 
@@ -102,10 +102,10 @@ security-сборки запланированы для 2.0/3.0.
 между binary и source ожидаема: binary mode видит скомпилированные символы, source mode строит
 call graph отдельных Go modules. Ни один результат не получил автоматического VEX.
 
-OpenFlux v0.1.0 не принят как замена: реальный зашифрованный data-plane canary ранее не провёл
-трафик. Для остальных компонентов простого перехода на более новый официальный release сейчас
-нет. Красный audit намеренно сохранён как release blocker; allowlist по количеству или общая
-маска `GO-*` не добавляются.
+Обновление сняло все source-reachable findings Caddy и Xray и сократило их binary findings
+соответственно с 87 до 11 и с 74 до 2. OpenFlux v0.1.0 не принят как замена: реальный
+зашифрованный data-plane canary ранее не провёл трафик. Красный audit намеренно сохранён как
+release blocker; allowlist по количеству или общая маска `GO-*` не добавляются.
 
 ## Откат
 

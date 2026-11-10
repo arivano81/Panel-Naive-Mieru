@@ -773,7 +773,7 @@ unset PANEL_GITHUB_TOKEN
 [docs/supply-chain.md](docs/supply-chain.md).
 
 > **Текущий security gate:** проверка exact Go-бинарников обнаруживает известные уязвимые
-> символы даже в последних доступных upstream-релизах Caddy, Mieru, Hysteria2, Xray и wgcf;
+> символы даже в закреплённых upstream-релизах Caddy, Mieru, Hysteria2, Xray и wgcf;
 > OpenFlux 0.0.5 также не проходит gate, а 0.1.0 отклонён data-plane canary. Это не скрыто
 > allowlist-ом: подробности и границы binary-mode анализа приведены в
 > [docs/supply-chain.md](docs/supply-chain.md). До закрытия findings сборку нельзя считать

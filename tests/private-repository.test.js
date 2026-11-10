@@ -83,6 +83,9 @@ ok(networkDiagnostics.status === 0, 'DNS and TLS diagnostics regression suite pa
 const clientCompatibility = spawnSync(process.execPath, [path.join(__dirname, 'client-compatibility.test.js')],
   { stdio: 'inherit' });
 ok(clientCompatibility.status === 0, 'client compatibility matrix regression suite passes');
+const readmeParity = spawnSync(process.execPath, [path.join(__dirname, 'readme-parity.test.js')],
+  { stdio: 'inherit' });
+ok(readmeParity.status === 0, 'bilingual README feature parity regression suite passes');
 const operatorMessages = spawnSync(process.execPath, [path.join(__dirname, 'operator-messages.test.js')],
   { stdio: 'inherit' });
 ok(operatorMessages.status === 0, 'operator-friendly result message regression suite passes');

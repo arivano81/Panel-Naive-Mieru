@@ -117,6 +117,109 @@ sudo bash update.sh --expose panel.example.com
 # TLS and HTTP Basic Auth are handled by caddy-naive.
 ```
 
+Return to SSH-only access with `sudo bash update.sh --ssh-only`. Public mode always keeps
+the panel process bound to loopback; Caddy exposes only the secret path behind TLS and HTTP
+Basic Auth, while the domain root serves a neutral stub.
+
+---
+
+## 🧭 Panel Operations Guide
+
+### First login and administrator security
+
+Read `/root/vertaflux-install-report.txt` for the generated address and credentials. The first-run
+wizard shows the VPN, panel, and subscription domains and reminds you to configure TOTP and an
+encrypted backup. **Settings → Two-factor authentication** accepts any standard TOTP app. A secret
+is activated only after the first valid code; disabling it requires the current password and code.
+
+Every authenticated mutation is recorded in **Logs → Audit** without request bodies, passwords,
+tokens, or query strings. Login, subscriptions, federation, backup secrets, and OpenFlux secret
+exports have separate rate limits. Sessions rotate after login and password changes, and all
+browser mutations carry a session-bound CSRF token.
+
+### Server settings and adaptive tuning
+
+Check the primary VPN domain, Naive port, Mieru range, panel domain, subscription URL, and server
+label in **Settings**. A domain or port change requires newly downloaded client profiles.
+
+NaiveProxy/Caddy, Mieru, Hysteria2, and Xray use one safe tuning workflow:
+
+`measure → recommend → preview diff → confirm → validate → apply one service → health check → rollback`
+
+Recommendations are editable and stored in a bounded, secret-free history. Applying one protocol
+does not restart unrelated VPN services. Hysteria2 remains opt-in and is installed from Settings;
+existing users receive it only when the administrator enables the protocol for them.
+
+### VLESS REALITY and XHTTP
+
+VLESS is an optional Xray component on its own port. Install it from **Settings → VLESS / Xray**,
+then enable VLESS per user. Each user receives an independent UUID; the REALITY private key never
+leaves the server. The production REALITY target must be the server's own primary domain, whose
+local certificate is checked before activation—popular third-party camouflage targets are rejected.
+
+XHTTP is a separate opt-in profile: Caddy terminates public TLS on a secret path and forwards h2c
+to a loopback-only Xray inbound. REALITY and XHTTP links are generated separately. Configuration
+changes validate candidates and roll both Caddy and Xray back together on failure.
+
+For an emergency REALITY target correction without touching NaiveProxy, run:
+
+```bash
+bash panel/scripts/reconfigure_xray_reality.sh --check <primary-domain>
+bash panel/scripts/reconfigure_xray_reality.sh <primary-domain>
+```
+
+The script preserves keys and UUIDs, restarts only Xray, and verifies that the Caddy/Naive PID did
+not change.
+
+### Experimental OpenFlux
+
+OpenFlux is deliberately isolated from shared users, subscriptions, Caddy, Mieru, Hysteria2, and
+Xray. Installation does not create a profile, open a port, or start a service. Each explicit profile
+has its own key, port, hardened systemd unit, firewall rule, and root-only client bundle. Use the
+separate **OpenFlux Experimental** page; key rotation invalidates the previous bundle. It is not a
+stable replacement for the primary protocols.
+
+### Users and client delivery
+
+Create a user, choose only the protocols installed on the server, then use **Config** to export a
+Naive link, Mieru JSON/link, Hysteria2 URI, VLESS REALITY/XHTTP URI, universal sing-box JSON, QR,
+or one smart subscription URL. Expiry and quota suspension apply to all managed protocols without
+deleting the user. The **Clients** page distinguishes real E2E tunnel evidence from format-only and
+experimental compatibility.
+
+### Monitoring, diagnostics, and federation
+
+The dashboard and Monitoring page report service state, ports, traffic, and quotas. **Diagnostics**
+is read-only and includes service/config health, time synchronization, public A/AAAA records,
+server-IP matching, and TLS certificate identity/lifetime for the VPN, panel, and subscription
+domains. The downloadable report uses a strict allowlist and contains no credentials or raw logs.
+
+Federation can provision or revoke the same email across explicitly configured nodes. Every node
+has its own bearer token and local passwords; one node never receives another node's password.
+Peer failures are isolated and reported per node instead of breaking the local subscription.
+
+### Maintenance, backup, restore, and access recovery
+
+Enable **Settings → Maintenance mode** before risky work. It locks configuration and federation
+mutations after password confirmation but leaves VPN traffic, status, diagnostics, encrypted backup
+export, logout, and the recovery toggle available.
+
+Before domain, port, or VPN identity changes, the panel writes a validated portable snapshot to
+`/etc/vertaflux/backups/operations/` (`0700` directory, `0600` files, last 20 retained). If the
+snapshot cannot be written, the mutation does not start. Manual exports use AES-256-GCM with scrypt
+and require both the administrator password and a separate backup passphrase. A clean installation
+can inspect and restore the encrypted file while either preserving backup network identity or the
+current server's domains and ports.
+
+If panel credentials or TOTP are lost, run:
+
+```bash
+sudo bash /opt/panel-naive-mieru/scripts/recover_access.sh
+```
+
+The root-only recovery flow resets the panel password and disables the lost TOTP factor without
+changing VPN user credentials.
+
 ---
 
 ## 📁 Important Paths
@@ -126,7 +229,8 @@ sudo bash update.sh --expose panel.example.com
 | `/etc/vertaflux/config.json` | Panel configuration |
 | `/etc/vertaflux/version` | Installed version |
 | `/etc/vertaflux/backups/` | Timestamped backups (last 10 kept) |
-| `/etc/caddy-naive/Caddyfile` | Caddy forwardproxy config (basicauth users + probe_resistance) |
+| `/etc/vertaflux/backups/operations/` | Automatic pre-change portable snapshots (last 20) |
+| `/etc/caddy-naive/Caddyfile` | Caddy forwardproxy config (`basic_auth` users + probe resistance) |
 | `/etc/caddy-naive/probe_secret` | Probe resistance secret token |
 | `/var/www/fake-site/` | Fake site (shown to unrecognised clients) |
 | `/var/log/caddy-naive/access.log` | caddy-naive access log |
@@ -134,6 +238,8 @@ sudo bash update.sh --expose panel.example.com
 | `/var/lib/vertaflux/db.sqlite` | SQLite user database |
 | `/opt/panel-naive-mieru/` | Panel application files |
 | `/usr/local/bin/caddy-naive` | caddy-forwardproxy-naive binary |
+| `/etc/xray/config.json` | Managed Xray/VLESS configuration (when installed) |
+| `/etc/openflux/` | Isolated experimental OpenFlux state (when installed) |
 
 Servers upgraded from older releases retain compatibility symlinks for rollback. A clean
 installation creates only the canonical VertaFlux paths.
@@ -209,7 +315,8 @@ Download the **Mieru JSON** or **Universal Config** from the Users page.
 | [Sing-box](https://github.com/SagerNet/sing-box/releases) | Android / Windows / Linux / macOS |
 
 ### Hysteria2
-Installed **out of the box** together with Naive + Mieru and works as a third shared-pool protocol. Link format: `hysteria2://username:password@domain:443?sni=domain&insecure=0#username`.
+Installed explicitly by the administrator from **Settings** and then enabled for selected users as
+a third shared-pool protocol. Link format: `hysteria2://username:password@domain:443?sni=domain&insecure=0#username`.
 
 | Client | Platform |
 |--------|----------|
@@ -314,12 +421,26 @@ Entry: hysteria-server ── iptables ──▶ redsocks ──▶ mieru-client
 bash update.sh                   # Interactive update
 bash update.sh --dry-run         # Preview changes (no writes)
 bash update.sh --force -y        # Force update, non-interactive
+bash update.sh --panel-only -y   # Update UI/API and PM2; do not restart VPN services
 bash update.sh --status          # Full health report
+bash update.sh --doctor          # Read-only diagnostics with monitoring exit status
+bash update.sh --rollback        # Restore the latest validated update snapshot
+bash update.sh --rollback <ID>   # Restore a snapshot selected from --status
 bash update.sh --repair          # Restore broken configs from backup
 bash update.sh --expose <domain> # Switch to public panel mode
 bash update.sh --ssh-only        # Revert to SSH-only mode
 bash update.sh --help            # Show help
 ```
+
+For this private repository, provide a fine-grained `PANEL_GITHUB_TOKEN` with **Contents: Read**
+only. The token is not printed or persisted. `--panel-only` verifies that every proxy PID remains
+unchanged before reporting success. Binary upgrades are performed one component at a time and only
+after confirming that the selected VPN service may be interrupted; unrelated services are never an
+implicit part of that permission.
+
+The panel's **Settings → About** update indicator is read-only: it compares `VERSION` with `main`,
+caches the result for six hours, and never installs anything automatically. Release archives,
+checksums, SPDX SBOM, and Sigstore bundles are documented in [docs/supply-chain.md](docs/supply-chain.md).
 
 The **Diagnostics → DNS and TLS** section checks the public A/AAAA records for the VPN,
 panel, and subscription domains, verifies that they include the configured server IP,
@@ -347,6 +468,10 @@ sudo bash uninstall.sh
 - Temporary config files deleted with `shred -u`
 - Login rate limiting: 20 req / 15 min
 - Session cookies are `httpOnly`
+- Optional TOTP, session rotation, CSRF protection, and bounded administrator audit log
+- Encrypted backup export uses AES-256-GCM with scrypt and password re-authentication
+- Maintenance mode fails closed for configuration mutations without stopping VPN traffic
+- Sensitive runtime/install logs redact passwords, tokens, UUIDs, private keys, and subscription URLs
 
 ---
 

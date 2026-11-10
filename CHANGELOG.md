@@ -9,6 +9,11 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Transactional Caddy/NaiveProxy binary updater that validates the live Caddyfile and
+  `forward_proxy` module, preserves the configuration, and rolls back failed activation.
+
 ## [v1.19.0] - 2026-11-10
 
 ### Added

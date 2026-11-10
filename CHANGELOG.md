@@ -23,6 +23,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   mutations fail closed if the snapshot cannot be persisted.
 - Read-only DNS and TLS diagnostics for the VPN, panel and subscription domains, including
   server-IP matching, certificate identity validation and remaining lifetime.
+- Client compatibility matrix in the panel with explicit end-to-end, format-only and
+  experimental evidence levels instead of treating every import path as equally verified.
 
 ### Changed
 

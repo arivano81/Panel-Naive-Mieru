@@ -165,6 +165,7 @@ function buildTitles() {
     federation:  t('nav.federation'),
     monitoring:  t('nav.monitoring'),
     logs:        t('nav.logs'),
+    clients:     t('nav.clients'),
     diagnostics: t('nav.diagnostics'),
   };
 }

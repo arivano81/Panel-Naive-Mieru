@@ -131,6 +131,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
         <span data-i18n="nav.logs">Logs</span>
       </a>
+      <a href="#" class="nav-item" data-page="clients">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="18" x2="15" y2="18"/></svg>
+        <span data-i18n="nav.clients">Clients</span>
+      </a>
       <a href="#" class="nav-item" data-page="diagnostics">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
         <span data-i18n="nav.diagnostics">Diagnostics</span>
@@ -1317,6 +1321,44 @@
           </button>
         </div>
         <pre class="log-viewer" id="log-content" data-i18n="logs.selectLog">Select a log above…</pre>
+      </div>
+    </section>
+
+    <!-- ── CLIENT COMPATIBILITY ─────────────────────────────── -->
+    <section id="page-clients" class="content-page">
+      <div class="page-header"><h3 data-i18n="clients.title">Client compatibility</h3></div>
+      <div class="card mb-3">
+        <div class="card-body">
+          <p class="card-desc" data-i18n="clients.intro">Use the smart subscription when possible. Verification levels distinguish a real tunnel canary from format-only checks.</p>
+          <div class="info-list">
+            <div class="info-row"><span data-i18n="clients.tunnelLevel">Tunnel verified</span><span class="badge badge-green">E2E</span></div>
+            <div class="info-row"><span data-i18n="clients.formatLevel">Import format verified</span><span class="badge badge-blue">FORMAT</span></div>
+            <div class="info-row"><span data-i18n="clients.experimentalLevel">Separate experimental profile</span><span class="badge badge-yellow">EXPERIMENTAL</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body table-wrap">
+          <table class="data-table" id="client-compatibility-table">
+            <thead><tr>
+              <th data-i18n="clients.application">Application</th>
+              <th data-i18n="clients.import">Import</th>
+              <th data-i18n="clients.protocols">Panel protocols</th>
+              <th data-i18n="clients.level">Verification</th>
+              <th data-i18n="clients.notes">Notes</th>
+            </tr></thead>
+            <tbody>
+              <tr><td>Karing</td><td data-i18n="clients.smartSingbox">Smart sub-link → sing-box JSON</td><td>Naive · Mieru · Hy2 · VLESS</td><td><span class="badge badge-green">E2E</span> <span class="badge badge-blue">FORMAT</span></td><td data-i18n="clients.karingNote">Naive, Mieru and Hy2 were device-tested. VLESS is emitted, but REALITY/XHTTP must be re-tested on the target version.</td></tr>
+              <tr><td>Shadowrocket</td><td data-i18n="clients.smartBase64">Smart sub-link → base64 URI list</td><td>Naive · Mieru · Hy2 · VLESS</td><td><span class="badge badge-green">E2E</span> <span class="badge badge-blue">FORMAT</span></td><td data-i18n="clients.shadowrocketNote">Naive, Mieru and Hy2 were device-tested. VLESS is emitted, but REALITY/XHTTP must be re-tested on the target version.</td></tr>
+              <tr><td>sing-box</td><td data-i18n="clients.universalJson">Universal JSON</td><td>Naive · Mieru · Hy2 · VLESS</td><td><span class="badge badge-green">E2E</span></td><td data-i18n="clients.singboxNote">Official CLI validates the generated configuration in CI.</td></tr>
+              <tr><td>NekoBox · Exclave · Throne</td><td data-i18n="clients.smartSingbox">Smart sub-link → sing-box JSON</td><td>Naive · Mieru · Hy2 · VLESS</td><td><span class="badge badge-blue">FORMAT</span></td><td data-i18n="clients.familyNote">User-Agent routing and JSON generation are tested; run a connection check on the target device.</td></tr>
+              <tr><td>Xray</td><td>VLESS URI</td><td>VLESS REALITY</td><td><span class="badge badge-green">E2E</span></td><td data-i18n="clients.xrayNote">Official client is used by the Debian 13 REALITY canary.</td></tr>
+              <tr><td>Mihomo</td><td>VLESS URI</td><td>VLESS XHTTP</td><td><span class="badge badge-green">E2E</span></td><td data-i18n="clients.mihomoNote">XHTTP transport is covered by an independent tunnel canary.</td></tr>
+              <tr><td>naiveproxy · Hysteria CLI</td><td data-i18n="clients.directLink">Protocol link / manual config</td><td>Naive · Hy2</td><td><span class="badge badge-green">E2E</span></td><td data-i18n="clients.cliNote">Use for protocol-specific troubleshooting and canary checks.</td></tr>
+              <tr><td>OpenFlux</td><td data-i18n="clients.serverBundle">Root-only client bundle</td><td>OpenFlux L4/Direct</td><td><span class="badge badge-yellow">EXPERIMENTAL</span></td><td data-i18n="clients.openfluxNote">Not included in shared users or smart subscriptions.</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
 

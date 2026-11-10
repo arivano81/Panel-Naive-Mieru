@@ -183,6 +183,12 @@ sudo bash uninstall.sh     # Full removal
 
 ## 📱 Client Applications
 
+The panel now has a dedicated **Clients** page with an evidence-based compatibility matrix.
+**E2E** means a real tunnel test, **FORMAT** means subscription routing and configuration shape
+were checked without guaranteeing a connection in every app release, and **EXPERIMENTAL** is a
+separate profile outside the shared subscription. Karing, NekoBox, Exclave, and Throne receive
+sing-box JSON; Shadowrocket receives base64 URIs. OpenFlux remains a separate root-only bundle.
+
 ### NaiveProxy
 Link format: `naive+https://username:password@domain:443`
 

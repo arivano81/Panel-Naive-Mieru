@@ -13,6 +13,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Transactional Caddy/NaiveProxy binary updater that validates the live Caddyfile and
   `forward_proxy` module, preserves the configuration, and rolls back failed activation.
+- Read-only panel update notification that checks the private repository only when a
+  process-scoped read token is available; it never downloads or installs an update.
 
 ### Changed
 

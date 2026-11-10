@@ -53,6 +53,9 @@ ok(migrations.status === 0, 'explicit SQLite migration regression suite passes')
 const configMigrations = spawnSync(process.execPath, [path.join(__dirname, 'config-migrations.test.js')],
   { stdio: 'inherit' });
 ok(configMigrations.status === 0, 'explicit config migration regression suite passes');
+const updateCheck = spawnSync(process.execPath, [path.join(__dirname, 'update-check.test.js')],
+  { stdio: 'inherit' });
+ok(updateCheck.status === 0, 'read-only update availability regression suite passes');
 const brand = spawnSync(process.execPath, [path.join(__dirname, 'vertaflux-brand.test.js')],
   { stdio: 'inherit' });
 ok(brand.status === 0, 'VertaFlux identity regression suite passes');

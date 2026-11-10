@@ -443,6 +443,7 @@ function enterApp() {
   // three displays (sidebar / topbar / settings), so it's correct even if the
   // user never opens the dashboard tab.
   syncVersionDisplay();
+  checkPanelUpdate();
 
   loadConfig().then(() => {
     navigateTo('dashboard');
@@ -463,6 +464,18 @@ async function syncVersionDisplay() {
       if (el) el.textContent = verStr;
     });
   } catch (_) { /* keep hardcoded fallback shown in index.html */ }
+}
+
+async function checkPanelUpdate() {
+  const target = document.getElementById('update-status');
+  if (!target) return;
+  try {
+    const result = await api('GET', '/api/update-check');
+    if (result.updateAvailable) {
+      target.innerHTML = `<a href="https://github.com/arivano81/Panel-Naive-Mieru" target="_blank" rel="noopener">${esc(t('settings.updateAvailable', { version: result.latestVersion }))}</a>`;
+    } else if (result.checked) target.textContent = t('settings.upToDate');
+    else target.textContent = t(`settings.updateCheck_${result.reason === 'token-required' ? 'token' : 'failed'}`);
+  } catch { target.textContent = t('settings.updateCheck_failed'); }
 }
 
 async function logout() {

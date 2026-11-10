@@ -41,6 +41,7 @@ const si             = require('systeminformation');
 const crypto         = require('crypto');   // Bug 100: module-level require so generateSafePassword() has a real Node crypto (not Web-Crypto globalThis.crypto, which lacks randomInt)
 const os             = require('os');
 const { readPanelVersion: resolvePanelVersion } = require('./version');
+const { createUpdateChecker } = require('./updateCheck');
 const { applyFileTransaction } = require('./fileTransaction');
 const { applyMultiFileTransaction } = require('./multiFileTransaction');
 const { runDatabaseMigrations } = require('./databaseMigrations');
@@ -194,6 +195,7 @@ const resolvedCaddyBin  = cfg.caddyBin      || CADDY_BIN;
 const resolvedCaddyCfgDir = cfg.caddyConfigDir || CADDY_CONFIG_DIR;
 const resolvedFakeSiteDir = cfg.fakeSiteDir  || FAKE_SITE_DIR;
 const openFluxService = createOpenFluxService();
+const checkForPanelUpdate = createUpdateChecker();
 const ADMIN_AUDIT_LIMIT = 10000;
 
 // ── SQLite (better-sqlite3) ───────────────────────────────────────────────────
@@ -2003,6 +2005,10 @@ function requireAuth(req, res, next) {
 registerOpenFluxRoutes(app, requireAuth, openFluxService,
   password => !!(cfg.adminPassHash && bcrypt.compareSync(password, cfg.adminPassHash)),
   openFluxSecretLimiter);
+
+app.get('/api/update-check', requireAuth, async (_req, res) => {
+  res.json(await checkForPanelUpdate(readPanelVersion()));
+});
 
 app.post('/api/settings/tuning/preview', requireAuth, (req, res) => {
   try {

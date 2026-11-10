@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PANEL_CONFIG="/etc/rixxx-panel/config.json"
+PANEL_CONFIG="/etc/vertaflux/config.json"
 XRAY_CONFIG="/etc/xray/config.json"
 XRAY_PUBLIC="/etc/xray/reality-public.json"
 XRAY_BIN="/usr/local/bin/xray"

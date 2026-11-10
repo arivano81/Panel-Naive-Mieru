@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 umask 077
 
-CONFIG="/etc/rixxx-panel/config.json"
+CONFIG="/etc/vertaflux/config.json"
 APP_DIR="/opt/panel-naive-mieru"
 REPORT="/root/vertaflux-install-report.txt"
 
@@ -37,14 +37,14 @@ BASIC_PASS="${BASIC_PASS:-$(random_password)}"
 BACKUP="${CONFIG}.access-backup-$(date +%Y%m%d-%H%M%S)"
 cp -a "$CONFIG" "$BACKUP"
 
-RIXXX_CONFIG="$CONFIG" RIXXX_APP="$APP_DIR" RIXXX_ADMIN_USER="$ADMIN_USER" RIXXX_ADMIN_PASS="$ADMIN_PASS" \
+VERTAFLUX_CONFIG="$CONFIG" VERTAFLUX_APP="$APP_DIR" VERTAFLUX_ADMIN_USER="$ADMIN_USER" VERTAFLUX_ADMIN_PASS="$ADMIN_PASS" \
 node <<'NODE'
 const fs = require('fs');
-const configPath = process.env.RIXXX_CONFIG;
-const bcrypt = require(process.env.RIXXX_APP + '/node_modules/bcryptjs');
+const configPath = process.env.VERTAFLUX_CONFIG;
+const bcrypt = require(process.env.VERTAFLUX_APP + '/node_modules/bcryptjs');
 const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-cfg.adminUser = process.env.RIXXX_ADMIN_USER;
-cfg.adminPassHash = bcrypt.hashSync(process.env.RIXXX_ADMIN_PASS, 12);
+cfg.adminUser = process.env.VERTAFLUX_ADMIN_USER;
+cfg.adminPassHash = bcrypt.hashSync(process.env.VERTAFLUX_ADMIN_PASS, 12);
 cfg.totpEnabled = false;
 cfg.totpSecret = '';
 cfg.totpLastCounter = -1;
@@ -78,7 +78,7 @@ if [[ -n "$PANEL_DOMAIN" && -n "$WEB_BASE_PATH" ]]; then
     http://127.0.0.1:3000/api/panel/external-access >/dev/null
 fi
 
-VERSION="$(cat /etc/rixxx-panel/version 2>/dev/null | sed -n 's/^panel_version=//p' | head -n1)"
+VERSION="$(cat /etc/vertaflux/version 2>/dev/null | sed -n 's/^panel_version=//p' | head -n1)"
 cat > "$REPORT" <<EOF
 VERTAFLUX ACCESS REPORT
 Generated:             $(date --iso-8601=seconds)

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # VertaFlux updater
-# Usage: bash update.sh [--dry-run] [--force] [--expose <domain>] [--ssh-only]
-#                       [--status] [--repair] [--help] [-y]
+# Usage: bash update.sh [--dry-run] [--force] [--panel-only] [--doctor]
+#                       [--rollback [backup-id]] [--status] [--repair] [--help] [-y]
 #
 # v1.2.4: Fixed Caddyfile template (bugs 23-40); uses caddyTemplate.js.
 #   - --repair calls /api/services/rebuild-all to regenerate Caddyfile
@@ -49,12 +49,12 @@ trap 'on_error $LINENO' ERR
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 PANEL_DIR="/opt/panel-naive-mieru"
-PANEL_CONFIG="/etc/rixxx-panel/config.json"
-VERSION_FILE="/etc/rixxx-panel/version"
-COMPONENT_REGISTRY="/etc/rixxx-panel/components.json"
-BACKUP_DIR="/etc/rixxx-panel/backups"
-DB_PATH="/var/lib/rixxx-panel/db.sqlite"
-MITA_STATE_FILE="/var/lib/rixxx-panel/mita-state.json"
+PANEL_CONFIG="/etc/vertaflux/config.json"
+VERSION_FILE="/etc/vertaflux/version"
+COMPONENT_REGISTRY="/etc/vertaflux/components.json"
+BACKUP_DIR="/etc/vertaflux/backups"
+DB_PATH="/var/lib/vertaflux/db.sqlite"
+MITA_STATE_FILE="/var/lib/vertaflux/mita-state.json"
 
 REPO_URL="https://github.com/arivano81/Panel-Naive-Mieru"
 # Bug 99: raw base for fetching single files (VERSION, update.sh) without git.
@@ -271,7 +271,7 @@ ensure_ipv4_preference() {
       || log_warn "Could not write /etc/gai.conf"
   fi
 
-  local sc=/etc/sysctl.d/99-rixxx-disable-ipv6.conf
+  local sc=/etc/sysctl.d/99-vertaflux-disable-ipv6.conf
   cat > "$sc" <<'SYSCTL'
 # Added by Panel Naive+Mieru (Bug 103): no working outbound IPv6 route → disable
 # IPv6 so mieru/mita stop routing AAAA traffic into a black hole. Remove this
@@ -289,7 +289,7 @@ SYSCTL
 }
 
 # Bug A (v1.3.1) / Bug 104 (v1.4.2): the panel UI shows cfg.version read from
-# config.json (/api/status → panel.version), NOT /etc/rixxx-panel/version.
+# config.json (/api/status → panel.version), not the version metadata file.
 # do_repair historically only restarted the process without bumping
 # config.json, so after `--repair` the UI/PM2 kept displaying a stale version
 # (e.g. 1.2.6 while 1.4.x is installed). Centralised here so do_update AND
@@ -1224,12 +1224,12 @@ migrate_warp_safety() {
 migrate_cascade_watchdog() {
   # Gate strictly on Variant-B actually being DEPLOYED on this box, not merely on
   # cascadeEnabled (which is also true for Variant-A native egress). The state
-  # file /var/lib/rixxx-panel/cascade-mieru.state is written ONLY by
+  # The cascade state file is written only by
   # `cascade_mieru.sh setup`, and the old watchdog binary is only present after a
   # Variant-B setup — either is proof the redsocks+mieru-client chain exists here.
   # This guarantees we never install a chain-probing watchdog on a host that
   # doesn't run the chain (which could spuriously restart unrelated services).
-  local state="/var/lib/rixxx-panel/cascade-mieru.state"
+  local state="/var/lib/vertaflux/cascade-mieru.state"
   local wd="/usr/local/bin/mieru-watchdog.sh"
   if [[ ! -f "$state" && ! -f "$wd" ]]; then
     return 0
@@ -1677,7 +1677,7 @@ update_panel() {
   mkdir -p "$PANEL_DIR"
   # Copy everything including dotfiles; cp -a preserves structure.
   # NOTE: this only touches $PANEL_DIR (/opt/...). The user DB
-  # (/var/lib/rixxx-panel/db.sqlite) and config (/etc/rixxx-panel/config.json)
+  # in the canonical VertaFlux data and configuration directories.
   # live OUTSIDE $PANEL_DIR and are never overwritten here → users are safe.
   cp -a "$src/." "$PANEL_DIR/"
 
@@ -2718,6 +2718,6 @@ main() {
   esac
 }
 
-if [[ "${RIXXX_UPDATE_LIBRARY_ONLY:-0}" != "1" ]]; then
+if [[ "${VERTAFLUX_UPDATE_LIBRARY_ONLY:-0}" != "1" ]]; then
   main "$@"
 fi

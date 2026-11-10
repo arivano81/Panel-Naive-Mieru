@@ -39,12 +39,12 @@ set -euo pipefail
 
 # ── Paths / constants ─────────────────────────────────────────────────────────
 MIERU_CLIENT_BIN="/usr/bin/mieru"
-MIERU_CLIENT_CONFIG="/var/lib/rixxx-panel/mieru-client-config.json"
+MIERU_CLIENT_CONFIG="/var/lib/vertaflux/mieru-client-config.json"
 MIERU_SERVICE="/etc/systemd/system/mieru.service"
 REDSOCKS_CONF="/etc/redsocks.conf"
 WATCHDOG_BIN="/usr/local/bin/mieru-watchdog.sh"
 CRON_FILE="/etc/cron.d/mieru-cascade-watchdog"
-STATE_FILE="/var/lib/rixxx-panel/cascade-mieru.state"
+STATE_FILE="/var/lib/vertaflux/cascade-mieru.state"
 
 SOCKS5_PORT=1080          # mieru-client local SOCKS5 listener (127.0.0.1 only)
 REDSOCKS_PORT=12345       # redsocks transparent redirector (127.0.0.1 only)

@@ -54,6 +54,13 @@ ok(fs.lstatSync(path.join(fixture, 'etc/rixxx-panel')).isSymbolicLink() &&
 result = run(fixture);
 ok(result.status === 0, 'migration is idempotent');
 
+const clean = fs.mkdtempSync(path.join(os.tmpdir(), 'vertaflux-storage-clean-'));
+result = run(clean);
+ok(result.status === 0 && fs.existsSync(path.join(clean, 'etc/vertaflux')) &&
+   fs.existsSync(path.join(clean, 'var/lib/vertaflux')), 'clean install creates canonical storage');
+ok(!fs.existsSync(path.join(clean, 'etc/rixxx-panel')) &&
+   !fs.existsSync(path.join(clean, 'var/lib/rixxx-panel')), 'clean install creates no legacy aliases');
+
 const conflict = fs.mkdtempSync(path.join(os.tmpdir(), 'vertaflux-storage-conflict-'));
 for (const dir of ['etc/rixxx-panel', 'etc/vertaflux', 'var/lib/rixxx-panel']) {
   fs.mkdirSync(path.join(conflict, dir), { recursive: true });

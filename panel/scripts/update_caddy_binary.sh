@@ -10,7 +10,7 @@ SHA256=$(read_pin CADDY_NAIVE_SHA256)
 BASE_VERSION=${VERSION%%-naive*}
 BIN=/usr/local/bin/caddy-naive
 CONFIG=/etc/caddy-naive/Caddyfile
-REGISTRY=/etc/rixxx-panel/components.json
+REGISTRY=/etc/vertaflux/components.json
 
 die() { echo "[CADDY UPDATE] ERROR: $*" >&2; exit 1; }
 [[ $EUID -eq 0 ]] || die 'run as root'

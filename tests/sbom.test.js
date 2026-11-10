@@ -91,7 +91,7 @@ try {
     'release artifacts receive a pinned keyless Sigstore signature and identity verification');
   ok(releaseWorkflow.includes('dist/SHA256SUMS') &&
      releaseWorkflow.includes('dist/Panel-Naive-Mieru-*.tar.gz') &&
-     releaseWorkflow.includes('dist/rixxx-panel-*.spdx.json') &&
+     releaseWorkflow.includes('dist/vertaflux-*.spdx.json') &&
      releaseWorkflow.includes('gh release upload "$GITHUB_REF_NAME" dist/*'),
     'archive, SBOM, checksum list and generated signature bundles are all published');
   ok(!/SIGSTORE_(?:PRIVATE|KEY)|COSIGN_(?:PRIVATE|KEY)|secrets\./.test(releaseWorkflow),

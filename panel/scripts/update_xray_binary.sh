@@ -10,7 +10,7 @@ SHA256=$(read_pin XRAY_SHA256)
 BIN=/usr/local/bin/xray
 CONFIG=/etc/xray/config.json
 PUBLIC=/etc/xray/reality-public.json
-REGISTRY=/etc/rixxx-panel/components.json
+REGISTRY=/etc/vertaflux/components.json
 
 die() { echo "[XRAY UPDATE] ERROR: $*" >&2; exit 1; }
 [[ $EUID -eq 0 ]] || die 'run as root'

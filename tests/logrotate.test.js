@@ -24,7 +24,7 @@ function ok(value, message) {
 
 console.log('Bounded file log rotation regression test');
 ok(script.includes('/var/log/panel-naive-mieru.log') &&
-   script.includes('/var/log/rixxx-panel-install.log') &&
+   script.includes('/var/log/vertaflux-install.log') &&
    script.includes('/var/log/cascade-watchdog.log'),
   'all panel-owned file logs share one explicit rotation policy');
 ok(script.includes('maxsize 10M') && script.includes('rotate 14') &&
@@ -38,14 +38,14 @@ ok(update.includes('bash "$PANEL_DIR/scripts/install_logrotate.sh"'),
   'updates repair or add the policy on existing servers');
 
 if (process.platform !== 'win32') {
-  const fixture = fs.mkdtempSync('/tmp/rixxx-logrotate-test-');
+  const fixture = fs.mkdtempSync('/tmp/vertaflux-logrotate-test-');
   const run = () => spawnSync('bash', ['panel/scripts/install_logrotate.sh'], {
     cwd: root,
-    env: { ...process.env, RIXXX_LOGROTATE_ROOT: fixture },
+    env: { ...process.env, VERTAFLUX_LOGROTATE_ROOT: fixture },
     encoding: 'utf8',
   });
   const first = run();
-  const target = path.join(fixture, 'etc/logrotate.d/rixxx-panel');
+  const target = path.join(fixture, 'etc/logrotate.d/vertaflux');
   const firstContent = fs.existsSync(target) ? fs.readFileSync(target, 'utf8') : '';
   const second = run();
   ok(first.status === 0 && second.status === 0 && fs.existsSync(target),

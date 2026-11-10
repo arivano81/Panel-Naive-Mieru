@@ -128,7 +128,7 @@ prepare() {
   (( port_start >= 1024 && port_start <= port_end && port_end <= 65535 )) || die 'invalid Exit port range'
   [[ "$expected_exit" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || die 'expected Exit egress must be an IPv4 literal'
   [[ ! -e "$STATE" && ! -e "$CLIENT_UNIT" && ! -e "$CLIENT_CONFIG" ]] || die 'existing canary state found; audit it before cleanup'
-  [[ ! -e /etc/systemd/system/mieru.service && ! -e /var/lib/rixxx-panel/cascade-mieru.state ]] \
+  [[ ! -e /etc/systemd/system/mieru.service && ! -e /var/lib/vertaflux/cascade-mieru.state ]] \
     || die 'Entry already has cascade state; use a disposable non-cascade baseline'
   ! iptables -t nat -S REDSOCKS >/dev/null 2>&1 || die 'existing REDSOCKS chain found'
   IFS= read -r exit_pass || [[ -n "$exit_pass" ]] || die 'read the Exit password from stdin'

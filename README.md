@@ -71,7 +71,7 @@ VertaFlux — самостоятельно поддерживаемая верс
 | 3 | Настройки сервера: смена портов, паттерны трафика, MTU, авто-обновление UFW |
 | 4 | Клиентские конфиги: Naive-ссылка, Mieru sing-box JSON, универсальный конфиг, QR-коды |
 | 5 | Мониторинг: WebSocket метрики в реальном времени, трафик, квоты, история снимков |
-| 6 | `update.sh`: `--dry-run`, `--force`, `--expose`, `--ssh-only`, `--status`, `--doctor`, `--rollback`, `--repair` |
+| 6 | `update.sh`: `--dry-run`, `--force`, `--panel-only`, `--expose`, `--ssh-only`, `--status`, `--doctor`, `--rollback`, `--repair` |
 | 7 | **Каскад / Relay** (v1.2.6): `client → Entry (RU) → Exit (EU) → internet` — Naive `upstream` + Mieru вариант B (mieru-client + redsocks + iptables), управляется из UI |
 | 8 | **Hysteria2 как дополнительный протокол** (v1.8.x): устанавливается из Settings по запросу администратора (`auth: userpass`, systemd, per-user трафик, каскад), после чего включается отдельно для нужных пользователей. |
 | 9 | **Одна «умная» Sub-ссылка** (v1.8.7–1.8.8): единая ссылка `/sub/:token` с авто-определением клиента по User-Agent. **Shadowrocket** получает base64-список URI (Naive → нативная HTTPS-схема, Mieru `mierus://`, Hy2 `hysteria2://`), **Karing** — sing-box JSON. Передаёт срок действия и трафик через заголовок `Subscription-Userinfo`. ✅ **Проверено на Karing и Shadowrocket.** |
@@ -502,7 +502,7 @@ sudo bash /opt/panel-naive-mieru/scripts/recover_access.sh
 | `/etc/caddy-naive/probe_secret` | Секрет защиты от зондирования |
 | `/var/www/fake-site/` | Фейковый сайт (показывается неопознанным клиентам) |
 | `/var/log/caddy-naive/access.log` | Лог доступа caddy-naive |
-| `/var/log/rixxx-panel-install.log` | Лог установки |
+| `/var/log/vertaflux-install.log` | Лог установки |
 | `/var/log/panel-naive-mieru.log` | Файловый лог панели |
 | `/var/log/cascade-watchdog.log` | Журнал автовосстановления каскада |
 | `/var/lib/vertaflux/mita-state.json` | JSON-файл Mieru (применяется через `mita apply config`) |
@@ -510,9 +510,9 @@ sudo bash /opt/panel-naive-mieru/scripts/recover_access.sh
 | `/opt/panel-naive-mieru/` | Файлы приложения панели |
 | `/usr/local/bin/caddy-naive` | Бинарный файл caddy-forwardproxy-naive |
 
-Пути `/etc/rixxx-panel` и `/var/lib/rixxx-panel` после обновления сохраняются как символические
-ссылки совместимости. Старые helper-скрипты и откат на предыдущую версию продолжают видеть те
-же данные, но основное хранилище уже использует имя VertaFlux.
+На серверах, обновлённых со старых выпусков, прежние каталоги сохраняются только как
+символические ссылки для совместимости и отката. Чистая установка создаёт исключительно
+каталоги VertaFlux.
 
 Файловые журналы панели, установщика и cascade-watchdog ротируются ежедневно
 или при достижении 10 MiB; хранится 14 сжатых поколений. Caddy использует собственную
@@ -738,8 +738,8 @@ read -rsp "GitHub token: " PANEL_GITHUB_TOKEN; echo
 export PANEL_GITHUB_TOKEN
 printf 'Authorization: Bearer %s\n' "$PANEL_GITHUB_TOKEN" | curl -fsSL -H @- \
   https://raw.githubusercontent.com/arivano81/Panel-Naive-Mieru/main/update.sh \
-  -o /tmp/rixxx-update.sh
-sudo --preserve-env=PANEL_GITHUB_TOKEN bash /tmp/rixxx-update.sh -y
+  -o /tmp/vertaflux-update.sh
+sudo --preserve-env=PANEL_GITHUB_TOKEN bash /tmp/vertaflux-update.sh -y
 unset PANEL_GITHUB_TOKEN
 ```
 
@@ -771,7 +771,7 @@ SQLite или конфигурации панели, а проверка лиш�
 ### Проверка состава релиза
 
 У каждого нового GitHub Release должны быть исходный архив, `SHA256SUMS`, SPDX-файл
-`rixxx-panel-<версия>.spdx.json` и Sigstore bundle `<имя>.sigstore.json` для каждого из этих
+`vertaflux-<версия>.spdx.json` и Sigstore bundle `<имя>.sigstore.json` для каждого из этих
 трёх файлов. SBOM перечисляет npm-зависимости и все загружаемые панелью бинарники с их
 архитектурами и контрольными суммами. Если файлов или подписей нет, tag не совпадает с
 `VERSION`, Sigstore identity не указывает на release workflow этого репозитория или checksum

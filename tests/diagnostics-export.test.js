@@ -28,7 +28,7 @@ ok(!/cfg\.(admin|federation|cascade|totp)/.test(collector) &&
 ok(collector.includes('probeSecretSet: !!(cfg.probeSecret)') &&
    !collector.includes('probeSecret: cfg.probeSecret'),
   'probe secret is reduced to a boolean presence flag');
-ok(collector.includes("format: 'rixxx-panel-diagnostics'") && collector.includes('schema: 1'),
+ok(collector.includes("format: 'vertaflux-diagnostics'") && collector.includes('schema: 1'),
   'download format is explicitly tagged and versioned');
 ok(collector.includes('users: Array.isArray(state.users) ? state.users.length : 0') &&
    !collector.includes('state.users.map'), 'Mita users are reduced to a count');

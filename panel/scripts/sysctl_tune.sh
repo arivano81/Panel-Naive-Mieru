@@ -6,7 +6,7 @@ set -euo pipefail
 DRY_RUN=false
 [[ "${1:-}" == "--dry-run" ]] && DRY_RUN=true
 
-SYSCTL_FILE="/etc/sysctl.d/99-rixxx-panel.conf"
+SYSCTL_FILE="/etc/sysctl.d/99-vertaflux.conf"
 
 apply_setting() {
   local key="$1" val="$2"

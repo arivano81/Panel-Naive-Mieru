@@ -2,21 +2,21 @@
 set -Eeuo pipefail
 umask 022
 
-ROOT="${RIXXX_LOGROTATE_ROOT:-}"
+ROOT="${VERTAFLUX_LOGROTATE_ROOT:-}"
 if [[ -n "$ROOT" ]]; then
-  case "$ROOT" in /tmp/rixxx-logrotate-test-*) ;; *)
-    echo 'RIXXX_LOGROTATE_ROOT must be a dedicated /tmp/rixxx-logrotate-test-* directory' >&2; exit 1 ;;
+  case "$ROOT" in /tmp/vertaflux-logrotate-test-*) ;; *)
+    echo 'VERTAFLUX_LOGROTATE_ROOT must be a dedicated /tmp/vertaflux-logrotate-test-* directory' >&2; exit 1 ;;
   esac
 fi
 [[ -n "$ROOT" || ${EUID:-$(id -u)} -eq 0 ]] || {
   echo 'run as root: sudo bash install_logrotate.sh' >&2; exit 1;
 }
 
-DEST="$ROOT/etc/logrotate.d/rixxx-panel"
+DEST="$ROOT/etc/logrotate.d/vertaflux"
 mkdir -p "$(dirname "$DEST")"
 TMP="${DEST}.new"
 cat > "$TMP" <<'EOF'
-/var/log/panel-naive-mieru.log /var/log/rixxx-panel-install.log /var/log/cascade-watchdog.log {
+/var/log/panel-naive-mieru.log /var/log/vertaflux-install.log /var/log/cascade-watchdog.log {
     daily
     maxsize 10M
     rotate 14

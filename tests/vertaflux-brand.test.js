@@ -30,6 +30,14 @@ ok(server.includes('│              VERTAFLUX               │') &&
 ok(app.includes("localStorage.setItem('vertaflux-theme'") &&
    app.includes("localStorage.getItem('rixxx-theme')"),
   'browser preferences use the new name while reading the legacy key');
+const install = fs.readFileSync(path.join(root, 'install.sh'), 'utf8');
+const update = fs.readFileSync(path.join(root, 'update.sh'), 'utf8');
+const backup = fs.readFileSync(path.join(root, 'panel/server/backupRestore.js'), 'utf8');
+ok(install.includes('/var/log/vertaflux-install.log') &&
+   update.includes('PANEL_CONFIG="/etc/vertaflux/config.json"'),
+  'new installation and update artifacts use canonical VertaFlux names');
+ok(backup.includes("const BACKUP_FORMAT = 'vertaflux-backup'") &&
+   backup.includes('LEGACY_BACKUP_FORMAT'), 'new backups are branded while legacy imports remain supported');
 const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
 ok((readme.match(/Родительский проект/g) || []).length === 1,
   'README retains exactly one attribution link to the parent project');

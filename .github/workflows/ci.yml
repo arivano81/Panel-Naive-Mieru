@@ -32,7 +32,7 @@ jobs:
         env:
           SBOM_CREATED: '2026-01-01T00:00:00Z'
         run: |
-          node tools/generate-sbom.js dist/rixxx-panel.spdx.json
+          node tools/generate-sbom.js dist/vertaflux.spdx.json
           node tests/sbom.test.js
 
   debian:

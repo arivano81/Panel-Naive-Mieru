@@ -54,7 +54,7 @@ WARP_SELF="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "$0")"
 
 WG_IFACE="warp"
 WG_CONF="/etc/wireguard/${WG_IFACE}.conf"
-WGCF_DIR="/etc/rixxx-panel/warp"
+WGCF_DIR="/etc/vertaflux/warp"
 WGCF_ACCOUNT="${WGCF_DIR}/wgcf-account.toml"
 WGCF_PROFILE="${WGCF_DIR}/wgcf-profile.conf"
 WARP_ENDPOINT_HOST="engage.cloudflareclient.com"

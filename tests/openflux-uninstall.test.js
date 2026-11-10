@@ -34,7 +34,7 @@ if (process.platform !== 'win32') {
   const secretDir = path.join(fixture, 'etc/openflux/secrets');
   const bundle = path.join(fixture, 'root/openflux-alpha-client');
   for (const dir of [bin, profileDir, secretDir, bundle, path.join(fixture, 'usr/local/bin'),
-    path.join(fixture, 'etc/systemd/system'), path.join(fixture, 'etc/rixxx-panel'), path.join(fixture, 'root')])
+    path.join(fixture, 'etc/systemd/system'), path.join(fixture, 'etc/vertaflux'), path.join(fixture, 'root')])
     fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(fixture, 'usr/local/bin/openflux'), 'binary');
   fs.writeFileSync(path.join(fixture, 'etc/systemd/system/openflux-exit@.service'), 'unit');
@@ -43,7 +43,7 @@ if (process.platform !== 'win32') {
   fs.writeFileSync(path.join(secretDir, 'alpha.key'), 'secret', { mode: 0o600 });
   fs.writeFileSync(path.join(bundle, 'client.conf'), 'client');
   fs.writeFileSync(path.join(bundle, 'openflux.key'), 'secret', { mode: 0o600 });
-  fs.writeFileSync(path.join(fixture, 'etc/rixxx-panel/components.json'),
+  fs.writeFileSync(path.join(fixture, 'etc/vertaflux/components.json'),
     JSON.stringify({ components: { openflux: { installed: true }, caddy: { installed: true } } }));
   fs.writeFileSync(path.join(fixture, 'core-stack-sentinel'), 'untouched');
   fs.writeFileSync(path.join(bin, 'systemctl'), '#!/bin/sh\nprintf "%s\\n" "$*" >> "$OPENFLUX_TEST_ROOT/systemctl.log"\n', { mode: 0o755 });
@@ -58,7 +58,7 @@ if (process.platform !== 'win32') {
     'recovery archive exists with mode 600');
   ok(!fs.existsSync(path.join(fixture, 'usr/local/bin/openflux')) && !fs.existsSync(bundle) &&
     fs.existsSync(path.join(fixture, 'core-stack-sentinel')), 'only OpenFlux artifacts are removed');
-  const registry = JSON.parse(fs.readFileSync(path.join(fixture, 'etc/rixxx-panel/components.json'), 'utf8'));
+  const registry = JSON.parse(fs.readFileSync(path.join(fixture, 'etc/vertaflux/components.json'), 'utf8'));
   ok(registry.components.openflux.installed === false && registry.components.caddy.installed === true,
     'component registry disables OpenFlux and preserves unrelated entries');
   ok(fs.readFileSync(path.join(fixture, 'ufw.log'), 'utf8').includes('delete allow 18445/tcp comment VertaFlux OpenFlux alpha'),

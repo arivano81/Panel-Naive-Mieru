@@ -6,7 +6,7 @@ OPENFLUX_DIR="/etc/openflux"
 PROFILE_DIR="$OPENFLUX_DIR/profiles"
 SECRET_DIR="$OPENFLUX_DIR/secrets"
 UNIT="/etc/systemd/system/openflux-exit@.service"
-LOCK="/run/lock/rixxx-openflux-profile.lock"
+LOCK="/run/lock/vertaflux-openflux-profile.lock"
 REPORT_DIR="/root"
 TEST_ROOT="${OPENFLUX_TEST_ROOT:-}"
 
@@ -19,7 +19,7 @@ if [[ -n "$TEST_ROOT" ]]; then
   PROFILE_DIR="$OPENFLUX_DIR/profiles"
   SECRET_DIR="$OPENFLUX_DIR/secrets"
   UNIT="$TEST_ROOT/etc/systemd/system/openflux-exit@.service"
-  LOCK="$TEST_ROOT/run/lock/rixxx-openflux-profile.lock"
+  LOCK="$TEST_ROOT/run/lock/vertaflux-openflux-profile.lock"
   REPORT_DIR="$TEST_ROOT/root"
 fi
 

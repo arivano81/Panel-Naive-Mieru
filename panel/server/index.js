@@ -47,7 +47,7 @@ const { applyMultiFileTransaction } = require('./multiFileTransaction');
 const { runDatabaseMigrations } = require('./databaseMigrations');
 const { runConfigMigrations } = require('./configMigrations');
 const { BACKUP_FORMAT, BACKUP_SCHEMA, validateBackup, restoreBackupState } = require('./backupRestore');
-const { ENCRYPTED_BACKUP_FORMAT, encryptBackup, decryptBackup } = require('./backupCrypto');
+const { ENCRYPTED_BACKUP_FORMAT, LEGACY_ENCRYPTED_BACKUP_FORMAT, encryptBackup, decryptBackup } = require('./backupCrypto');
 const { buildXrayRealityConfig, buildVlessRealityLink, buildVlessXhttpLink,
   buildCaddyXhttpRoute, normalizeXhttpSettings } = require('./xrayConfig');
 const { normalizeXrayTuning, recommendXrayTuning } = require('./xrayTuning');
@@ -2399,7 +2399,7 @@ app.post('/api/backup/export/encrypted', requireAuth, backupSecretLimiter, (req,
     const envelope = encryptBackup(buildPortableBackup(), input.passphrase);
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Content-Disposition',
-      `attachment; filename="${backupFilename('rixxx.enc.json')}"`);
+      `attachment; filename="${backupFilename('enc.json')}"`);
     res.setHeader('Content-Type', 'application/json');
     res.json(envelope);
   } catch (e) {
@@ -2411,12 +2411,13 @@ app.post('/api/backup/export/encrypted', requireAuth, backupSecretLimiter, (req,
 app.post('/api/backup/inspect', requireAuth, backupSecretLimiter, (req, res) => {
   try {
     let backup = req.body && req.body.backup;
-    if (backup && backup.format === ENCRYPTED_BACKUP_FORMAT)
+    if (backup && [ENCRYPTED_BACKUP_FORMAT, LEGACY_ENCRYPTED_BACKUP_FORMAT].includes(backup.format))
       backup = decryptBackup(backup, req.body && req.body.passphrase);
     validateBackup(backup);
     res.setHeader('Cache-Control', 'no-store');
     res.json({
-      encrypted: (req.body && req.body.backup && req.body.backup.format) === ENCRYPTED_BACKUP_FORMAT,
+      encrypted: !!(req.body && req.body.backup &&
+        [ENCRYPTED_BACKUP_FORMAT, LEGACY_ENCRYPTED_BACKUP_FORMAT].includes(req.body.backup.format)),
       users: backup.users.length,
       domain: backup.config.domain || '',
       exportedAt: backup.exportedAt || null,
@@ -2434,7 +2435,7 @@ app.post('/api/backup/import', requireAuth, backupSecretLimiter, (req, res) => {
   const domainMode = (req.body && req.body.domainMode) === 'current' ? 'current' : 'backup';
 
   try {
-    if (backup && backup.format === ENCRYPTED_BACKUP_FORMAT)
+    if (backup && [ENCRYPTED_BACKUP_FORMAT, LEGACY_ENCRYPTED_BACKUP_FORMAT].includes(backup.format))
       backup = decryptBackup(backup, req.body && req.body.passphrase);
     validateBackup(backup);
     let transaction;
@@ -6184,7 +6185,7 @@ function collectSafeDiagnostics() {
   } catch { /* optional component must never break the main diagnostic report */ }
 
   return {
-    format: 'rixxx-panel-diagnostics',
+    format: 'vertaflux-diagnostics',
     schema: 1,
     generatedAt: new Date().toISOString(),
     panelVersion: readPanelVersion(),

@@ -15,6 +15,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `forward_proxy` module, preserves the configuration, and rolls back failed activation.
 - Read-only panel update notification that checks the private repository only when a
   process-scoped read token is available; it never downloads or installs an update.
+- Canonical VertaFlux names for installation logs, storage, temporary updater files,
+  backups, diagnostics and SPDX artifacts; legacy names remain import-only.
 
 ### Changed
 
@@ -23,6 +25,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   encrypted-tunnel canary before activation.
 - Documented one-component-at-a-time production updates and mandatory operator approval
   immediately before any binary replacement that can interrupt a VPN service.
+- Documented the complete `update.sh` command set, including `--panel-only` for UI/API
+  updates that preserve every VPN service process.
 
 ## [v1.19.0] - 2026-11-10
 

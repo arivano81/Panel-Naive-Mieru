@@ -24,7 +24,7 @@ ok(update.includes('curl -H @-'), 'updater keeps the curl authorization header o
 ok(html.includes('github.com/arivano81/Panel-Naive-Mieru'), 'panel GitHub links point to this fork');
 ok(!html.includes('github.com/cwash797-cmd'), 'panel has no duplicate parent-project link');
 for (const [name, source] of [['install.sh', install], ['update.sh', update]]) {
-  ok(source.includes(`COMPONENT_REGISTRY="/etc/${name === 'install.sh' ? 'vertaflux' : 'rixxx-panel'}/components.json"`),
+  ok(source.includes('COMPONENT_REGISTRY="/etc/vertaflux/components.json"'),
     `${name} uses its migration-safe component registry path`);
   ok(/write_component_registry\(\)/.test(source), `${name} defines component registry writer`);
   ok(source.includes('vless:{installed:$xrayInstalled') && source.includes('openflux:{installed:$openfluxInstalled'),

@@ -2,14 +2,16 @@
 
 const { runConfigMigrations } = require('./configMigrations');
 
-const BACKUP_FORMAT = 'rixxx-panel-backup';
+const BACKUP_FORMAT = 'vertaflux-backup';
+const LEGACY_BACKUP_FORMAT = 'rixxx-panel-backup';
 const BACKUP_SCHEMA = 4;
 const NETWORK_KEYS = ['domain', 'serverIp', 'naivePort', 'mieruPortStart', 'mieruPortEnd', 'hy2Port'];
 const PATH_KEYS = ['dbPath', 'caddyBin', 'caddyFile', 'caddyConfigDir', 'fakeSiteDir', 'mitaStateFile'];
 
 function validateBackup(backup) {
   if (!backup || typeof backup !== 'object') throw new Error('No backup payload provided');
-  if (backup.format !== BACKUP_FORMAT) throw new Error('Not a panel backup file (bad format tag)');
+  if (![BACKUP_FORMAT, LEGACY_BACKUP_FORMAT].includes(backup.format))
+    throw new Error('Not a panel backup file (bad format tag)');
   if (!Number.isInteger(backup.schema) || backup.schema < 1 || backup.schema > BACKUP_SCHEMA)
     throw new Error(`Unsupported backup schema (${backup.schema}); supported up to ${BACKUP_SCHEMA}`);
   if (!backup.config || typeof backup.config !== 'object' || Array.isArray(backup.config))
@@ -84,6 +86,6 @@ function restoreBackupState({
 }
 
 module.exports = {
-  BACKUP_FORMAT, BACKUP_SCHEMA, NETWORK_KEYS, PATH_KEYS,
+  BACKUP_FORMAT, LEGACY_BACKUP_FORMAT, BACKUP_SCHEMA, NETWORK_KEYS, PATH_KEYS,
   validateBackup, mergeBackupConfig, normalizeBackupUser, restoreBackupState,
 };

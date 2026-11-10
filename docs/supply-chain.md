@@ -23,7 +23,7 @@ SBOM не утверждает лицензию, если она не закре
 Локальная генерация:
 
 ```bash
-node tools/generate-sbom.js dist/rixxx-panel.spdx.json
+node tools/generate-sbom.js dist/vertaflux.spdx.json
 node tests/sbom.test.js
 ```
 

@@ -48,8 +48,8 @@ ok(!/async function backupExport\(\)[\s\S]{0,1200}prompt\(/.test(ui),
 ok(['backup-admin-password', 'backup-passphrase', 'backup-passphrase-confirm', 'backup-unlock-passphrase']
   .every(id => new RegExp(`type="password" id="${id}"`).test(html)),
    'every backup secret is collected in a masked password field');
-ok(/const BACKUP_FORMAT\s*=\s*'rixxx-panel-backup'/.test(backupRestoreSrc),
-   'backup format tag is "rixxx-panel-backup"');
+ok(/const BACKUP_FORMAT\s*=\s*'vertaflux-backup'/.test(backupRestoreSrc),
+   'new backup format uses the VertaFlux identity');
 ok(/const BACKUP_SCHEMA\s*=\s*4/.test(backupRestoreSrc),
    'backup schema version is 4');
 
@@ -84,7 +84,7 @@ ok(/express\.json\(\{\s*limit:\s*'25mb'\s*\}\)/.test(src),
 // ── (b) Logic simulation: export shape ───────────────────────────────────────
 function makeExport(cfg, users) {
   return {
-    format: 'rixxx-panel-backup',
+    format: 'vertaflux-backup',
     schema: 3,
     version: '1.6.0',
     exportedAt: new Date().toISOString(),
@@ -115,7 +115,7 @@ const usersOld = [
     protocols: '["mieru"]', createdAt: 't0', updatedAt: 't0' }
 ];
 const backup = makeExport(cfgOld, usersOld);
-ok(backup.format === 'rixxx-panel-backup' && backup.schema === 3, 'export shape is tagged');
+ok(backup.format === 'vertaflux-backup' && backup.schema === 3, 'export shape is tagged');
 ok(backup.users.length === 2, 'export carries all users');
 ok(backup.users[0].password === 'secretA', 'export preserves plaintext password');
 ok(backup.config.domain === 'old.example.com', 'export carries the domain');
@@ -145,7 +145,7 @@ function importMerge(liveCfg, incomingCfg, domainMode) {
 const liveCfg = {
   domain: 'new-server.example.com', serverIp: '20.0.0.9',
   naivePort: 8443, mieruPortStart: 3000, mieruPortEnd: 3010,
-  version: '1.6.0', dbPath: '/var/lib/rixxx-panel/db.sqlite'
+  version: '1.6.0', dbPath: '/var/lib/vertaflux/db.sqlite'
 };
 
 // mode 'backup' → the RESTORED domain is the backup's (clients unaffected)
@@ -153,7 +153,7 @@ const mBackup = importMerge(liveCfg, cfgOld, 'backup');
 ok(mBackup.domain === 'old.example.com', "domainMode 'backup' keeps backup domain");
 ok(mBackup.naivePort === 443,            "domainMode 'backup' keeps backup naivePort");
 ok(mBackup.adminUser === 'admin',        "domainMode 'backup' still restores admin creds");
-ok(mBackup.dbPath === '/var/lib/rixxx-panel/db.sqlite',
+ok(mBackup.dbPath === '/var/lib/vertaflux/db.sqlite',
    "local path (dbPath) is always taken from the live server, never the backup");
 
 // mode 'current' → keep THIS server's domain/ports (new DNS)

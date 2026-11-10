@@ -35,7 +35,6 @@ migrate_dir() {
     ln -s "$canonical" "$legacy"
   elif [[ ! -e "$legacy" ]]; then
     mkdir -p "$canonical"
-    ln -s "$canonical" "$legacy"
   fi
 
   chmod "$mode" "$canonical"

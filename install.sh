@@ -25,7 +25,7 @@ export PYTHONUTF8=1
 export PYTHONIOENCODING=utf-8
 
 # ── Capture all installer output to a log file ────────────────────────────────
-INSTALL_LOG="/var/log/rixxx-panel-install.log"
+INSTALL_LOG="/var/log/vertaflux-install.log"
 ADMIN_REPORT="/root/vertaflux-install-report.txt"
 mkdir -p "$(dirname "$INSTALL_LOG")"
 exec 3>&1
@@ -1151,15 +1151,15 @@ write_config_json() {
   server_ip=$(curl -4 -fsSL https://api.ipify.org 2>/dev/null || hostname -I | awk '{print $1}')
 
   # Generate bcrypt hash via Node (rounds=12).
-  # Bug 73 (P0): the password is passed via the RIXXX_ADMIN_PASS env var, NOT
+  # Bug 73 (P0): the password is passed via an environment variable, NOT
   # argv. With `node -e`, there is no script-path argument, so the first user
   # arg lands at process.argv[1] (not argv[2]); the old code read argv[2] →
   # undefined → bcrypt.hashSync threw → install aborted at write_config_json.
   # Env-var passing also avoids any shell-quoting issues with special chars.
   local bcrypt_hash
-  bcrypt_hash=$(cd "$PANEL_DIR" && RIXXX_ADMIN_PASS="$ADMIN_PASS" node -e "
+  bcrypt_hash=$(cd "$PANEL_DIR" && VERTAFLUX_ADMIN_PASS="$ADMIN_PASS" node -e "
     const bcrypt = require('bcryptjs');
-    const pw = process.env.RIXXX_ADMIN_PASS || '';
+    const pw = process.env.VERTAFLUX_ADMIN_PASS || '';
     if (!pw) { process.exit(2); }
     process.stdout.write(bcrypt.hashSync(pw, 12));
   " 2>/dev/null) || true

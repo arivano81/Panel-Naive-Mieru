@@ -27,18 +27,18 @@ jobs:
           test "$GITHUB_REF_NAME" = "v${version}"
           created=$(date -u -d "$(git show -s --format=%cI HEAD)" +%Y-%m-%dT%H:%M:%SZ)
           mkdir -p dist
-          SBOM_CREATED="$created" node tools/generate-sbom.js "dist/rixxx-panel-${version}.spdx.json"
+          SBOM_CREATED="$created" node tools/generate-sbom.js "dist/vertaflux-${version}.spdx.json"
           node tests/sbom.test.js
           git archive --format=tar.gz --prefix="Panel-Naive-Mieru-${version}/" \
             -o "dist/Panel-Naive-Mieru-${version}.tar.gz" HEAD
           cd dist
-          sha256sum "Panel-Naive-Mieru-${version}.tar.gz" "rixxx-panel-${version}.spdx.json" > SHA256SUMS
+          sha256sum "Panel-Naive-Mieru-${version}.tar.gz" "vertaflux-${version}.spdx.json" > SHA256SUMS
       - name: Sign and verify release artifacts with keyless Sigstore
         uses: sigstore/gh-action-sigstore-python@5b79a39c381910c090341a2c9b0bf022c8b387e1 # v3.4.0
         with:
           inputs: |
             dist/Panel-Naive-Mieru-*.tar.gz
-            dist/rixxx-panel-*.spdx.json
+            dist/vertaflux-*.spdx.json
             dist/SHA256SUMS
           verify: true
           verify-cert-identity: https://github.com/${{ github.workflow_ref }}

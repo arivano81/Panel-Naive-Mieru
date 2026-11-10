@@ -17,7 +17,7 @@ function rejects(fn, pattern, message) {
 
 console.log('Encrypted backup regression test');
 const backup = {
-  format: 'rixxx-panel-backup', schema: 4,
+  format: 'vertaflux-backup', schema: 4,
   config: { domain: 'vpn.example', adminPassHash: 'secret-hash' },
   users: [{ id: 'u1', username: 'alice', passHash: 'hash', password: 'client-secret' }],
 };

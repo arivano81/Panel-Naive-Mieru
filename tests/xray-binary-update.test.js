@@ -23,7 +23,7 @@ ok(script.includes("die 'metadata update failed; previous binary and metadata re
   'metadata failure rolls the binary and metadata back together');
 ok(script.includes('INSTALLER="$SCRIPT_DIR/install_xray.sh"'),
   'pin lookup works in both source and deployed script directories');
-ok(script.includes('REGISTRY=/etc/rixxx-panel/components.json'),
+ok(script.includes('REGISTRY=/etc/vertaflux/components.json'),
   'update uses the active component registry');
 ok(!/systemctl (restart|stop|start) (caddy-naive|mita|hysteria-server)/.test(script),
   'update can address only Xray');

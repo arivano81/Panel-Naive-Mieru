@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.resolve(__dirname, '..');
-const output = path.resolve(process.argv[2] || path.join(root, 'dist', 'rixxx-panel.spdx.json'));
+const output = path.resolve(process.argv[2] || path.join(root, 'dist', 'vertaflux.spdx.json'));
 const lock = JSON.parse(fs.readFileSync(path.join(root, 'panel/package-lock.json'), 'utf8'));
 const panelPackage = JSON.parse(fs.readFileSync(path.join(root, 'panel/package.json'), 'utf8'));
 const manifestBytes = fs.readFileSync(path.join(root, 'supply-chain/components.json'));

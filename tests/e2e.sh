@@ -126,7 +126,7 @@ else
     pass "install.sh exited 0"
   else
     fail "install.sh exited non-zero"
-    log_error "Aborting e2e: installation failed. See /var/log/rixxx-panel-install.log"
+    log_error "Aborting e2e: installation failed. See /var/log/vertaflux-install.log"
     exit 1
   fi
 fi
@@ -495,10 +495,10 @@ assert "uninstall.sh removes /var/lib/caddy" \
 
 # Bug 73 (P0): write_config_json must pass the admin password via env var and
 # read it from process.env (NOT process.argv[2], which is undefined for node -e).
-assert "Bug73: install.sh bcrypt uses RIXXX_ADMIN_PASS env (not argv[2])" \
-  "grep -q 'RIXXX_ADMIN_PASS' '$REPO_ROOT/install.sh' && ! grep -q 'hashSync(process.argv\\[2\\]' '$REPO_ROOT/install.sh'"
-assert "Bug73: install.sh reads pw from process.env.RIXXX_ADMIN_PASS" \
-  "grep -q 'process.env.RIXXX_ADMIN_PASS' '$REPO_ROOT/install.sh'"
+assert "Bug73: install.sh bcrypt uses VERTAFLUX_ADMIN_PASS env (not argv[2])" \
+  "grep -q 'VERTAFLUX_ADMIN_PASS' '$REPO_ROOT/install.sh' && ! grep -q 'hashSync(process.argv\\[2\\]' '$REPO_ROOT/install.sh'"
+assert "Bug73: install.sh reads pw from process.env.VERTAFLUX_ADMIN_PASS" \
+  "grep -q 'process.env.VERTAFLUX_ADMIN_PASS' '$REPO_ROOT/install.sh'"
 assert "Bug73: install.sh htpasswd fallback installs apache2-utils" \
   "grep -q 'apache2-utils' '$REPO_ROOT/install.sh'"
 assert "install.sh install_panel falls back to PWD/panel" \

@@ -1709,14 +1709,15 @@ async function backupImportFile(file) {
     show(t('settings.backupBadFile') || 'Not a valid backup file (JSON parse failed)', false);
     return;
   }
-  if (!backup || !['rixxx-panel-backup', 'rixxx-panel-backup-encrypted'].includes(backup.format)) {
+  if (!backup || !['vertaflux-backup', 'vertaflux-backup-encrypted',
+    'rixxx-panel-backup', 'rixxx-panel-backup-encrypted'].includes(backup.format)) {
     show(t('settings.backupBadFile') || 'Not a valid VertaFlux backup file', false);
     return;
   }
   let passphrase;
   let nUsers;
   let bDomain;
-  if (backup.format === 'rixxx-panel-backup-encrypted') {
+  if (['vertaflux-backup-encrypted', 'rixxx-panel-backup-encrypted'].includes(backup.format)) {
     passphrase = el('backup-unlock-passphrase')?.value || '';
     if (!passphrase) {
       show(t('settings.backupUnlockRequired') || 'Enter the backup passphrase before selecting the file', false);

@@ -57,7 +57,7 @@ Read the changelog and make a backup before updating a production server.
 | 3 | Server settings: port changes, traffic-pattern presets, MTU, UFW auto-update |
 | 4 | Client configs: Naive link, Mieru sing-box JSON, universal auto-fallback config, QR codes |
 | 5 | Monitoring dashboard: WebSocket live metrics, traffic snapshots, quota alerts |
-| 6 | `update.sh`: `--dry-run`, `--force`, `--expose`, `--ssh-only`, `--status`, `--repair`, `--help` |
+| 6 | `update.sh`: `--dry-run`, `--force`, `--panel-only`, `--expose`, `--ssh-only`, `--status`, `--doctor`, `--rollback`, `--repair`, `--help` |
 | 7 | **Cascade / Relay** (v1.2.6): `client → Entry (RU) → Exit (EU) → internet`; Naive uses HTTPS upstream, while Mieru and Hy2 use the transparent Mieru relay. |
 | 8 | **Optional Hysteria2** (v1.8.x): installed by the administrator from Settings (`auth: userpass`, systemd, per-user traffic, cascade), then enabled for selected users. |
 | 9 | **One "smart" Sub-link** (v1.8.7–1.8.8): a single `/sub/:token` link with client auto-detection by User-Agent. **Shadowrocket** gets a base64 URI list (Naive → native HTTPS scheme, Mieru `mierus://`, Hy2 `hysteria2://`), **Karing** gets sing-box JSON. Passes expiry & traffic via the `Subscription-Userinfo` header. ✅ **Verified on Karing and Shadowrocket.** |
@@ -135,8 +135,8 @@ sudo bash update.sh --expose panel.example.com
 | `/opt/panel-naive-mieru/` | Panel application files |
 | `/usr/local/bin/caddy-naive` | caddy-forwardproxy-naive binary |
 
-After an upgrade, `/etc/rixxx-panel` and `/var/lib/rixxx-panel` remain compatibility symlinks.
-Older helper scripts and rollback releases therefore continue to access the same canonical data.
+Servers upgraded from older releases retain compatibility symlinks for rollback. A clean
+installation creates only the canonical VertaFlux paths.
 
 > ⚠️ **Note:** `/etc/mita/` is Mieru's internal protobuf store — **never edit manually**.  
 > The panel uses `/var/lib/vertaflux/mita-state.json` and applies it via `mita apply config <file>`.

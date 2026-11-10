@@ -86,7 +86,7 @@ printf '%s\n' "$*" >> "$OPENFLUX_TEST_ROOT/systemctl.log"
       `${mode} download is rejected with an explicit error`);
     ok(!fs.existsSync(path.join(fixture, 'usr/local/bin/openflux')) &&
       !fs.existsSync(path.join(fixture, 'etc/systemd/system/openflux-exit@.service')) &&
-      !fs.existsSync(path.join(fixture, 'etc/rixxx-panel/components.json')) &&
+      !fs.existsSync(path.join(fixture, 'etc/vertaflux/components.json')) &&
       !fs.existsSync(path.join(fixture, 'systemctl.log')),
     `${mode} download leaves no binary, unit, registry, or systemd side effect`);
     fs.rmSync(fixture, { recursive: true, force: true });
@@ -116,7 +116,7 @@ exit 1
     'post-write systemd failure reaches transactional rollback');
   ok(!fs.existsSync(path.join(activationFixture, 'usr/local/bin/openflux')) &&
     !fs.existsSync(path.join(activationFixture, 'etc/systemd/system/openflux-exit@.service')) &&
-    !fs.existsSync(path.join(activationFixture, 'etc/rixxx-panel/components.json')) &&
+    !fs.existsSync(path.join(activationFixture, 'etc/vertaflux/components.json')) &&
     !fs.existsSync(path.join(activationFixture, 'etc/openflux')) &&
     !fs.existsSync(path.join(activationFixture, 'var/lib/openflux')),
   'post-write failure removes every newly installed system artifact');

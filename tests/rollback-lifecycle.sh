@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-RIXXX_UPDATE_LIBRARY_ONLY=1 source "$REPO_ROOT/update.sh"
+VERTAFLUX_UPDATE_LIBRARY_ONLY=1 source "$REPO_ROOT/update.sh"
 trap - ERR
 
 TEST_ROOT=$(mktemp -d)

@@ -8,7 +8,7 @@ OPENFLUX_URL="https://github.com/p1neappleXpress/OpenFlux/releases/download/${OP
 OPENFLUX_BIN="/usr/local/bin/openflux"
 OPENFLUX_DIR="/etc/openflux"
 OPENFLUX_UNIT="/etc/systemd/system/openflux-exit@.service"
-COMPONENT_REGISTRY="/etc/rixxx-panel/components.json"
+COMPONENT_REGISTRY="/etc/vertaflux/components.json"
 REPORT="/root/vertaflux-openflux-install-report.txt"
 STATE_DIR="/var/lib/openflux"
 TEST_ROOT="${OPENFLUX_TEST_ROOT:-}"
@@ -20,7 +20,7 @@ if [[ -n "$TEST_ROOT" ]]; then
   OPENFLUX_BIN="$TEST_ROOT/usr/local/bin/openflux"
   OPENFLUX_DIR="$TEST_ROOT/etc/openflux"
   OPENFLUX_UNIT="$TEST_ROOT/etc/systemd/system/openflux-exit@.service"
-  COMPONENT_REGISTRY="$TEST_ROOT/etc/rixxx-panel/components.json"
+  COMPONENT_REGISTRY="$TEST_ROOT/etc/vertaflux/components.json"
   REPORT="$TEST_ROOT/root/vertaflux-openflux-install-report.txt"
   STATE_DIR="$TEST_ROOT/var/lib/openflux"
 fi

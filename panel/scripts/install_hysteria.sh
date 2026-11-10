@@ -32,7 +32,7 @@ HY_PORT="${HY_PORT:-443}"
 EMAIL="${HY_EMAIL:-admin@example.com}"
 PASSWORD="${HY_PASSWORD:-}"
 USE_CADDY_CERT="${USE_CADDY_CERT:-1}"
-COMPONENT_REGISTRY="/etc/rixxx-panel/components.json"
+COMPONENT_REGISTRY="/etc/vertaflux/components.json"
 
 if [[ -z "$DOMAIN" ]]; then
   echo "ERROR: missing env HY_DOMAIN"
@@ -107,7 +107,7 @@ log "▶ Загрузка Hysteria2 (arch: ${HY_ARCH})..."
 
 log "  Закреплённая версия: ${HY_VERSION}"
 HY_URL="https://github.com/apernet/hysteria/releases/download/${HY_VERSION}/hysteria-linux-${HY_ARCH}"
-HY_WORK=$(mktemp -d /tmp/rixxx-hysteria.XXXXXX)
+HY_WORK=$(mktemp -d /tmp/vertaflux-hysteria.XXXXXX)
 HY_CANDIDATE="${HY_WORK}/hysteria"
 trap 'rm -rf "${HY_WORK:-}"' EXIT
 wget -q --timeout=120 "${HY_URL}" -O "$HY_CANDIDATE" 2>&1 || {

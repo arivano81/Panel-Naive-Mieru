@@ -9,6 +9,16 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Consolidated Markdown and JSON summaries for weekly/manual pinned Go binary and source
+  vulnerability audits, including shared-source attribution and unique advisory counts.
+
+### Security
+
+- Re-ran the production audit on 10 November 2026 and documented the increased reachable
+  findings without adding broad VEX exclusions; the red upstream blocker remains explicit.
+
 ## [v1.18.1] - 2026-11-10
 
 ### Changed

@@ -77,6 +77,9 @@ ok(sbom.status === 0, 'SPDX release SBOM regression suite passes');
 const goVulnAudit = spawnSync(process.execPath, [path.join(__dirname, 'go-vulnerability-audit.test.js')],
   { stdio: 'inherit' });
 ok(goVulnAudit.status === 0, 'pinned Go binary vulnerability audit contract passes');
+const goVulnSummary = spawnSync(process.execPath, [path.join(__dirname, 'go-vulnerability-summary.test.js')],
+  { stdio: 'inherit' });
+ok(goVulnSummary.status === 0, 'Go vulnerability summary regression suite passes');
 const storageMigration = spawnSync(process.execPath, [path.join(__dirname, 'storage-migration.test.js')],
   { stdio: 'inherit' });
 ok(storageMigration.status === 0, 'VertaFlux storage migration regression suite passes');

@@ -487,7 +487,9 @@ L3 не включается, пока не будут готовы изолир
   открытым до обновления upstream, собственных воспроизводимых security-builds
   либо документированного VEX по каждому конкретному finding. Manifest теперь
   также закрепляет полный upstream commit, а второй source-mode проход строит
-  call graph всех Go modules для обоснованного VEX;
+  call graph всех Go modules для обоснованного VEX. Контрольный запуск 10 ноября
+  2026 года повторно подтвердил блокер; artifact теперь получает автоматическую
+  Markdown/JSON-сводку уникальных advisory без их подавления;
 - [ ] собственные воспроизводимые security-сборки Caddy, Mieru, Hysteria2,
   Xray, wgcf и OpenFlux перенесены в ветку 2.0/3.0. Линейка 1.x использует
   последние доступные checksum-pinned upstream assets; красный audit gate

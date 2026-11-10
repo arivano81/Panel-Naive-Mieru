@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-XRAY_VERSION="v26.3.27"
+XRAY_VERSION="v26.11.9"
 XRAY_ASSET="Xray-linux-64.zip"
-XRAY_SHA256="23cd9af937744d97776ee35ecad4972cf4b2109d1e0fe6be9930467608f7c8ae"
+XRAY_SHA256="b651f7e1d9966ee2c1b1ee1bf8b52c72771824d3065dce96bbc8bcc19ed95f82"
 XRAY_URL="https://github.com/XTLS/Xray-core/releases/download/${XRAY_VERSION}/${XRAY_ASSET}"
 XRAY_BIN="/usr/local/bin/xray"
 XRAY_DIR="/etc/xray"

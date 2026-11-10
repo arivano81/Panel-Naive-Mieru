@@ -66,6 +66,9 @@ jobs:
       - name: Validate pinned Xray binary and generated config
         if: matrix.release == '13'
         run: bash tests/xray-binary-canary.sh
+      - name: Validate pinned Caddy forwardproxy binary and config
+        if: matrix.release == '13'
+        run: bash tests/caddy-binary-canary.sh
       - name: Validate pinned OpenFlux encrypted Direct tunnel
         if: matrix.release == '13'
         run: bash tests/openflux-binary-canary.sh

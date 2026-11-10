@@ -98,9 +98,9 @@ REPO_URL="https://github.com/arivano81/Panel-Naive-Mieru"
 REPO_RAW="https://raw.githubusercontent.com/arivano81/Panel-Naive-Mieru/main"
 # Reviewed amd64-only caddy-forwardproxy-naive artifact. Never resolve `latest`:
 # a release change must update both the version and checksum in review.
-CADDY_NAIVE_VERSION="v2.11.2-naive"
+CADDY_NAIVE_VERSION="v2.11.7-naive2"
 CADDY_NAIVE_URL="https://github.com/klzgrad/forwardproxy/releases/download/${CADDY_NAIVE_VERSION}/caddy-forwardproxy-naive.tar.xz"
-CADDY_NAIVE_SHA256="19eccb7321dd877a5fb4a3dba6ef1b745185188b616c96cc6201f1a1fc0380a8"
+CADDY_NAIVE_SHA256="c273dc07dd79c5919f97639cbdcb559d40ce90475dbd8aac80641b0a8c8065ff"
 MIERU_VERSION="3.38.0"
 MIERU_RELEASE_BASE="https://github.com/enfein/mieru/releases/download/v${MIERU_VERSION}"
 MIERU_MITA_SHA256_AMD64="5170555aace38f76862541587b632d61848bba12f2e845b057977c9f9257e59a"

@@ -15,10 +15,10 @@ HTTPS-трафик через тот же REALITY-профиль на Debian 13.
 
 ## Зафиксированный компонент
 
-- Xray-core: `v26.3.27` (последний stable release на дату проверки).
+- Xray-core: `v26.11.9` (последний stable release на дату проверки 10 ноября 2026 года).
 - Asset amd64: `Xray-linux-64.zip`.
-- SHA-256: `23cd9af937744d97776ee35ecad4972cf4b2109d1e0fe6be9930467608f7c8ae`.
-- Источник: `https://github.com/XTLS/Xray-core/releases/tag/v26.3.27`.
+- SHA-256: `b651f7e1d9966ee2c1b1ee1bf8b52c72771824d3065dce96bbc8bcc19ed95f82`.
+- Источник: `https://github.com/XTLS/Xray-core/releases/tag/v26.11.9`.
 
 Установщик не использует `latest`, сверяет SHA-256 до распаковки и отказывается
 заменять рабочий бинарник или конфиг при несовпадении.

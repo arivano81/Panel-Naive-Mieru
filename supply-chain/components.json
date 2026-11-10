@@ -3,16 +3,16 @@
   "components": [
     {
       "name": "caddy-forwardproxy-naive",
-      "version": "v2.11.2-naive",
+      "version": "v2.11.7-naive2",
       "source": "https://github.com/klzgrad/forwardproxy",
-      "sourceRef": "v2.11.2-naive",
-      "sourceCommit": "d62c80d3dd2c706b6b87579844d2397bddd18317",
+      "sourceRef": "v2.11.7-naive2",
+      "sourceCommit": "e747854e78743dba85c039b38ed185fb11d93667",
       "license": "NOASSERTION",
       "artifacts": [
         {
           "arch": "linux-amd64",
-          "url": "https://github.com/klzgrad/forwardproxy/releases/download/v2.11.2-naive/caddy-forwardproxy-naive.tar.xz",
-          "sha256": "19eccb7321dd877a5fb4a3dba6ef1b745185188b616c96cc6201f1a1fc0380a8"
+          "url": "https://github.com/klzgrad/forwardproxy/releases/download/v2.11.7-naive2/caddy-forwardproxy-naive.tar.xz",
+          "sha256": "c273dc07dd79c5919f97639cbdcb559d40ce90475dbd8aac80641b0a8c8065ff"
         }
       ]
     },
@@ -83,16 +83,16 @@
     },
     {
       "name": "xray-core",
-      "version": "v26.3.27",
+      "version": "v26.11.9",
       "source": "https://github.com/XTLS/Xray-core",
-      "sourceRef": "v26.3.27",
-      "sourceCommit": "d2758a023cd7f4174a5a5fa4ff66e487d4342ba0",
+      "sourceRef": "v26.11.9",
+      "sourceCommit": "676eaf66f8f05d4d558ee7a74b4736623d3feeb9",
       "license": "NOASSERTION",
       "artifacts": [
         {
           "arch": "linux-amd64",
-          "url": "https://github.com/XTLS/Xray-core/releases/download/v26.3.27/Xray-linux-64.zip",
-          "sha256": "23cd9af937744d97776ee35ecad4972cf4b2109d1e0fe6be9930467608f7c8ae"
+          "url": "https://github.com/XTLS/Xray-core/releases/download/v26.11.9/Xray-linux-64.zip",
+          "sha256": "b651f7e1d9966ee2c1b1ee1bf8b52c72771824d3065dce96bbc8bcc19ed95f82"
         }
       ]
     },

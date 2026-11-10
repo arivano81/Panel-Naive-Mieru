@@ -9,10 +9,21 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [v1.19.0] - 2026-11-10
+
 ### Added
 
 - Consolidated Markdown and JSON summaries for weekly/manual pinned Go binary and source
   vulnerability audits, including shared-source attribution and unique advisory counts.
+- Debian 13 canary that executes the pinned Caddy/NaiveProxy binary, checks the
+  `forward_proxy` module and validates a representative configuration.
+- Transactional Xray binary updater that preserves the production configuration, REALITY
+  identity and user UUIDs, and restores the previous binary when activation fails.
+
+### Changed
+
+- Updated Caddy with NaiveProxy support to `v2.11.7-naive2` and Xray-core to `v26.11.9`,
+  retaining immutable release URLs and reviewed SHA-256 checksums.
 
 ### Security
 

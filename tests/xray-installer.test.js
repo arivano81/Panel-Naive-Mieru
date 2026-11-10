@@ -17,7 +17,7 @@ function ok(value, message) {
 }
 
 console.log('Pinned Xray installer regression test');
-ok(/XRAY_VERSION="v26\.3\.27"/.test(script), 'stable Xray version is pinned');
+ok(/XRAY_VERSION="v26\.11\.9"/.test(script), 'stable Xray version is pinned');
 ok(workflow.includes("if: matrix.release == '13'") && workflow.includes('bash tests/xray-binary-canary.sh'),
   'Debian 13 CI runs the real pinned-binary canary');
 ok(binaryCanary.includes('run -test -config "$WORK/config.json"'),
@@ -36,7 +36,7 @@ ok(/XRAY_ASSET="Xray-linux-64\.zip"/.test(script), 'amd64 release asset is pinne
 ok(/SERVER_NAME="\$\{XRAY_SERVER_NAME:-\}"/.test(script) &&
    script.includes('XRAY_SERVER_NAME must equal the configured primary domain'),
   'installer requires the operator-owned primary domain instead of a third-party target');
-ok(script.includes('23cd9af937744d97776ee35ecad4972cf4b2109d1e0fe6be9930467608f7c8ae'),
+ok(script.includes('b651f7e1d9966ee2c1b1ee1bf8b52c72771824d3065dce96bbc8bcc19ed95f82'),
   'official SHA-256 is pinned');
 ok(!/releases\/latest|api\.github\.com\/repos\/XTLS/.test(script), 'installer never resolves latest');
 const verifyAt = script.indexOf('sha256sum -c');

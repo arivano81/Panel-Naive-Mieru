@@ -16,6 +16,7 @@ const stableTopics = [
   ['DNS and TLS diagnostics', /DNS and TLS/], ['client matrix', /compatibility matrix/i],
   ['panel-only update', /--panel-only/], ['doctor', /--doctor/], ['rollback', /--rollback/],
   ['supply chain', /supply-chain\.md/], ['access recovery', /recover_access\.sh/],
+  ['per-user connection check', /Client connection check/],
 ];
 for (const [topic, pattern] of stableTopics) assert(pattern.test(en), `English README covers ${topic}`);
 for (const token of ['TOTP', 'VLESS', 'OpenFlux', '--panel-only', '--doctor', '--rollback'])

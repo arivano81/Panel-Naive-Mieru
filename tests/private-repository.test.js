@@ -86,6 +86,9 @@ ok(clientCompatibility.status === 0, 'client compatibility matrix regression sui
 const readmeParity = spawnSync(process.execPath, [path.join(__dirname, 'readme-parity.test.js')],
   { stdio: 'inherit' });
 ok(readmeParity.status === 0, 'bilingual README feature parity regression suite passes');
+const connectionDiagnostics = spawnSync(process.execPath, [path.join(__dirname, 'connection-diagnostics.test.js')],
+  { stdio: 'inherit' });
+ok(connectionDiagnostics.status === 0, 'per-user connection diagnostics regression suite passes');
 const operatorMessages = spawnSync(process.execPath, [path.join(__dirname, 'operator-messages.test.js')],
   { stdio: 'inherit' });
 ok(operatorMessages.status === 0, 'operator-friendly result message regression suite passes');

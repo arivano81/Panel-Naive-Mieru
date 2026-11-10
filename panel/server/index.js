@@ -45,6 +45,7 @@ const { createUpdateChecker } = require('./updateCheck');
 const { maintenanceProtection } = require('./maintenance');
 const { createOperationBackup, operationBackupMiddleware } = require('./operationBackup');
 const { checkDnsTls } = require('./networkDiagnostics');
+const { buildUserConnectionDiagnostics } = require('./connectionDiagnostics');
 const { applyFileTransaction } = require('./fileTransaction');
 const { applyMultiFileTransaction } = require('./multiFileTransaction');
 const { runDatabaseMigrations } = require('./databaseMigrations');
@@ -2903,6 +2904,14 @@ app.get('/api/users', requireAuth, (req, res) => {
     return parseUserRow(rest);
   });
   res.json(users);
+});
+
+app.get('/api/users/:id/connection-diagnostics', requireAuth, async (req, res) => {
+  const user = getUserById(req.params.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const report = await collectCompleteDiagnostics();
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(buildUserConnectionDiagnostics(user, cfg, report, userAccessState(user)));
 });
 
 // BUG-176: outcome of the most recent background applyAllConfigsAsync() run.
@@ -6236,7 +6245,11 @@ function collectSafeDiagnostics() {
       // Hy2 listens on UDP; chkPort uses `ss -tlnup` which covers UDP too.
       hy2:         hy2Installed() ? chkPort(cfg.hy2Port) : false,
       hy2Port:     parseInt(cfg.hy2Port, 10) || 443,
-      hy2Installed: hy2Installed()
+      hy2Installed: hy2Installed(),
+      vless: fs.existsSync(XRAY_BIN) ? chkPort(cfg.vlessPort) : false,
+      vlessPort: parseInt(cfg.vlessPort, 10) || 8443,
+      vlessXhttp: cfg.stack?.vlessXhttp === true ? chkPort(cfg.vlessXhttpPort) : false,
+      vlessXhttpPort: parseInt(cfg.vlessXhttpPort, 10) || 10443
     },
     services: {
       caddy: serviceState('caddy-naive'),

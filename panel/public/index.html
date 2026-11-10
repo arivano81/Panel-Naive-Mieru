@@ -1372,6 +1372,17 @@
         </div>
       </div>
       <div class="card mb-3">
+        <div class="card-header" data-i18n="diagnostics.connectionTitle">Client connection check</div>
+        <div class="card-body">
+          <p class="text-muted" data-i18n="diagnostics.connectionHint">Checks access policy, identity, DNS/TLS, listener and service state without using or exposing credentials.</p>
+          <div class="form-row">
+            <div class="form-group flex-1"><select id="diag-user"><option value="" data-i18n="diagnostics.selectUser">Select a user</option></select></div>
+            <button class="btn btn-primary" data-action="diagnose-user" data-i18n="diagnostics.checkUser">Check user</button>
+          </div>
+          <div class="info-list mt-2" id="diag-user-result"><p class="text-muted">—</p></div>
+        </div>
+      </div>
+      <div class="card mb-3">
         <div class="card-header" data-i18n="diagnostics.healthTitle">Component health</div>
         <div class="card-body">
           <p class="text-muted" data-i18n="diagnostics.healthHint">A read-only overview. Optional protocols are not enabled by this check.</p>

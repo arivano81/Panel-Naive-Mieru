@@ -378,6 +378,7 @@ function handleDelegatedClick(e) {
     // ── Diagnostics
     case 'run-diagnostics':  runDiagnostics(); break;
     case 'export-diagnostics': exportDiagnostics(); break;
+    case 'diagnose-user': diagnoseUserConnection(); break;
 
     // ── Login / topbar lang + theme (also wired via data-action on the buttons)
     case 'lang':             cycleLang(); break;
@@ -516,7 +517,7 @@ function navigateTo(page) {
     case 'federation':  loadFederation();  break;
     case 'monitoring':  loadMonitoring();  break;
     case 'logs':        loadLogs(currentLogService); break;
-    case 'diagnostics': runDiagnostics();  break;
+    case 'diagnostics': runDiagnostics(); loadDiagnosticUsers(); break;
   }
 
   if (window.innerWidth <= 768) {
@@ -3179,6 +3180,40 @@ async function loadLogs(service) {
 // ══════════════════════════════════════════════════════════════
 // DIAGNOSTICS
 // ══════════════════════════════════════════════════════════════
+
+async function loadDiagnosticUsers() {
+  try {
+    const users = await api('GET', '/api/users');
+    const select = el('diag-user');
+    select.innerHTML = `<option value="">${t('diagnostics.selectUser')}</option>` + users
+      .map(user => `<option value="${esc(user.id)}">${esc(user.username)}</option>`).join('');
+  } catch (error) { toast(error.message, 'error'); }
+}
+
+async function diagnoseUserConnection() {
+  const id = el('diag-user')?.value;
+  if (!id) return toast(t('diagnostics.selectUser'), 'error');
+  const box = el('diag-user-result');
+  box.innerHTML = `<p class="text-muted">${t('diagnostics.checking')}</p>`;
+  try {
+    const result = await api('GET', `/api/users/${encodeURIComponent(id)}/connection-diagnostics`);
+    const access = result.access?.active
+      ? healthRowForConnection(t('diagnostics.accessPolicy'), true, t('diagnostics.accessActive'))
+      : healthRowForConnection(t('diagnostics.accessPolicy'), false,
+        t(`diagnostics.access_${result.access?.reason || 'blocked'}`));
+    const protocols = (result.protocols || []).map(protocol => {
+      const failed = ['installed', 'service', 'listening', 'identity', 'network']
+        .filter(key => !protocol[key]).map(key => t(`diagnostics.check_${key}`)).join(', ');
+      return healthRowForConnection(protocol.name.toUpperCase(), protocol.ready,
+        protocol.ready ? t('diagnostics.connectionReady') : `${t('diagnostics.failedChecks')}: ${failed}`);
+    }).join('');
+    box.innerHTML = access + (protocols || `<p class="text-muted">${t('diagnostics.noProtocols')}</p>`);
+  } catch (error) { box.innerHTML = `<p class="msg-inline error">${esc(error.message)}</p>`; }
+}
+
+function healthRowForConnection(name, ok, detail) {
+  return `<div class="info-row"><span><strong>${esc(name)}</strong><small style="display:block;color:var(--text-muted)">${esc(detail)}</small></span><span class="badge ${ok ? 'badge-green' : 'badge-red'}">${esc(t(ok ? 'diagnostics.healthy' : 'diagnostics.attention'))}</span></div>`;
+}
 
 async function runDiagnostics() {
   el('diag-health').innerHTML = `<p class="text-muted">${t('diagnostics.checking') || '…'}</p>`;

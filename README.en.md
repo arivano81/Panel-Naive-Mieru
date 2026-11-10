@@ -194,6 +194,11 @@ is read-only and includes service/config health, time synchronization, public A/
 server-IP matching, and TLS certificate identity/lifetime for the VPN, panel, and subscription
 domains. The downloadable report uses a strict allowlist and contains no credentials or raw logs.
 
+The **Client connection check** selects one user and classifies expiry/quota, identity presence,
+DNS/TLS, listener, and service readiness for each enabled protocol without returning a password or
+UUID. REALITY and XHTTP are reported independently. A green result proves server-side readiness;
+the final connection test still belongs on the target client device.
+
 Federation can provision or revoke the same email across explicitly configured nodes. Every node
 has its own bearer token and local passwords; one node never receives another node's password.
 Peer failures are isolated and reported per node instead of breaking the local subscription.

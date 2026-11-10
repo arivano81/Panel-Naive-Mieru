@@ -27,6 +27,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   experimental evidence levels instead of treating every import path as equally verified.
 - English operator guide brought to feature parity for TOTP/audit, tuning, VLESS/XHTTP,
   OpenFlux isolation, federation, diagnostics, maintenance, backup/restore and safe updates.
+- Read-only per-user connection diagnostics that classify access policy, identity, DNS/TLS,
+  listener and service readiness for every enabled managed protocol without exposing secrets.
 
 ### Changed
 

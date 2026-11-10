@@ -3181,6 +3181,7 @@ async function loadLogs(service) {
 
 async function runDiagnostics() {
   el('diag-health').innerHTML = `<p class="text-muted">${t('diagnostics.checking') || '…'}</p>`;
+  el('diag-network').innerHTML = `<p class="text-muted">${t('diagnostics.checking') || '…'}</p>`;
   el('diag-ports').innerHTML  = `<p class="text-muted">${t('diagnostics.checking') || '…'}</p>`;
   el('diag-config').innerHTML = `<p class="text-muted">${t('diagnostics.checking') || '…'}</p>`;
   el('diag-mita-status').textContent = t('logs.loading') || '…';
@@ -3210,6 +3211,16 @@ async function runDiagnostics() {
       healthRow('OpenFlux', !openflux.installed ? 'optional' : (openfluxOk ? 'ok' : 'warn'), openflux.installed ? t('diagnostics.openfluxProfiles', { healthy: openflux.healthyProfiles || 0, active: openflux.activeProfiles || 0, total: openflux.profiles || 0 }) : ''),
       healthRow(t('diagnostics.timeSync'), data.timeSynced ? 'ok' : 'warn'),
     ].join('');
+
+    el('diag-network').innerHTML = (data.network || []).map(item => {
+      const ok = item.dnsOk && item.certificate?.ok;
+      const dns = item.addresses?.length ? item.addresses.join(', ') : (item.dnsError || 'unresolved');
+      const tls = item.certificate?.ok
+        ? t('diagnostics.certificateDays', { days: item.certificate.daysRemaining })
+        : (item.certificate?.error || 'TLS failed');
+      return healthRow(`${item.role}: ${item.host}:${item.port}`, ok ? 'ok' : 'warn',
+        `DNS: ${dns} · TLS: ${tls}`);
+    }).join('') || `<p class="text-muted">${t('diagnostics.noDomains')}</p>`;
 
     el('diag-ports').innerHTML = `
       <div class="info-list">

@@ -21,6 +21,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   VPN traffic, status, diagnostics, encrypted backup export and its own recovery control.
 - Validated root-only portable safety backups before domain, port and VPN identity changes;
   mutations fail closed if the snapshot cannot be persisted.
+- Read-only DNS and TLS diagnostics for the VPN, panel and subscription domains, including
+  server-IP matching, certificate identity validation and remaining lifetime.
 
 ### Changed
 

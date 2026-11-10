@@ -44,6 +44,7 @@ const { readPanelVersion: resolvePanelVersion } = require('./version');
 const { createUpdateChecker } = require('./updateCheck');
 const { maintenanceProtection } = require('./maintenance');
 const { createOperationBackup, operationBackupMiddleware } = require('./operationBackup');
+const { checkDnsTls } = require('./networkDiagnostics');
 const { applyFileTransaction } = require('./fileTransaction');
 const { applyMultiFileTransaction } = require('./multiFileTransaction');
 const { runDatabaseMigrations } = require('./databaseMigrations');
@@ -6270,13 +6271,19 @@ function collectSafeDiagnostics() {
   };
 }
 
-app.get('/api/diagnostics', requireAuth, (_req, res) => {
+async function collectCompleteDiagnostics() {
+  const report = collectSafeDiagnostics();
+  report.network = await checkDnsTls(cfg);
+  return report;
+}
+
+app.get('/api/diagnostics', requireAuth, async (_req, res) => {
   res.setHeader('Cache-Control', 'no-store');
-  res.json(collectSafeDiagnostics());
+  res.json(await collectCompleteDiagnostics());
 });
 
-app.get('/api/diagnostics/export', requireAuth, (_req, res) => {
-  const report = collectSafeDiagnostics();
+app.get('/api/diagnostics/export', requireAuth, async (_req, res) => {
+  const report = await collectCompleteDiagnostics();
   const dateTag = report.generatedAt.slice(0, 10);
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Content-Type', 'application/json');

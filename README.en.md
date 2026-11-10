@@ -315,6 +315,11 @@ bash update.sh --ssh-only        # Revert to SSH-only mode
 bash update.sh --help            # Show help
 ```
 
+The **Diagnostics → DNS and TLS** section checks the public A/AAAA records for the VPN,
+panel, and subscription domains, verifies that they include the configured server IP,
+and validates the certificate name and remaining lifetime. The check is read-only and
+is included in the downloadable safe diagnostics report.
+
 ---
 
 ## 🗑 Uninstall

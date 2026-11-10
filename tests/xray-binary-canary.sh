@@ -70,8 +70,13 @@ const settings = {
   privateKey: process.env.XRAY_PRIVATE_KEY, publicKey: process.env.XRAY_PUBLIC_KEY,
   shortId: '0123456789abcdef',
 };
-fs.writeFileSync(process.env.XRAY_SERVER_OUT, JSON.stringify(
-  buildXrayRealityConfig(settings, [{ id, email: 'canary-user' }]), null, 2));
+const server = buildXrayRealityConfig(settings, [{ id, email: 'canary-user' }]);
+// Xray 26.11 blocks private destinations from proxy inbounds by default. The
+// canary alone permits its exact loopback origin; production keeps that guard.
+server.outbounds.find(outbound => outbound.tag === 'direct').settings.finalRules = [{
+  action: 'allow', network: 'tcp', port: '19080', ip: ['127.0.0.1/32'],
+}];
+fs.writeFileSync(process.env.XRAY_SERVER_OUT, JSON.stringify(server, null, 2));
 fs.writeFileSync(process.env.XRAY_CLIENT_OUT, JSON.stringify({
   log: { loglevel: 'warning' },
   inbounds: [{ listen: '127.0.0.1', port: 18080, protocol: 'socks', settings: { udp: false } }],

@@ -42,6 +42,7 @@ const crypto         = require('crypto');   // Bug 100: module-level require so 
 const os             = require('os');
 const { readPanelVersion: resolvePanelVersion } = require('./version');
 const { createUpdateChecker } = require('./updateCheck');
+const { maintenanceProtection } = require('./maintenance');
 const { applyFileTransaction } = require('./fileTransaction');
 const { applyMultiFileTransaction } = require('./multiFileTransaction');
 const { runDatabaseMigrations } = require('./databaseMigrations');
@@ -155,7 +156,7 @@ try {
     // BUG-162: boot-persistence is OFF by default. Only set true when the
     //   operator explicitly confirms autostart (protects against reboot lock-out).
     warpPersist: false,
-    language: 'ru', version: '1.6.0'
+    language: 'ru', version: '1.6.0', maintenanceMode: false
   };
 }
 
@@ -1989,6 +1990,7 @@ app.use('/api/', (req, res, next) => {
   next();
 });
 app.use('/api/', csrfProtection);
+app.use('/api/', maintenanceProtection(() => cfg.maintenanceMode === true));
 
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));
@@ -1999,6 +2001,23 @@ function requireAuth(req, res, next) {
   if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Unauthorized' });
   res.redirect('/');
 }
+
+app.get('/api/maintenance', requireAuth, (_req, res) => {
+  res.json({ enabled: cfg.maintenanceMode === true });
+});
+
+app.post('/api/maintenance', requireAuth, (req, res) => {
+  const password = String(req.body?.password || '');
+  if (!cfg.adminPassHash || !bcrypt.compareSync(password, cfg.adminPassHash))
+    return res.status(403).json({ error: 'Administrator password confirmation failed' });
+  const previous = cfg.maintenanceMode === true;
+  cfg.maintenanceMode = req.body?.enabled === true;
+  if (!saveConfig()) {
+    cfg.maintenanceMode = previous;
+    return res.status(500).json({ error: 'Could not persist maintenance mode' });
+  }
+  res.json({ enabled: cfg.maintenanceMode });
+});
 
 // OpenFlux remains a separately namespaced, opt-in subsystem. Its routes invoke
 // only the isolated lifecycle CLI and never rebuild or restart the main stack.

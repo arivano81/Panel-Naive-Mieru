@@ -345,6 +345,7 @@ function handleDelegatedClick(e) {
     case 'change-udp-mode':      changeUdpMode(); break;
     case 'change-language':      changeLanguage(); break;
     case 'change-password':      changePassword(); break;
+    case 'toggle-maintenance':   toggleMaintenance(); break;
     case 'totp-setup':          setupTotp(); break;
     case 'totp-enable':         enableTotp(); break;
     case 'totp-disable':        disableTotp(); break;
@@ -546,6 +547,7 @@ function toggleSidebar() {
 async function loadConfig() {
   try {
     state.config = await api('GET', '/api/config');
+    renderMaintenance(state.config.maintenanceMode === true);
     // Bug A (v1.3.2): update all three version displays, not just the topbar.
     {
       const verStr = `v${state.config.version || '1.2.4'}`;
@@ -1423,6 +1425,7 @@ async function loadSettings() {
   try {
     const cfg = await api('GET', '/api/config');
     state.config = cfg;
+    renderMaintenance(cfg.maintenanceMode === true);
     el('s-naive-port').value  = cfg.naivePort     || 443;
     renderCaddyTuning(cfg.caddyTuning || {});
     loadTuningHistory();
@@ -1555,6 +1558,32 @@ async function loadSettings() {
     applyFoolproofGates();
     renderTotpStatus(cfg.totpEnabled === true);
   } catch {}
+}
+
+function renderMaintenance(enabled) {
+  state.config.maintenanceMode = enabled;
+  const banner = el('maintenance-banner');
+  if (banner) banner.classList.toggle('hidden', !enabled);
+  const status = el('maintenance-status');
+  if (status) {
+    status.textContent = t(enabled ? 'settings.maintenanceEnabled' : 'settings.maintenanceDisabled');
+    status.className = `msg-inline ${enabled ? 'warning' : 'success'}`;
+  }
+  const button = el('maintenance-toggle');
+  if (button) button.textContent = t(enabled ? 'settings.maintenanceDisable' : 'settings.maintenanceEnable');
+}
+
+async function toggleMaintenance() {
+  const password = el('maintenance-password')?.value || '';
+  if (!password) return toast(t('settings.currentPassword'), 'error');
+  try {
+    const result = await api('POST', '/api/maintenance', {
+      enabled: state.config.maintenanceMode !== true, password,
+    });
+    if (el('maintenance-password')) el('maintenance-password').value = '';
+    renderMaintenance(result.enabled === true);
+    toast(t(result.enabled ? 'settings.maintenanceEnabled' : 'settings.maintenanceDisabled'), 'success');
+  } catch (error) { toast(error.message, 'error'); }
 }
 
 // ── v1.4.0: external panel access UI ──────────────────────────────────────────

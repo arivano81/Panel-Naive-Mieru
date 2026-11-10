@@ -1,6 +1,6 @@
 'use strict';
 
-const LATEST_CONFIG_SCHEMA = 14;
+const LATEST_CONFIG_SCHEMA = 15;
 
 const CONFIG_MIGRATIONS = [
   { version: 1, name: 'probe mode', up(config) {
@@ -79,6 +79,9 @@ const CONFIG_MIGRATIONS = [
     if (!config.caddyTuning || typeof config.caddyTuning !== 'object' || Array.isArray(config.caddyTuning))
       config.caddyTuning = { enabled: false };
     if (config.caddyTuning.enabled == null) config.caddyTuning.enabled = false;
+  } },
+  { version: 15, name: 'maintenance mode', up(config) {
+    if (config.maintenanceMode == null) config.maintenanceMode = false;
   } },
 ];
 

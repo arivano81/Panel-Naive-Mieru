@@ -17,6 +17,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   process-scoped read token is available; it never downloads or installs an update.
 - Canonical VertaFlux names for installation logs, storage, temporary updater files,
   backups, diagnostics and SPDX artifacts; legacy names remain import-only.
+- Password-confirmed maintenance mode that locks configuration mutations while preserving
+  VPN traffic, status, diagnostics, encrypted backup export and its own recovery control.
 
 ### Changed
 

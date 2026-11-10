@@ -9,6 +9,15 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [v1.18.1] - 2026-11-10
+
+### Changed
+
+- Added an original VertaFlux README banner that visualizes multiple protocols converging into
+  one control plane and secure routing layer.
+- Removed unrelated support and donation links from both READMEs, the panel UI and the installer
+  completion screen.
+
 ## [v1.18.0] - 2026-11-09
 
 ### Added
@@ -3917,7 +3926,6 @@ because the Exit node is a full Mieru server (`mita`), not a raw SOCKS5 endpoint
 - `mita-state.json` correctly documented at `/var/lib/rixxx-panel/mita-state.json`
 - Troubleshooting section (top-5 fixes) in both READMEs
 - Uninstall documentation with `--keep-configs` flag
-- Donation / Telegram links prominently placed in READMEs
 
 ### Fixed
 - Removed incorrect `/etc/mita/server.json` and `/etc/mita/users.json` references from docs

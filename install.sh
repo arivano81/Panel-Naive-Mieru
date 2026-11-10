@@ -1722,9 +1722,6 @@ print_banner() {
   echo -e "  ${YELLOW}${BOLD}⚠  $(t 'ВАЖНО: Сохраните пароль и probe_secret — они больше не будут показаны!' \
                                     'IMPORTANT: Save the password and probe_secret — they will not be shown again!')${NC}"
   echo ""
-  echo -e "  Telegram: ${CYAN}https://t.me/russian_paradice_vpn${NC}"
-  echo -e "  $(t 'Донат' 'Donate'):    ${CYAN}https://app.lava.top/2107724612?tabId=donate${NC}"
-  echo ""
 }
 
 # ── Read-only network tuning preview ──────────────────────────────────────────

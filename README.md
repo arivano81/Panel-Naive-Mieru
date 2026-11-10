@@ -6,16 +6,14 @@
 
 # ◈ VertaFlux
 
-**v1.18.0** — универсальная панель управления личным прокси-сервером на Ubuntu или Debian
+**v1.18.1** — универсальная панель управления личным прокси-сервером на Ubuntu или Debian
 
-[![Telegram](https://img.shields.io/badge/Telegram-@russian__paradice__vpn-2CA5E0?logo=telegram&logoColor=white)](https://t.me/russian_paradice_vpn)
+![VertaFlux — единая панель, несколько маршрутов](docs/assets/vertaflux-banner.svg)
+
 [![GitHub](https://img.shields.io/badge/GitHub-arivano81-181717?logo=github)](https://github.com/arivano81/Panel-Naive-Mieru)
 [![CI](https://github.com/arivano81/Panel-Naive-Mieru/actions/workflows/ci.yml/badge.svg)](https://github.com/arivano81/Panel-Naive-Mieru/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-MIT-blue?color=248cff)](LICENSE)
 [![Debian](https://img.shields.io/badge/Debian-11–13-A81D33?logo=debian&logoColor=white)](#-поддерживаемые-ос)
-
-> 💬 **Поддержка и обновления:** [t.me/russian_paradice_vpn](https://t.me/russian_paradice_vpn)  
-> ☕ **Поддержать проект:** [app.lava.top/2107724612](https://app.lava.top/2107724612?tabId=donate)
 
 VertaFlux объединяет NaiveProxy, Mieru, Hysteria2, VLESS и экспериментальный OpenFlux
 в одном понятном интерфейсе. Название подчёркивает главную идею проекта: один шлюз,
@@ -902,8 +900,6 @@ ufw status
 
 - **Проект:** VertaFlux (`arivano81/Panel-Naive-Mieru`)
 - **Родительский проект:** [cwash797-cmd/Panel-Naive-Mieru-by-RIXXX](https://github.com/cwash797-cmd/Panel-Naive-Mieru-by-RIXXX)
-- **Telegram:** [@russian_paradice_vpn](https://t.me/russian_paradice_vpn)
-- **Донат:** [app.lava.top/2107724612](https://app.lava.top/2107724612?tabId=donate)
 - **NaiveProxy:** [klzgrad/naiveproxy](https://github.com/klzgrad/naiveproxy)
 - **Mieru:** [enfein/mieru](https://github.com/enfein/mieru)
 - **Caddy:** [caddyserver.com](https://caddyserver.com)

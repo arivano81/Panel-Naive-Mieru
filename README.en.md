@@ -6,15 +6,13 @@
 
 # ◈ VertaFlux
 
-**v1.18.0** — Universal control panel for a personal proxy server on Ubuntu or Debian
+**v1.18.1** — Universal control panel for a personal proxy server on Ubuntu or Debian
 
-[![Telegram](https://img.shields.io/badge/Telegram-@russian__paradice__vpn-2CA5E0?logo=telegram&logoColor=white)](https://t.me/russian_paradice_vpn)
+![VertaFlux — one control plane, multiple routes](docs/assets/vertaflux-banner.svg)
+
 [![GitHub](https://img.shields.io/badge/GitHub-arivano81-181717?logo=github)](https://github.com/arivano81/Panel-Naive-Mieru)
 [![CI](https://github.com/arivano81/Panel-Naive-Mieru/actions/workflows/ci.yml/badge.svg)](https://github.com/arivano81/Panel-Naive-Mieru/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-MIT-blue?color=248cff)](LICENSE)
-
-> 💬 **Support & updates:** [t.me/russian_paradice_vpn](https://t.me/russian_paradice_vpn)  
-> ☕ **Support the project:** [app.lava.top/2107724612](https://app.lava.top/2107724612?tabId=donate)
 
 VertaFlux brings NaiveProxy, Mieru, Hysteria2, VLESS, and experimental OpenFlux
 into one approachable interface: one gateway, multiple access technologies, and
@@ -400,8 +398,6 @@ ufw status
 ## 📝 Credits
 
 - **Project:** VertaFlux (`arivano81/Panel-Naive-Mieru`)
-- **Telegram:** [@russian_paradice_vpn](https://t.me/russian_paradice_vpn)
-- **Donate:** [app.lava.top/2107724612](https://app.lava.top/2107724612?tabId=donate)
 - **NaiveProxy:** [klzgrad/naiveproxy](https://github.com/klzgrad/naiveproxy)
 - **Mieru:** [enfein/mieru](https://github.com/enfein/mieru)
 - **Caddy:** [caddyserver.com](https://caddyserver.com)

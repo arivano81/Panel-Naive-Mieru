@@ -19,6 +19,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   backups, diagnostics and SPDX artifacts; legacy names remain import-only.
 - Password-confirmed maintenance mode that locks configuration mutations while preserving
   VPN traffic, status, diagnostics, encrypted backup export and its own recovery control.
+- Validated root-only portable safety backups before domain, port and VPN identity changes;
+  mutations fail closed if the snapshot cannot be persisted.
 
 ### Changed
 

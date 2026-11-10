@@ -43,6 +43,7 @@ const os             = require('os');
 const { readPanelVersion: resolvePanelVersion } = require('./version');
 const { createUpdateChecker } = require('./updateCheck');
 const { maintenanceProtection } = require('./maintenance');
+const { createOperationBackup, operationBackupMiddleware } = require('./operationBackup');
 const { applyFileTransaction } = require('./fileTransaction');
 const { applyMultiFileTransaction } = require('./multiFileTransaction');
 const { runDatabaseMigrations } = require('./databaseMigrations');
@@ -1991,6 +1992,7 @@ app.use('/api/', (req, res, next) => {
 });
 app.use('/api/', csrfProtection);
 app.use('/api/', maintenanceProtection(() => cfg.maintenanceMode === true));
+app.use('/api/', operationBackupMiddleware(writeSafetyBackup));
 
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));
@@ -2401,6 +2403,10 @@ function buildPortableBackup() {
     config: cfg,
     users,
   };
+}
+
+function writeSafetyBackup(label) {
+  return createOperationBackup(buildPortableBackup(), label);
 }
 
 function backupFilename(suffix) {
@@ -5045,6 +5051,12 @@ app.post('/api/federation/provision', fedLimiter, (req, res) => {
   if (expiry && isNaN(Date.parse(expiry)))
     return res.status(400).json({ error: 'expiry must be a valid ISO date string' });
 
+  let safetyBackup;
+  try { safetyBackup = writeSafetyBackup('federation-keys'); }
+  catch (error) {
+    return res.status(503).json({ error: `Safety backup failed; no changes were made: ${error.message}` });
+  }
+
   try {
     const now      = new Date().toISOString();
     const existing = getUserByEmail(email);
@@ -5065,6 +5077,7 @@ app.post('/api/federation/provision', fedLimiter, (req, res) => {
         ok: true, action: 'updated',
         username: updated.username,
         subLink: token ? `${subBaseUrl()}/sub/${token}` : null,
+        safetyBackup,
       });
     }
 
@@ -5110,6 +5123,7 @@ app.post('/api/federation/provision', fedLimiter, (req, res) => {
       ok: true, action: result.created ? 'created' : 'updated',
       username: row.username,
       subLink: token ? `${subBaseUrl()}/sub/${token}` : null,
+      safetyBackup,
     });
   } catch (e) {
     console.warn('[FED] provision failed:', e && e.message);
@@ -5166,9 +5180,14 @@ app.post('/api/federation/deprovision', fedLimiter, (req, res) => {
       // Desired end state already holds — report success, do nothing.
       return res.json({ ok: true, action: 'absent' });
     }
+    let safetyBackup;
+    try { safetyBackup = writeSafetyBackup('federation-keys'); }
+    catch (error) {
+      return res.status(503).json({ error: `Safety backup failed; no changes were made: ${error.message}` });
+    }
     deleteUser(existing.id);
     applyAllConfigsAsync();
-    return res.json({ ok: true, action: 'deleted', username: existing.username || null });
+    return res.json({ ok: true, action: 'deleted', username: existing.username || null, safetyBackup });
   } catch (e) {
     console.warn('[FED] deprovision failed:', e && e.message);
     return res.status(500).json({ error: 'deprovision failed on node' });

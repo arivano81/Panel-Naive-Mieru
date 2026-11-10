@@ -59,6 +59,9 @@ ok(updateCheck.status === 0, 'read-only update availability regression suite pas
 const maintenance = spawnSync(process.execPath, [path.join(__dirname, 'maintenance-mode.test.js')],
   { stdio: 'inherit' });
 ok(maintenance.status === 0, 'maintenance mode regression suite passes');
+const operationBackup = spawnSync(process.execPath, [path.join(__dirname, 'operation-backup.test.js')],
+  { stdio: 'inherit' });
+ok(operationBackup.status === 0, 'operation safety backup regression suite passes');
 const brand = spawnSync(process.execPath, [path.join(__dirname, 'vertaflux-brand.test.js')],
   { stdio: 'inherit' });
 ok(brand.status === 0, 'VertaFlux identity regression suite passes');

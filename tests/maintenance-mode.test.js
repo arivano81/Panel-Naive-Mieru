@@ -25,6 +25,13 @@ assert.strictEqual(run(true, 'POST', '/api/federation/provision', false).respons
 assert(run(true, 'POST', '/api/federation/fetch', false).next, 'read-only federation fetch stays available');
 assert(run(false, 'POST', '/api/users').next, 'normal operation is unchanged when disabled');
 assert(run(true, 'POST', '/api/login', false).next, 'authentication remains available');
+let mountedNext = false;
+maintenanceProtection(() => true)(
+  { method: 'POST', baseUrl: '/api', path: '/maintenance', session: { authenticated: true } },
+  { status() { throw new Error('mounted maintenance route was blocked'); } },
+  () => { mountedNext = true; },
+);
+assert(mountedNext, 'mounted Express middleware keeps its recovery route available');
 
 const root = path.resolve(__dirname, '..');
 const server = fs.readFileSync(path.join(root, 'panel/server/index.js'), 'utf8');

@@ -17,7 +17,7 @@ die() { echo "[XRAY UPDATE] ERROR: $*" >&2; exit 1; }
 [[ -x "$BIN" && -f "$CONFIG" ]] || die 'installed Xray and config are required'
 for command in curl unzip sha256sum jq systemctl; do command -v "$command" >/dev/null || die "missing $command"; done
 
-if "$BIN" version | head -n1 | grep -F "${VERSION#v}" >/dev/null; then
+if [[ "$("$BIN" version 2>/dev/null | sed -n '1p')" == *"${VERSION#v}"* ]]; then
   echo "[XRAY UPDATE] Xray $VERSION is already installed"
   exit 0
 fi
@@ -34,7 +34,7 @@ printf '%s  %s\n' "$SHA256" "$WORK/$ASSET" | sha256sum -c --status - \
 unzip -q "$WORK/$ASSET" xray -d "$WORK/unpacked"
 CANDIDATE="$WORK/unpacked/xray"
 chmod 755 "$CANDIDATE"
-"$CANDIDATE" version | head -n1 | grep -F "${VERSION#v}" >/dev/null \
+[[ "$("$CANDIDATE" version 2>/dev/null | sed -n '1p')" == *"${VERSION#v}"* ]] \
   || die 'candidate version mismatch'
 "$CANDIDATE" run -test -config "$CONFIG" >/dev/null \
   || die 'current production config is incompatible with the candidate'

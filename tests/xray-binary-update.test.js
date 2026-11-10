@@ -11,6 +11,8 @@ function ok(value, message) { if (!value) throw new Error(message); console.log(
 ok(script.includes('run -test -config "$CONFIG"'), 'candidate validates the existing production config');
 ok(script.indexOf('sha256sum -c --status') < script.indexOf('mv "${BIN}.new" "$BIN"'),
   'checksum verification precedes binary replacement');
+ok(!script.includes('version | head -n1'),
+  'version checks cannot fail from a pipefail/SIGPIPE race');
 ok(script.includes('cp -a "$BIN" "$BACKUP/xray"') && script.includes('rollback'),
   'current binary is backed up and rollback is defined');
 ok(!script.includes('x25519') && !script.includes('PRIVATE_KEY') && !script.includes('SHORT_ID'),

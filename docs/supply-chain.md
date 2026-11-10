@@ -96,15 +96,15 @@ Production-запуск [№ 42789108590](https://github.com/arivano81/Panel-Nai
 | Hysteria2 | app/v2.12.3 | go1.26.8 | 23 | 20 |
 | Xray-core | v26.11.9 | go1.27.3 | 2 | 0 |
 | wgcf | 2.3.0 | go1.27.0 | 17 | 18 |
-| OpenFlux | 0.0.5 | go1.26.4 | 43 | 18 |
+| OpenFlux | v0.17.1 | ожидает повторного audit | ожидает повторного audit | ожидает повторного audit |
 
 Значения — количество уникальных GO advisory ID, а не число строк или stack traces. Разница
 между binary и source ожидаема: binary mode видит скомпилированные символы, source mode строит
 call graph отдельных Go modules. Ни один результат не получил автоматического VEX.
 
 Обновление сняло все source-reachable findings Caddy и Xray и сократило их binary findings
-соответственно с 87 до 11 и с 74 до 2. OpenFlux v0.1.0 не принят как замена: реальный
-зашифрованный data-plane canary ранее не провёл трафик. Красный audit намеренно сохранён как
+соответственно с 87 до 11 и с 74 до 2. OpenFlux переведён на checksum-pinned v0.17.1;
+его новые результаты фиксируются следующим audit-run после data-plane canary. Красный audit намеренно сохранён как
 release blocker; allowlist по количеству или общая маска `GO-*` не добавляются.
 
 ## Откат

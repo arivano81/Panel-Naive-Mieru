@@ -19,9 +19,9 @@ function ok(value, message) {
 }
 
 console.log('OpenFlux opt-in installer regression test');
-ok(script.includes('OPENFLUX_VERSION="0.0.5"'), 'release version is pinned');
+ok(script.includes('OPENFLUX_VERSION="v0.17.1"'), 'release version is pinned');
 ok(script.includes('OPENFLUX_ASSET="openflux-linux-amd64"'), 'amd64 asset is pinned');
-ok(script.includes('8211dd5343dd4eac49fcd2838ffcb9e1912c14a0e878c735395967999b0573c5'),
+ok(script.includes('c0d00461e8cc59e48429b239fd8044b1c1aaa3769968a7c9160c488f4bd63f3b'),
   'official SHA-256 is pinned');
 ok(!/releases\/latest|api\.github\.com/.test(script), 'installer never resolves latest');
 const fastPathAt = script.indexOf('pinned OpenFlux ${OPENFLUX_VERSION} is already installed exactly');

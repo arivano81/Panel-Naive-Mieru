@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-OPENFLUX_VERSION="0.0.5"
+OPENFLUX_VERSION="v0.17.1"
 OPENFLUX_ASSET="openflux-linux-amd64"
-OPENFLUX_SHA256="8211dd5343dd4eac49fcd2838ffcb9e1912c14a0e878c735395967999b0573c5"
+OPENFLUX_SHA256="c0d00461e8cc59e48429b239fd8044b1c1aaa3769968a7c9160c488f4bd63f3b"
 OPENFLUX_URL="https://github.com/p1neappleXpress/OpenFlux/releases/download/${OPENFLUX_VERSION}/${OPENFLUX_ASSET}"
 OPENFLUX_BIN="/usr/local/bin/openflux"
 OPENFLUX_DIR="/etc/openflux"
@@ -170,7 +170,7 @@ systemctl daemon-reload
   echo "Source: https://github.com/p1neappleXpress/OpenFlux/tree/$OPENFLUX_VERSION"
   echo "License: GPL-3.0-or-later"
   echo "Backup: ${BACKUP:-none (first install)}"
-  echo "Next step: isolated Debian 13 canary; do not use on a production server yet."
+  echo "Next step: keep disabled until the Debian 13 canary passes; no dedicated VPS is required."
 } > "$REPORT"
 chmod 0600 "$REPORT"
 COMMITTED=1

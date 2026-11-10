@@ -1624,7 +1624,7 @@ write_component_registry() {
     --arg mieru "${MIERU_VERSION:-unknown}" \
     --arg hy2 "$hy2_v" --argjson hy2Installed "$hy2_installed" \
     --arg xray "$xray_v" --argjson xrayInstalled "$xray_installed" \
-    --arg openflux "0.0.5" --argjson openfluxInstalled "$openflux_installed" \
+    --arg openflux "v0.17.1" --argjson openfluxInstalled "$openflux_installed" \
     '{schema:1,generatedAt:$generated,source:{repository:$source,branch:$branch},components:{
       panel:{installed:true,version:$panel,path:"/opt/panel-naive-mieru"},
       caddyNaive:{installed:true,version:$caddy,path:"/usr/local/bin/caddy-naive"},

@@ -14,6 +14,14 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Transactional Caddy/NaiveProxy binary updater that validates the live Caddyfile and
   `forward_proxy` module, preserves the configuration, and rolls back failed activation.
 
+### Changed
+
+- Updated the disabled-by-default OpenFlux integration from `0.0.5` to checksum-pinned
+  `v0.17.1`; the existing L4/Direct config remains isolated and must pass its Debian 13
+  encrypted-tunnel canary before activation.
+- Documented one-component-at-a-time production updates and mandatory operator approval
+  immediately before any binary replacement that can interrupt a VPN service.
+
 ## [v1.19.0] - 2026-11-10
 
 ### Added

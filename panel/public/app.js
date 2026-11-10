@@ -2315,7 +2315,7 @@ async function loadOpenFlux() {
   const rows = el('openflux-profiles');
   try {
     const data = await api('GET', '/api/openflux');
-    if (el('openflux-version')) el('openflux-version').textContent = `v${data.version || '0.0.5'}`;
+    if (el('openflux-version')) el('openflux-version').textContent = data.version || 'v0.17.1';
     el('openflux-not-installed')?.classList.toggle('hidden', !!data.installed);
     el('openflux-installed')?.classList.toggle('hidden', !data.installed);
     const profiles = Array.isArray(data.profiles) ? data.profiles : [];

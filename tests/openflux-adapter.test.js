@@ -22,9 +22,9 @@ function rejects(fn, pattern, message) {
 }
 
 console.log('OpenFlux isolated adapter regression test');
-ok(OPENFLUX_RELEASE.version === '0.0.5' && OPENFLUX_RELEASE.asset === 'openflux-linux-amd64',
+ok(OPENFLUX_RELEASE.version === 'v0.17.1' && OPENFLUX_RELEASE.asset === 'openflux-linux-amd64',
   'release and amd64 asset are pinned');
-ok(OPENFLUX_RELEASE.sha256 === '8211dd5343dd4eac49fcd2838ffcb9e1912c14a0e878c735395967999b0573c5',
+ok(OPENFLUX_RELEASE.sha256 === 'c0d00461e8cc59e48429b239fd8044b1c1aaa3769968a7c9160c488f4bd63f3b',
   'official release SHA-256 is pinned');
 ok(OPENFLUX_RELEASE.license === 'GPL-3.0-or-later' && OPENFLUX_RELEASE.sourceUrl.endsWith('/OpenFlux'),
   'upstream source and license provenance are retained');

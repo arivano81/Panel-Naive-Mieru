@@ -3,9 +3,9 @@
 const net = require('net');
 
 const OPENFLUX_RELEASE = Object.freeze({
-  version: '0.0.5',
+  version: 'v0.17.1',
   asset: 'openflux-linux-amd64',
-  sha256: '8211dd5343dd4eac49fcd2838ffcb9e1912c14a0e878c735395967999b0573c5',
+  sha256: 'c0d00461e8cc59e48429b239fd8044b1c1aaa3769968a7c9160c488f4bd63f3b',
   sourceUrl: 'https://github.com/p1neappleXpress/OpenFlux',
   license: 'GPL-3.0-or-later',
 });

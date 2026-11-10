@@ -28,13 +28,13 @@ const service = createOpenFluxService({
     if (file === 'journalctl') return 'normal line\nEncryptionKey = forbidden\npassword=forbidden\n';
     if (file === 'tar') return Buffer.from('archive');
     if (file === 'bash' && args[0] === '/scripts/install.sh')
-      return 'OPENFLUX_RESULT_JSON={"ok":true,"installed":true,"activated":false,"changed":false,"version":"0.0.5"}\n';
+      return 'OPENFLUX_RESULT_JSON={"ok":true,"installed":true,"activated":false,"changed":false,"version":"v0.17.1"}\n';
     if (args[1] === 'list') return '[{"id":"alpha","active":false}]';
     return '{"ok":true}';
   },
 });
 ok(service.installed(), 'installation state requires the binary and lifecycle CLI');
-ok(service.release.version === '0.0.5', 'status exposes the pinned supported version');
+ok(service.release.version === 'v0.17.1', 'status exposes the pinned supported version');
 ok(service.list()[0].id === 'alpha', 'profile list is parsed as structured JSON');
 service.create({ id: 'alpha', port: 18445, host: 'vpn.example.com' });
 ok(calls.some(call => call.join('|') === 'bash|/scripts/profile.sh|create|alpha|18445|vpn.example.com'),

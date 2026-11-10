@@ -123,16 +123,16 @@
     },
     {
       "name": "openflux",
-      "version": "0.0.5",
+      "version": "v0.17.1",
       "source": "https://github.com/p1neappleXpress/OpenFlux",
-      "sourceRef": "0.0.5",
-      "sourceCommit": "ea52949d45c0284c532cb8295abadced58b3a389",
-      "license": "GPL-3.0-only",
+      "sourceRef": "v0.17.1",
+      "sourceCommit": "f492a1a33b7581ad8f88118f97e0b866adda3cdc",
+      "license": "GPL-3.0-or-later",
       "artifacts": [
         {
           "arch": "linux-amd64",
-          "url": "https://github.com/p1neappleXpress/OpenFlux/releases/download/0.0.5/openflux-linux-amd64",
-          "sha256": "8211dd5343dd4eac49fcd2838ffcb9e1912c14a0e878c735395967999b0573c5"
+          "url": "https://github.com/p1neappleXpress/OpenFlux/releases/download/v0.17.1/openflux-linux-amd64",
+          "sha256": "c0d00461e8cc59e48429b239fd8044b1c1aaa3769968a7c9160c488f4bd63f3b"
         }
       ]
     }

@@ -9,6 +9,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [v1.21.0] - 2026-11-11
+
 ### Added
 
 - Transactional Caddy/NaiveProxy binary updater that validates the live Caddyfile and

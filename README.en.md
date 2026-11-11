@@ -6,7 +6,7 @@
 
 # ◈ VertaFlux
 
-**v1.19.0** — Universal control panel for a personal proxy server on Ubuntu or Debian
+**v1.21.0** — Universal control panel for a personal proxy server on Ubuntu or Debian
 
 ![VertaFlux — one control plane, multiple routes](docs/assets/vertaflux-banner.svg)
 

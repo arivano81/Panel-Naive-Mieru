@@ -880,6 +880,8 @@ function openAddUser() {
   el('u-quota').value      = '0';
   el('p-naive').checked    = true;
   el('p-mieru').checked    = true;
+  el('u-mieru-loopback').checked = false;
+  el('u-mieru-private').checked = false;
   if (el('p-hy2')) el('p-hy2').checked = false;
   if (el('p-vless')) el('p-vless').checked = false;
   applyHy2Gate();
@@ -928,6 +930,8 @@ function openEditUser(id) {
   el('u-quota').value    = user.quotaMB || 0;
   el('p-naive').checked  = protocols.includes('naive');
   el('p-mieru').checked  = protocols.includes('mieru');
+  el('u-mieru-loopback').checked = !!user.mieruAllowLoopbackIP;
+  el('u-mieru-private').checked = !!user.mieruAllowPrivateIP;
   applyHy2Gate();
   applyVlessGate();
   // After gating: reflect the saved hy2 state (a user may already have hy2 even
@@ -970,7 +974,11 @@ async function saveUser() {
   if (password && password.length < 8) return showUserError(t('users.passwordTooShort'));
   if (!protocols.length)    return showUserError(t('users.protocolRequired'));
 
-  const body = { email, username, expiry, protocols, quotaMB };
+  const body = {
+    email, username, expiry, protocols, quotaMB,
+    mieruAllowLoopbackIP: el('u-mieru-loopback').checked,
+    mieruAllowPrivateIP: el('u-mieru-private').checked,
+  };
   if (password) body.password = password;
 
   // v1.2.5: disabled-button + spinner pattern

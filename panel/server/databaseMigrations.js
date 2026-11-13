@@ -2,7 +2,7 @@
 
 const crypto = require('crypto');
 
-const LATEST_DB_SCHEMA = 8;
+const LATEST_DB_SCHEMA = 9;
 
 function ensureAdminAuditTable(db) {
   db.exec(`
@@ -144,6 +144,14 @@ const MIGRATIONS = [
     name: 'VPN tuning history',
     up(db) { ensureTuningHistoryTable(db); },
   },
+  {
+    version: 9,
+    name: 'per-user Mieru private network access',
+    up(db) {
+      addColumn(db, 'users', 'mieruAllowLoopbackIP INTEGER NOT NULL DEFAULT 0');
+      addColumn(db, 'users', 'mieruAllowPrivateIP INTEGER NOT NULL DEFAULT 0');
+    },
+  },
 ];
 
 function runDatabaseMigrations(db, {
@@ -179,6 +187,8 @@ function runDatabaseMigrations(db, {
     addColumn(db, 'users', 'vlessDownloadBytes INTEGER DEFAULT 0');
     addColumn(db, 'users', 'vlessLastUploadBytes INTEGER DEFAULT 0');
     addColumn(db, 'users', 'vlessLastDownloadBytes INTEGER DEFAULT 0');
+    addColumn(db, 'users', 'mieruAllowLoopbackIP INTEGER NOT NULL DEFAULT 0');
+    addColumn(db, 'users', 'mieruAllowPrivateIP INTEGER NOT NULL DEFAULT 0');
     ensureAdminAuditTable(db);
     ensureTuningHistoryTable(db);
     db.prepare("UPDATE users SET email = NULL WHERE email = ''").run();

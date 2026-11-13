@@ -38,6 +38,8 @@ ok(names.has('bonus_links'), 'bonus_links survives nullable-email table rebuild'
 ok(names.has('vless_uuid'), 'VLESS UUID column is created');
 ok(names.has('vlessUploadBytes') && names.has('vlessLastUploadBytes'),
   'durable VLESS counters are created');
+ok(names.has('mieruAllowLoopbackIP') && names.has('mieruAllowPrivateIP'),
+  'per-user Mieru private network permissions are created');
 const auditTable = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='admin_audit'").get();
 const auditIndex = db.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_admin_audit_ts'").get();
 ok(auditTable && auditIndex, 'administrator audit table and timestamp index are created');
@@ -48,6 +50,8 @@ ok(user.username === 'alice', 'existing user preserved');
 ok(user.email === null, 'legacy empty email normalized to NULL');
 ok(user.sub_token === 'ab'.repeat(16), 'missing subscription token backfilled');
 ok(user.vless_uuid === '11111111-1111-4111-8111-111111111111', 'missing VLESS UUID backfilled');
+ok(user.mieruAllowLoopbackIP === 0 && user.mieruAllowPrivateIP === 0,
+  'existing users keep safe Mieru network defaults');
 
 const second = runDatabaseMigrations(db, { logger: { log() {} } });
 ok(second.applied.length === 0, 'second run is idempotent');

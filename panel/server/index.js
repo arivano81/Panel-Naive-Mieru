@@ -229,7 +229,9 @@ try {
       vlessUploadBytes INTEGER DEFAULT 0,
       vlessDownloadBytes INTEGER DEFAULT 0,
       vlessLastUploadBytes INTEGER DEFAULT 0,
-      vlessLastDownloadBytes INTEGER DEFAULT 0
+      vlessLastDownloadBytes INTEGER DEFAULT 0,
+      mieruAllowLoopbackIP INTEGER NOT NULL DEFAULT 0,
+      mieruAllowPrivateIP INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS traffic_snapshots (
       id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -347,9 +349,9 @@ function upsertUser(u) {
     const email = (u.email && String(u.email).trim()) ? String(u.email).trim() : null;
     db.prepare(`
       INSERT INTO users
-        (id,email,username,passHash,password,expiry,protocols,quotaMB,usedMB,createdAt,updatedAt,lastSeen,sub_token,bonus_links,vless_uuid,vlessUploadBytes,vlessDownloadBytes,vlessLastUploadBytes,vlessLastDownloadBytes)
+        (id,email,username,passHash,password,expiry,protocols,quotaMB,usedMB,createdAt,updatedAt,lastSeen,sub_token,bonus_links,vless_uuid,vlessUploadBytes,vlessDownloadBytes,vlessLastUploadBytes,vlessLastDownloadBytes,mieruAllowLoopbackIP,mieruAllowPrivateIP)
       VALUES
-        (@id,@email,@username,@passHash,@password,@expiry,@protocols,@quotaMB,@usedMB,@createdAt,@updatedAt,@lastSeen,@sub_token,@bonus_links,@vless_uuid,@vlessUploadBytes,@vlessDownloadBytes,@vlessLastUploadBytes,@vlessLastDownloadBytes)
+        (@id,@email,@username,@passHash,@password,@expiry,@protocols,@quotaMB,@usedMB,@createdAt,@updatedAt,@lastSeen,@sub_token,@bonus_links,@vless_uuid,@vlessUploadBytes,@vlessDownloadBytes,@vlessLastUploadBytes,@vlessLastDownloadBytes,@mieruAllowLoopbackIP,@mieruAllowPrivateIP)
       ON CONFLICT(id) DO UPDATE SET
         email=excluded.email, username=excluded.username,
         passHash=excluded.passHash, password=excluded.password,
@@ -362,9 +364,12 @@ function upsertUser(u) {
         vlessUploadBytes=excluded.vlessUploadBytes,
         vlessDownloadBytes=excluded.vlessDownloadBytes,
         vlessLastUploadBytes=excluded.vlessLastUploadBytes,
-        vlessLastDownloadBytes=excluded.vlessLastDownloadBytes
+        vlessLastDownloadBytes=excluded.vlessLastDownloadBytes,
+        mieruAllowLoopbackIP=excluded.mieruAllowLoopbackIP,
+        mieruAllowPrivateIP=excluded.mieruAllowPrivateIP
     `).run({ vlessUploadBytes: 0, vlessDownloadBytes: 0, vlessLastUploadBytes: 0,
-             vlessLastDownloadBytes: 0, ...u, email, password: u.password || '', bonus_links: u.bonus_links || null,
+             vlessLastDownloadBytes: 0, mieruAllowLoopbackIP: 0, mieruAllowPrivateIP: 0,
+             ...u, email, password: u.password || '', bonus_links: u.bonus_links || null,
              sub_token: u.sub_token || crypto.randomBytes(16).toString('hex'),
              vless_uuid: u.vless_uuid || uuidv4() });
   } else {
@@ -393,12 +398,13 @@ function createUserAtomic(u) {
   if (db) {
     const info = db.prepare(`
       INSERT INTO users
-        (id,email,username,passHash,password,expiry,protocols,quotaMB,usedMB,createdAt,updatedAt,lastSeen,sub_token,bonus_links,vless_uuid,vlessUploadBytes,vlessDownloadBytes,vlessLastUploadBytes,vlessLastDownloadBytes)
+        (id,email,username,passHash,password,expiry,protocols,quotaMB,usedMB,createdAt,updatedAt,lastSeen,sub_token,bonus_links,vless_uuid,vlessUploadBytes,vlessDownloadBytes,vlessLastUploadBytes,vlessLastDownloadBytes,mieruAllowLoopbackIP,mieruAllowPrivateIP)
       VALUES
-        (@id,@email,@username,@passHash,@password,@expiry,@protocols,@quotaMB,@usedMB,@createdAt,@updatedAt,@lastSeen,@sub_token,@bonus_links,@vless_uuid,@vlessUploadBytes,@vlessDownloadBytes,@vlessLastUploadBytes,@vlessLastDownloadBytes)
+        (@id,@email,@username,@passHash,@password,@expiry,@protocols,@quotaMB,@usedMB,@createdAt,@updatedAt,@lastSeen,@sub_token,@bonus_links,@vless_uuid,@vlessUploadBytes,@vlessDownloadBytes,@vlessLastUploadBytes,@vlessLastDownloadBytes,@mieruAllowLoopbackIP,@mieruAllowPrivateIP)
       ON CONFLICT(username) DO NOTHING
     `).run({ vlessUploadBytes: 0, vlessDownloadBytes: 0, vlessLastUploadBytes: 0,
-             vlessLastDownloadBytes: 0, ...u, email, password: u.password || '', bonus_links: u.bonus_links || null,
+             vlessLastDownloadBytes: 0, mieruAllowLoopbackIP: 0, mieruAllowPrivateIP: 0,
+             ...u, email, password: u.password || '', bonus_links: u.bonus_links || null,
              sub_token: u.sub_token || crypto.randomBytes(16).toString('hex'),
              vless_uuid: u.vless_uuid || uuidv4() });
 
@@ -986,7 +992,9 @@ function buildMitaStateContent() {
     portBindings,
     users: mieruUsers.map(u => ({
       name:     u.username,
-      password: u.password || ''   // plain string — mita hashes on apply
+      password: u.password || '',  // plain string — mita hashes on apply
+      allowLoopbackIP: !!u.mieruAllowLoopbackIP,
+      allowPrivateIP: !!u.mieruAllowPrivateIP
     })),
     loggingLevel: 'INFO',
     mtu: cfg.mtu || 1400
@@ -2395,7 +2403,9 @@ function buildPortableBackup() {
       vlessUploadBytes: u.vlessUploadBytes || 0,
       vlessDownloadBytes: u.vlessDownloadBytes || 0,
       vlessLastUploadBytes: u.vlessLastUploadBytes || 0,
-      vlessLastDownloadBytes: u.vlessLastDownloadBytes || 0
+      vlessLastDownloadBytes: u.vlessLastDownloadBytes || 0,
+      mieruAllowLoopbackIP: u.mieruAllowLoopbackIP ? 1 : 0,
+      mieruAllowPrivateIP: u.mieruAllowPrivateIP ? 1 : 0
   }));
   return {
     format: BACKUP_FORMAT,
@@ -2922,7 +2932,8 @@ app.get('/api/apply-status', requireAuth, (req, res) => {
 });
 
 app.post('/api/users', requireAuth, async (req, res) => {
-  const { email, username, password, expiry, protocols, quotaMB, quotaGb } = req.body;
+  const { email, username, password, expiry, protocols, quotaMB, quotaGb,
+    mieruAllowLoopbackIP, mieruAllowPrivateIP } = req.body;
   const validation = validateUserInput(
     { email, username, password, protocols, quotaMB, quotaGb }, true);
   if (validation.error)
@@ -3007,6 +3018,8 @@ app.post('/api/users', requireAuth, async (req, res) => {
       // /sub/:token link works the instant the user is created.
       sub_token: crypto.randomBytes(16).toString('hex'),
       vless_uuid: uuidv4(),
+      mieruAllowLoopbackIP: mieruAllowLoopbackIP === true ? 1 : 0,
+      mieruAllowPrivateIP: mieruAllowPrivateIP === true ? 1 : 0,
       createdAt: now, updatedAt: now, lastSeen: null
     };
 
@@ -3050,7 +3063,8 @@ app.put('/api/users/:id', requireAuth, (req, res) => {
   const user = getUserById(req.params.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
 
-  const { email, username, password, expiry, protocols, quotaMB, quotaGb } = req.body;
+  const { email, username, password, expiry, protocols, quotaMB, quotaGb,
+    mieruAllowLoopbackIP, mieruAllowPrivateIP } = req.body;
   const validation = validateUserInput(
     { email: email ?? user.email,
       username: username ?? user.username,
@@ -3090,6 +3104,10 @@ app.put('/api/users/:id', requireAuth, (req, res) => {
     quotaMB:   (quotaMB !== undefined || quotaGb !== undefined)
       ? validation.quotaMB
       : user.quotaMB,
+    mieruAllowLoopbackIP: mieruAllowLoopbackIP === undefined
+      ? user.mieruAllowLoopbackIP : (mieruAllowLoopbackIP === true ? 1 : 0),
+    mieruAllowPrivateIP: mieruAllowPrivateIP === undefined
+      ? user.mieruAllowPrivateIP : (mieruAllowPrivateIP === true ? 1 : 0),
     updatedAt: new Date().toISOString()
   };
   if (password) {

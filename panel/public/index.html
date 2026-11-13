@@ -390,6 +390,11 @@
                 <p id="p-hy2-hint" class="hidden" style="margin-top:4px;color:var(--text-secondary);font-size:12px"
                    data-i18n="users.hy2NotInstalled">Hysteria2 не установлен — доустановите его в «Настройках сервера», чтобы выдавать hy2-ключи.</p>
                 <p id="p-vless-hint" class="hidden" style="margin-top:4px;color:var(--text-secondary);font-size:12px">VLESS REALITY не установлен — сначала включите его в «Настройках сервера».</p>
+                <div id="mieru-network-access" style="margin-top:10px">
+                  <label class="checkbox"><input type="checkbox" id="u-mieru-loopback" /> <span data-i18n="users.mieruAllowLoopback">Mieru: allow access to server loopback addresses</span></label>
+                  <label class="checkbox"><input type="checkbox" id="u-mieru-private" /> <span data-i18n="users.mieruAllowPrivate">Mieru: allow access to private networks</span></label>
+                  <p class="form-hint" data-i18n="users.mieruPrivateHint">Enable only for trusted users: this grants access to services in the server and organization LAN.</p>
+                </div>
               </div>
             </div>
             <div id="user-modal-error" class="alert alert-error hidden"></div>

@@ -46,6 +46,8 @@ function normalizeBackupUser(user, now = new Date().toISOString()) {
     vlessDownloadBytes: user.vlessDownloadBytes || 0,
     vlessLastUploadBytes: user.vlessLastUploadBytes || 0,
     vlessLastDownloadBytes: user.vlessLastDownloadBytes || 0,
+    mieruAllowLoopbackIP: user.mieruAllowLoopbackIP ? 1 : 0,
+    mieruAllowPrivateIP: user.mieruAllowPrivateIP ? 1 : 0,
   };
 }
 

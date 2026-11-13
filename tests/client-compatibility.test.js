@@ -13,8 +13,8 @@ assert(html.includes('data-page="clients"') && html.includes('id="page-clients"'
   app.includes("clients:     t('nav.clients')"), 'panel exposes the client compatibility section');
 for (const client of ['Karing', 'Shadowrocket', 'sing-box', 'NekoBox', 'Xray', 'Mihomo', 'OpenFlux'])
   assert(html.includes(client), `${client} is classified in the matrix`);
-assert(html.includes('E2E') && html.includes('FORMAT') && html.includes('EXPERIMENTAL'),
-  'matrix distinguishes tunnel, format-only and experimental evidence');
+assert(html.includes('E2E') && html.includes('FORMAT') && html.includes('ISOLATED'),
+  'matrix distinguishes tunnel, format-only and isolated-profile evidence');
 assert(/forced === 'karing'[\s\S]*forced === 'nekobox'[\s\S]*forced === 'exclave'[\s\S]*forced === 'throne'/.test(server),
   'sing-box-family compatibility matches the actual subscription router');
 assert(server.includes("return 'shadowrocket'") && server.includes("return 'karing'"),

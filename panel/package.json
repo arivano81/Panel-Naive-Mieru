@@ -1,6 +1,6 @@
 {
   "name": "panel-naive-mieru",
-  "version": "1.21.0",
+  "version": "1.21.1",
   "description": "VertaFlux universal proxy control panel",
   "main": "server/index.js",
   "scripts": {

@@ -9,6 +9,16 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [v1.21.1] - 2026-11-13
+
+### Changed
+
+- Reworked both READMEs into consistent operator guides, corrected section numbering and
+  navigation, and documented the complete OpenFlux install/profile/client/health/cleanup workflow.
+- Constrained the banner slogan to its frame and removed stale release-history labels and a broken
+  screenshots reference from the current usage guide.
+- Made the Russian security and contribution policies primary, with complete English translations.
+
 ## [v1.21.0] - 2026-11-11
 
 ### Added

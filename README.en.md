@@ -6,7 +6,7 @@
 
 # ◈ VertaFlux
 
-**v1.21.0** — Universal control panel for a personal proxy server on Ubuntu or Debian
+**v1.21.1** — Universal control panel for a personal proxy server on Ubuntu or Debian
 
 ![VertaFlux — one control plane, multiple routes](docs/assets/vertaflux-banner.svg)
 
@@ -14,7 +14,7 @@
 [![CI](https://github.com/arivano81/Panel-Naive-Mieru/actions/workflows/ci.yml/badge.svg)](https://github.com/arivano81/Panel-Naive-Mieru/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-MIT-blue?color=248cff)](LICENSE)
 
-VertaFlux brings NaiveProxy, Mieru, Hysteria2, VLESS, and experimental OpenFlux
+VertaFlux brings NaiveProxy, Mieru, Hysteria2, VLESS, and OpenFlux
 into one approachable interface: one gateway, multiple access technologies, and
 one user lifecycle.
 
@@ -50,17 +50,19 @@ Read the changelog and make a backup before updating a production server.
 
 ## ✨ Features
 
-| Sprint | Feature |
-|--------|---------|
+| No. | Feature |
+|-----|---------|
 | 1 | Auto-installer: arch detection (**amd64 only**), caddy-forwardproxy-naive, Mieru .deb, systemd, NTP, UFW, config.json |
 | 2 | User CRUD: SQLite, atomic Caddyfile + Mieru config rebuild on every change, expiry cron |
 | 3 | Server settings: port changes, traffic-pattern presets, MTU, UFW auto-update |
 | 4 | Client configs: Naive link, Mieru sing-box JSON, universal auto-fallback config, QR codes |
 | 5 | Monitoring dashboard: WebSocket live metrics, traffic snapshots, quota alerts |
 | 6 | `update.sh`: `--dry-run`, `--force`, `--panel-only`, `--expose`, `--ssh-only`, `--status`, `--doctor`, `--rollback`, `--repair`, `--help` |
-| 7 | **Cascade / Relay** (v1.2.6): `client → Entry (RU) → Exit (EU) → internet`; Naive uses HTTPS upstream, while Mieru and Hy2 use the transparent Mieru relay. |
-| 8 | **Optional Hysteria2** (v1.8.x): installed by the administrator from Settings (`auth: userpass`, systemd, per-user traffic, cascade), then enabled for selected users. |
-| 9 | **One "smart" Sub-link** (v1.8.7–1.8.8): a single `/sub/:token` link with client auto-detection by User-Agent. **Shadowrocket** gets a base64 URI list (Naive → native HTTPS scheme, Mieru `mierus://`, Hy2 `hysteria2://`), **Karing** gets sing-box JSON. Passes expiry & traffic via the `Subscription-Userinfo` header. ✅ **Verified on Karing and Shadowrocket.** |
+| 7 | **Cascade / Relay**: `client → Entry → Exit → internet` for Naive, Mieru, and Hysteria2 |
+| 8 | **Optional Hysteria2**: opt-in installation, userpass authentication, systemd, per-user traffic, and cascade |
+| 9 | **One smart Sub-link**: `/sub/:token` selects base64 URIs for Shadowrocket or sing-box JSON for Karing |
+| 10 | **VLESS REALITY and XHTTP**: pinned Xray, per-user UUIDs, client links, statistics, and transactional configuration |
+| 11 | **OpenFlux**: isolated L4/Direct profiles with their own key, TCP port, systemd unit, UFW rule, and client bundle |
 
 ---
 
@@ -72,7 +74,7 @@ Read the changelog and make a backup before updating a production server.
 | Debian | 11, 12, 13 |
 
 **Architecture:** `x86_64` (amd64) — **only** *(caddy-forwardproxy-naive supports amd64 only)*  
-> ⚠️ ARM64 and ARMv7 are **not supported** in v1.2.3 — the installer will exit with a clear error message.
+> ⚠️ ARM64 and ARMv7 are not currently supported; the installer exits before changing the system.
 
 ---
 
@@ -171,13 +173,45 @@ bash panel/scripts/reconfigure_xray_reality.sh <primary-domain>
 The script preserves keys and UUIDs, restarts only Xray, and verifies that the Caddy/Naive PID did
 not change.
 
-### Experimental OpenFlux
+### OpenFlux
 
-OpenFlux is deliberately isolated from shared users, subscriptions, Caddy, Mieru, Hysteria2, and
-Xray. Installation does not create a profile, open a port, or start a service. Each explicit profile
-has its own key, port, hardened systemd unit, firewall rule, and root-only client bundle. Use the
-separate **OpenFlux Experimental** page; key rotation invalidates the previous bundle. It is not a
-stable replacement for the primary protocols.
+OpenFlux is a working optional `L4/Direct` transport. It is deliberately isolated from shared users,
+subscriptions, Caddy, Mieru, Hysteria2, and Xray, so its lifecycle never rewrites or restarts the
+main VPN stack. Each profile has its own key, TCP port, hardened systemd unit, UFW rule, and client
+bundle and supports one concurrently active client session.
+
+To enable it from the panel:
+
+1. Open **OpenFlux** and select **Install OpenFlux**. The panel verifies the pinned binary and
+   installs it without opening a port or starting a profile.
+2. Enter a profile name, a free TCP port from `1024–65535`, and the server's public domain or IP.
+3. Create the profile, then download its client bundle after confirming the administrator password.
+4. Start the profile. The panel opens only its assigned port, enables its unit, and verifies the
+   listener; a failed health check rolls activation and the firewall rule back.
+5. Confirm the profile is active and listening. Filtered per-profile logs are available in the same row.
+
+The bundle contains `client.conf` and `openflux.key`; transfer both through a secure channel. It is
+never added to a smart subscription. Rotating the key immediately invalidates the old bundle.
+
+The equivalent SSH workflow is:
+
+```bash
+sudo bash /opt/panel-naive-mieru/scripts/install_openflux.sh
+sudo bash /opt/panel-naive-mieru/scripts/openflux_profile.sh create phone 18445 vpn.example.com
+sudo bash /opt/panel-naive-mieru/scripts/openflux_profile.sh start phone
+sudo bash /opt/panel-naive-mieru/scripts/openflux_profile.sh status phone
+sudo bash /opt/panel-naive-mieru/scripts/openflux_profile.sh stop phone
+```
+
+Client files are stored in `/root/openflux-phone-client/`. The `rotate`, `reset`, and `remove`
+actions affect only the selected profile. Complete removal creates a root-only recovery archive:
+
+```bash
+sudo bash /opt/panel-naive-mieru/scripts/uninstall_openflux.sh --purge
+```
+
+The pinned binary and lifecycle pass a real encrypted-tunnel, wrong-key, reboot, rollback, and
+primary-service isolation canary on Debian 13 CI.
 
 ### Users and client delivery
 
@@ -185,7 +219,7 @@ Create a user, choose only the protocols installed on the server, then use **Con
 Naive link, Mieru JSON/link, Hysteria2 URI, VLESS REALITY/XHTTP URI, universal sing-box JSON, QR,
 or one smart subscription URL. Expiry and quota suspension apply to all managed protocols without
 deleting the user. The **Clients** page distinguishes real E2E tunnel evidence from format-only and
-experimental compatibility.
+isolated compatibility.
 
 ### Monitoring, diagnostics, and federation
 
@@ -244,7 +278,7 @@ changing VPN user credentials.
 | `/opt/panel-naive-mieru/` | Panel application files |
 | `/usr/local/bin/caddy-naive` | caddy-forwardproxy-naive binary |
 | `/etc/xray/config.json` | Managed Xray/VLESS configuration (when installed) |
-| `/etc/openflux/` | Isolated experimental OpenFlux state (when installed) |
+| `/etc/openflux/` | Isolated OpenFlux state (when installed) |
 
 Servers upgraded from older releases retain compatibility symlinks for rollback. A clean
 installation creates only the canonical VertaFlux paths.
@@ -331,7 +365,7 @@ a third shared-pool protocol. Link format: `hysteria2://username:password@domain
 
 > ℹ️ The server uses `auth: userpass`, so the on-the-wire password is the pair `username:password`. For sing-box clients (Karing) the panel injects it into the `password` field automatically — sing-box has no separate username field.
 
-### 🔗 Sub-link (one "smart" subscription) — v1.8.7–1.8.8
+### 🔗 Sub-link — one smart subscription
 Click **"Sub-link"** on the user card to copy a single link like
 `https://sub.<domain>/sub/<token>`. It **auto-detects the client** by User-Agent and serves the right format:
 
@@ -378,7 +412,7 @@ sub.example.com/sub/TOKEN ── TLS ──▶ caddy-naive ──▶ panel ─�
 
 ---
 
-## 🌐 Cascade / Relay (v1.2.6)
+## 🌐 Cascade / Relay
 
 Configure a two-hop chain directly from the panel (**Settings → Cascade**):
 
@@ -543,3 +577,6 @@ ufw status
 - **Mieru:** [enfein/mieru](https://github.com/enfein/mieru)
 - **Caddy:** [caddyserver.com](https://caddyserver.com)
 - **Karing:** [KaringX/karing](https://github.com/KaringX/karing)
+
+Development guide: [CONTRIBUTING.en.md](CONTRIBUTING.en.md). Security policy:
+[SECURITY.en.md](SECURITY.en.md).

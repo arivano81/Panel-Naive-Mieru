@@ -117,7 +117,7 @@
       </a>
       <a href="#" class="nav-item" data-page="openflux">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h8l-1 8 10-12h-8z"/></svg>
-        <span>OpenFlux <small style="color:var(--warning)">Experimental</small></span>
+        <span>OpenFlux <small style="color:var(--info)">Isolated</small></span>
       </a>
       <a href="#" class="nav-item" data-page="federation">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><line x1="12" y1="8" x2="5" y2="16"/><line x1="12" y1="8" x2="19" y2="16"/></svg>
@@ -1121,13 +1121,13 @@
       </div>
     </section>
 
-    <!-- OpenFlux is deliberately separate from shared users and stable protocols. -->
+    <!-- OpenFlux is deliberately separate from shared users and the primary VPN stack. -->
     <section id="page-openflux" class="content-page">
-      <div class="page-header"><h3>OpenFlux Experimental</h3></div>
-      <div class="alert alert-warning" style="margin-bottom:16px">
-        <strong>⚠ Экспериментальная функция.</strong>
-        OpenFlux не входит в общие ключи и Sub-ссылки. Один профиль предназначен для одного
-        активного клиента. Используйте только после проверки доступа к серверу по SSH.
+      <div class="page-header"><h3>OpenFlux</h3></div>
+      <div class="alert alert-info" style="margin-bottom:16px">
+        <strong>Изолированный дополнительный транспорт.</strong>
+        OpenFlux не входит в общих пользователей и Sub-ссылки, не изменяет конфиги основного
+        VPN-стека. Один профиль предназначен для одного одновременно активного клиента.
       </div>
       <div class="card">
         <div class="card-header">Компонент OpenFlux <span id="openflux-version"></span></div>
@@ -1144,7 +1144,7 @@
               <div class="form-group"><label>Публичный IP или домен</label><input id="openflux-host" placeholder="vpn.example.com" /></div>
             </div>
             <button class="btn btn-primary" id="btn-openflux-create" data-action="openflux-create">Создать остановленный профиль</button>
-            <p class="card-desc" style="margin-top:10px">Клиентский bundle сохраняется только на сервере в <code>/root/openflux-&lt;id&gt;-client</code>. Секрет не передаётся браузеру.</p>
+            <p class="card-desc" style="margin-top:10px">Клиентский комплект хранится в <code>/root/openflux-&lt;id&gt;-client</code> и скачивается только после повторного подтверждения пароля администратора.</p>
             <button class="btn btn-secondary mt-2" id="btn-openflux-update" data-action="openflux-update">Проверить / обновить компонент</button>
             <button class="btn btn-danger mt-2" id="btn-openflux-uninstall" data-action="openflux-uninstall">Удалить компонент и профили</button>
           </div>
@@ -1333,7 +1333,7 @@
           <div class="info-list">
             <div class="info-row"><span data-i18n="clients.tunnelLevel">Tunnel verified</span><span class="badge badge-green">E2E</span></div>
             <div class="info-row"><span data-i18n="clients.formatLevel">Import format verified</span><span class="badge badge-blue">FORMAT</span></div>
-            <div class="info-row"><span data-i18n="clients.experimentalLevel">Separate experimental profile</span><span class="badge badge-yellow">EXPERIMENTAL</span></div>
+            <div class="info-row"><span data-i18n="clients.isolatedLevel">Separate isolated profile</span><span class="badge badge-yellow">ISOLATED</span></div>
           </div>
         </div>
       </div>
@@ -1355,7 +1355,7 @@
               <tr><td>Xray</td><td>VLESS URI</td><td>VLESS REALITY</td><td><span class="badge badge-green">E2E</span></td><td data-i18n="clients.xrayNote">Official client is used by the Debian 13 REALITY canary.</td></tr>
               <tr><td>Mihomo</td><td>VLESS URI</td><td>VLESS XHTTP</td><td><span class="badge badge-green">E2E</span></td><td data-i18n="clients.mihomoNote">XHTTP transport is covered by an independent tunnel canary.</td></tr>
               <tr><td>naiveproxy · Hysteria CLI</td><td data-i18n="clients.directLink">Protocol link / manual config</td><td>Naive · Hy2</td><td><span class="badge badge-green">E2E</span></td><td data-i18n="clients.cliNote">Use for protocol-specific troubleshooting and canary checks.</td></tr>
-              <tr><td>OpenFlux</td><td data-i18n="clients.serverBundle">Root-only client bundle</td><td>OpenFlux L4/Direct</td><td><span class="badge badge-yellow">EXPERIMENTAL</span></td><td data-i18n="clients.openfluxNote">Not included in shared users or smart subscriptions.</td></tr>
+              <tr><td>OpenFlux</td><td data-i18n="clients.serverBundle">Root-only client bundle</td><td>OpenFlux L4/Direct</td><td><span class="badge badge-yellow">ISOLATED</span></td><td data-i18n="clients.openfluxNote">Not included in shared users or smart subscriptions.</td></tr>
             </tbody>
           </table>
         </div>

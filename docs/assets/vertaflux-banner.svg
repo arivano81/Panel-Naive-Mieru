@@ -51,7 +51,7 @@
     <path d="M58 59l12-7 12 7v14l-12 7-12-7z" fill="#16e0a1" opacity=".85"/>
     <text x="112" y="78" fill="#f2f7fa" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="42" font-weight="700" letter-spacing="1">VertaFlux</text>
     <rect x="48" y="112" width="324" height="1" fill="url(#flux)" opacity=".45"/>
-    <text x="48" y="146" fill="#a8bbc6" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" letter-spacing="1.8">ONE CONTROL PLANE · MULTIPLE ROUTES</text>
+    <text x="48" y="146" fill="#a8bbc6" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" textLength="324" lengthAdjust="spacingAndGlyphs">ONE CONTROL PLANE · MULTIPLE ROUTES</text>
     <text x="48" y="174" fill="#53e4c0" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14">Naive · Mieru · Hysteria2 · VLESS · OpenFlux</text>
   </g>
 </svg>

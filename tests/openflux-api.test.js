@@ -75,10 +75,10 @@ for (const route of [
 ok(routes.includes("new Set(['start', 'stop', 'restart', 'reset'])"), 'action endpoint has an explicit allowlist');
 ok(!/caddy|mieru|hysteria|xray|warp|cascade/i.test(routes), 'OpenFlux routes cannot address the primary stack');
 ok(server.includes('registerOpenFluxRoutes(app, requireAuth, openFluxService,'), 'isolated routes are registered by the panel');
-ok(html.includes('id="page-openflux"') && html.includes('OpenFlux Experimental'),
-  'OpenFlux is visually separated on an experimental page');
-ok(html.includes('/root/openflux-&lt;id&gt;-client') && html.includes('Секрет не передаётся браузеру'),
-  'UI explains the server-only client bundle boundary');
+ok(html.includes('id="page-openflux"') && html.includes('Изолированный дополнительный транспорт'),
+  'OpenFlux is presented as a working isolated component');
+ok(html.includes('/root/openflux-&lt;id&gt;-client') && html.includes('подтверждения пароля администратора'),
+  'UI explains the protected client bundle boundary');
 ok(ui.includes("case 'openflux':    loadOpenFlux()") && ui.includes("'/api/openflux/profiles'"),
   'page loads isolated profile state and creates profiles through its namespace');
 ok(ui.includes("['start', 'stop', 'restart', 'reset'].includes(action)"), 'browser action dispatcher repeats the server allowlist');
@@ -90,7 +90,7 @@ ok(routes.includes('requireAuth, secretExportLimiter') && server.includes('openF
 ok(ui.includes("case 'openflux-bundle'") && ui.includes("prompt('Повторно введите пароль администратора панели:'"),
   'UI requires an explicit warning and administrator password before bundle export');
 ok(routes.includes('service.rotate(req.params.id)') && ui.includes("case 'openflux-rotate'"),
-  'key rotation is exposed only through its confirmed experimental control');
+  'key rotation is exposed only through its confirmed isolated control');
 ok(routes.includes("req.body.confirm !== 'UNINSTALL OPENFLUX'") &&
    routes.includes('service.uninstall()') && html.includes('id="btn-openflux-uninstall"') &&
    ui.includes("case 'openflux-uninstall'"),

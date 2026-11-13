@@ -42,6 +42,9 @@ const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
 ok((readme.match(/Родительский проект/g) || []).length === 1,
   'README retains exactly one attribution link to the parent project');
 ok(readme.includes('docs/assets/vertaflux-banner.svg'), 'README uses the VertaFlux project banner');
+const banner = fs.readFileSync(path.join(root, 'docs/assets/vertaflux-banner.svg'), 'utf8');
+ok(/ONE CONTROL PLANE · MULTIPLE ROUTES<\/text>/.test(banner) &&
+   /textLength="324"/.test(banner), 'banner slogan is constrained to the control-plane frame');
 
 console.log(`\nResult: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

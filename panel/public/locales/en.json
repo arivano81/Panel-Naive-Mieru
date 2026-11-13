@@ -418,7 +418,7 @@
     "intro": "Use the smart subscription when possible. Verification levels distinguish a real tunnel canary from format-only checks.",
     "tunnelLevel": "Tunnel verified",
     "formatLevel": "Import format verified",
-    "experimentalLevel": "Separate experimental profile",
+    "isolatedLevel": "Separate isolated profile",
     "application": "Application",
     "import": "Import",
     "protocols": "Panel protocols",

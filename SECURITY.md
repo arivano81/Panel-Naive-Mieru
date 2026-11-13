@@ -1,57 +1,53 @@
-# Security policy
+[🇷🇺 Русский](SECURITY.md) | [🇬🇧 English](SECURITY.en.md)
 
-## Supported versions
+# Политика безопасности
 
-Security fixes are prepared for the current `main` branch and the newest
-published release. Older snapshots should be upgraded before troubleshooting.
+## Поддерживаемые версии
 
-## Reporting a vulnerability
+Исправления безопасности готовятся для текущей ветки `main` и последнего опубликованного
+релиза. Перед диагностикой более старую установку следует обновить.
 
-Do not publish an exploit, credentials, subscription links, private keys, server
-addresses or diagnostic archives in an issue, discussion or chat.
+## Как сообщить об уязвимости
 
-Use **Security → Advisories → Report a vulnerability** in this private GitHub
-repository. Include only the minimum reproducible details:
+Не публикуйте exploit, учётные данные, Sub-ссылки, приватные ключи, адреса рабочих серверов
+или диагностические архивы в issue, discussion или публичном чате.
 
-- affected commit or release;
-- affected component and prerequisites;
-- impact and a safe reproduction sequence;
-- sanitized logs with secrets removed;
-- a proposed mitigation, if known.
+В приватном репозитории откройте **Security → Advisories → Report a vulnerability** и укажите
+только необходимые для воспроизведения сведения:
 
-The maintainer should acknowledge the report within 72 hours. No fixed repair
-deadline is promised: severity, exploitability and safe rollout determine it.
-The reporter and maintainer coordinate disclosure only after a fixed release is
-available to administrators.
+- затронутый commit или релиз;
+- компонент и необходимые условия;
+- влияние и безопасную последовательность воспроизведения;
+- обезличенные журналы без секретов;
+- известный способ временного ограничения риска.
 
-## Administrator response
+Сопровождающий подтверждает получение сообщения в течение 72 часов. Фиксированный срок
+исправления не обещается: он зависит от критичности, практической применимости атаки и
+безопасности обновления. Публикация деталей согласуется только после выхода исправленного релиза.
 
-If compromise is suspected:
+## Действия администратора при подозрении на компрометацию
 
-1. Restrict panel access to SSH/loopback and stop experimental profiles.
-2. Preserve a root-only backup and sanitized diagnostic evidence.
-3. Rotate the panel password, HTTP Basic Auth password, TOTP secret, user
-   passwords, subscription tokens, VLESS UUIDs and OpenFlux profile keys that
-   may have been exposed.
-4. Replace the affected binary or release only with a version whose checksum is
-   recorded by the project, then rebuild all managed configurations.
-5. Review the administrator audit log and service journals for unexpected
-   changes before reopening access.
+1. Переведите панель в SSH-only/loopback и остановите затронутые дополнительные профили.
+2. Сохраните root-only резервную копию и обезличенные диагностические данные.
+3. Смените пароль панели, HTTP Basic Auth, TOTP, пользовательские пароли, токены подписок,
+   VLESS UUID и ключи OpenFlux, которые могли быть раскрыты.
+4. Замените затронутый бинарник или релиз только версией с опубликованной проектом контрольной
+   суммой, затем перестройте управляемые конфигурации.
+5. Проверьте журнал действий администратора и systemd-журналы перед возвратом внешнего доступа.
 
-## Release revocation procedure
+## Отзыв релиза
 
-Only a maintainer may revoke a project release. The maintainer must:
+Отозвать релиз может только сопровождающий проекта. Он обязан:
 
-1. Mark the GitHub release as compromised and remove downloadable artifacts;
-   never silently reuse or replace the same version tag.
-2. Add a prominent advisory naming the affected versions, indicators of
-   compromise, immediate containment and required secret rotations.
-3. Disable the affected version in installer/update metadata or pinned component
-   constants and publish a new version with new checksums.
-4. Run the complete Debian 12/13 CI and real Xray/OpenFlux canaries for the
-   replacement commit.
-5. Record the incident and recovery instructions in `CHANGELOG.md`, then notify
-   administrators through the release notes.
+1. Пометить GitHub Release как скомпрометированный и удалить загружаемые артефакты; прежний
+   тег версии нельзя незаметно переиспользовать или подменять.
+2. Опубликовать advisory с затронутыми версиями, признаками компрометации, срочными мерами и
+   перечнем секретов, которые требуется сменить.
+3. Запретить затронутую версию в метаданных установщика/обновления или закреплённых константах
+   и выпустить новую версию с новыми контрольными суммами.
+4. Выполнить полный CI на Debian 12/13 и реальные canary Xray/OpenFlux для нового commit.
+5. Записать происшествие и порядок восстановления в `CHANGELOG.md`, затем уведомить
+   администраторов в release notes.
 
-Deleting a tag alone is not revocation: existing servers and cached artifacts
-remain affected until administrators upgrade and rotate exposed credentials.
+Одного удаления тега недостаточно: установленные серверы и кэшированные артефакты остаются
+уязвимыми, пока администраторы не обновятся и не сменят раскрытые секреты.

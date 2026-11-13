@@ -161,7 +161,7 @@ function buildTitles() {
     dashboard:   t('nav.dashboard'),
     users:       t('nav.users'),
     settings:    t('nav.settings'),
-    openflux:    'OpenFlux Experimental',
+    openflux:    'OpenFlux',
     federation:  t('nav.federation'),
     monitoring:  t('nav.monitoring'),
     logs:        t('nav.logs'),
@@ -2355,7 +2355,7 @@ async function saveVlessXhttp() {
   finally { setBtnBusy(btn, false); }
 }
 
-// ── OpenFlux Experimental ────────────────────────────────────────────────────
+// ── OpenFlux ─────────────────────────────────────────────────────────────────
 async function loadOpenFlux() {
   const rows = el('openflux-profiles');
   try {

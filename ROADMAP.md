@@ -584,6 +584,7 @@ Xray/VLESS и OpenFlux. Исключение допустимо только д�
 Полная спецификация: [`docs/legacy-mieru-migration.md`](docs/legacy-mieru-migration.md).
 
 - [x] read-only экспорт фактической конфигурации через `mita describe config`;
+- [x] передаваемая инвентаризация без секретов и root-only backup с SHA-256;
 - [x] индивидуальные параметры Mieru `allowLoopbackIP` и `allowPrivateIP` с безопасным default;
 - [ ] точные TCP/UDP `portBindings` вместо обязательного сплошного диапазона;
 - [ ] dry-run с запросом единого почтового домена и отчётом о конфликтах;
